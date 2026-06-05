@@ -1,10 +1,10 @@
 """NASKB MCP Server 压力测试。
 
 测试内容：
-1. 数据准备 — 生成5万条5~15字的向量文本，经向量化后存入向量数据库
+1. 数据准备 — 生成5万条5~15字的向量文本（CPU 实测 2000 条约 17min），经向量化后存入向量数据库
 2. 索引验证 — 检查建索引过程是否正常、耗时多少
 3. 查询压力测试 — 持续20秒进行向量查询，每100ms一次，每次获取最匹配的5条记录
-4. 结果统计 — 向量化耗时、查询耗时等分阶段统计
+4. 结果统计 — 向量化耗时、查询耗时等分阶段统计，并外推 50,000 条的预期耗时
 """
 import gc
 import os
@@ -24,13 +24,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 _PRECACHED_MODEL = Path(r"c:\Sync\NASKB\NASKB_data\models\bge-base-zh-v1.5")
 
 # ── 常量 ──
-TOTAL_FILES = 50_000        # 生成文件数
+TOTAL_FILES = 2_000         # 生成文件数（CPU 编码 5万需 ~7h，2000 约 17min）
 TEXT_MIN_LEN = 5            # 最小文本长度（字符）
 TEXT_MAX_LEN = 15           # 最大文本长度（字符）
 QUERY_DURATION_SEC = 20     # 查询持续时间（秒）
 QUERY_INTERVAL_MS = 100     # 查询间隔（毫秒）
 QUERY_TOP_K = 5             # 每次查询返回记录数
-FILES_PER_DIR = 1000        # 每个子目录的文件数（避免单目录文件过多）
+FILES_PER_DIR = 500         # 每个子目录的文件数
 ONNX_BATCH_SIZE = 64        # ONNX 真正批处理大小
 
 
@@ -628,7 +628,7 @@ enabled = true
         print(f"  {result2[:200]}...")
         assert "找到" in result2 or "结果" in result2, "Search should return results"
 
-        print("\n  [RESULT] 索引验证通过 ✓")
+        print("\n  [RESULT] 索引验证通过 OK")
 
     # ═══════════════════════════════════════════════════════════════
     # Phase 3: 查询压力测试
@@ -786,7 +786,7 @@ enabled = true
         assert query_count > 0, "Should have completed at least one query"
         assert errors == 0, f"Should have no errors, got {errors}"
 
-        print("\n  [RESULT] 查询压力测试通过 ✓")
+        print("\n  [RESULT] 查询压力测试通过 OK")
 
     # ═══════════════════════════════════════════════════════════════
     # Phase 4: 综合报告

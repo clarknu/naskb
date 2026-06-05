@@ -1,0 +1,213 @@
+{
+  "created_at": "20260605-145956",
+  "root": "C:\\Sync\\NASKB",
+  "environment": {
+    "python": "C:\\Sync\\NASKB\\.venv\\Scripts\\python.exe",
+    "python_version": "3.14.3 (tags/v3.14.3:323c59a, Feb  3 2026, 16:04:56) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "AMD64 Family 25 Model 116 Stepping 1, AuthenticAMD",
+    "cpu_count": 16,
+    "gpus": [
+      {
+        "Name": "AMD Radeon 780M Graphics",
+        "AdapterRAM": 536870912,
+        "DriverVersion": "32.0.23033.1002"
+      }
+    ],
+    "packages": {
+      "onnxruntime": "1.26.0",
+      "onnxruntime-directml": "1.24.4",
+      "lancedb": "0.33.0",
+      "pyarrow": "24.0.0",
+      "tokenizers": "0.22.2",
+      "transformers": "4.57.6",
+      "torch": "2.12.0",
+      "faiss-cpu": null,
+      "hnswlib": null,
+      "qdrant-client": null
+    },
+    "onnxruntime_module": "C:\\Sync\\NASKB\\.venv\\Lib\\site-packages\\onnxruntime\\__init__.py",
+    "onnxruntime_available_providers": [
+      "AzureExecutionProvider",
+      "CPUExecutionProvider"
+    ],
+    "torch": {
+      "cuda_available": false,
+      "cuda_device_count": 0,
+      "mps_available": false
+    }
+  },
+  "embedding": {
+    "available": true,
+    "model_dir": "C:\\Sync\\NASKB\\NASKB_data\\models\\bge-base-zh-v1.5",
+    "available_providers": [
+      "AzureExecutionProvider",
+      "CPUExecutionProvider"
+    ],
+    "results": [
+      {
+        "provider_requested": "CPUExecutionProvider",
+        "provider_active": "CPUExecutionProvider",
+        "batch_size": 1,
+        "max_length": 128,
+        "output_shape": [
+          "batch_size",
+          "sequence_length",
+          768
+        ],
+        "vector_shape": [
+          1,
+          768
+        ],
+        "run_only": {
+          "avg_ms": 61.989,
+          "p50_ms": 61.811,
+          "p95_ms": 62.89,
+          "items_per_sec": 16.132
+        },
+        "end_to_end": {
+          "avg_ms": 62.804,
+          "p50_ms": 62.201,
+          "p95_ms": 64.113,
+          "items_per_sec": 15.923
+        }
+      },
+      {
+        "provider_requested": "CPUExecutionProvider",
+        "provider_active": "CPUExecutionProvider",
+        "batch_size": 8,
+        "max_length": 128,
+        "output_shape": [
+          "batch_size",
+          "sequence_length",
+          768
+        ],
+        "vector_shape": [
+          8,
+          768
+        ],
+        "run_only": {
+          "avg_ms": 445.909,
+          "p50_ms": 449.255,
+          "p95_ms": 459.492,
+          "items_per_sec": 17.941
+        },
+        "end_to_end": {
+          "avg_ms": 452.785,
+          "p50_ms": 459.368,
+          "p95_ms": 470.435,
+          "items_per_sec": 17.668
+        }
+      },
+      {
+        "provider_requested": "CPUExecutionProvider",
+        "provider_active": "CPUExecutionProvider",
+        "batch_size": 32,
+        "max_length": 128,
+        "output_shape": [
+          "batch_size",
+          "sequence_length",
+          768
+        ],
+        "vector_shape": [
+          32,
+          768
+        ],
+        "run_only": {
+          "avg_ms": 1886.147,
+          "p50_ms": 1902.942,
+          "p95_ms": 1948.626,
+          "items_per_sec": 16.966
+        },
+        "end_to_end": {
+          "avg_ms": 2004.991,
+          "p50_ms": 1997.704,
+          "p95_ms": 2029.095,
+          "items_per_sec": 15.96
+        }
+      }
+    ]
+  },
+  "vectors": {
+    "optional_backends": {
+      "faiss": {
+        "available": false,
+        "package": null
+      },
+      "hnswlib": {
+        "available": false,
+        "package": null
+      },
+      "qdrant_client": {
+        "available": false,
+        "package": null
+      }
+    },
+    "results": [
+      {
+        "count": 1000,
+        "dim": 768,
+        "query_count": 10,
+        "top_k": 10,
+        "numpy_exact": {
+          "avg_ms": 2.317,
+          "p50_ms": 2.317,
+          "p95_ms": 2.357,
+          "items_per_sec": 4315.926
+        },
+        "lancedb": {
+          "available": true,
+          "ingest_ms": 52.696,
+          "search": {
+            "avg_ms": 12.311,
+            "p50_ms": 12.96,
+            "p95_ms": 14.786,
+            "items_per_sec": 81.227
+          },
+          "index": {
+            "created": true,
+            "build_ms": 289.812,
+            "search": {
+              "avg_ms": 8.665,
+              "p50_ms": 8.254,
+              "p95_ms": 11.555,
+              "items_per_sec": 115.412
+            }
+          }
+        }
+      },
+      {
+        "count": 10000,
+        "dim": 768,
+        "query_count": 10,
+        "top_k": 10,
+        "numpy_exact": {
+          "avg_ms": 15.487,
+          "p50_ms": 15.487,
+          "p95_ms": 16.184,
+          "items_per_sec": 645.707
+        },
+        "lancedb": {
+          "available": true,
+          "ingest_ms": 284.314,
+          "search": {
+            "avg_ms": 26.57,
+            "p50_ms": 26.34,
+            "p95_ms": 27.936,
+            "items_per_sec": 37.637
+          },
+          "index": {
+            "created": true,
+            "build_ms": 4415.56,
+            "search": {
+              "avg_ms": 8.723,
+              "p50_ms": 8.509,
+              "p95_ms": 10.543,
+              "items_per_sec": 114.643
+            }
+          }
+        }
+      }
+    ]
+  }
+}

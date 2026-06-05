@@ -254,20 +254,68 @@ class Embedder(BaseEmbedder):
         return embedding.astype(np.float32)
 
     def encode_batch(self, texts: list[str], batch_size: int = 32) -> np.ndarray:
-        """Encode multiple texts. Returns (N, dim) array."""
+        """Encode multiple texts with true batch inference.
+
+        Uses dynamic padding (pad to longest in batch) instead of
+        max_length padding, which is 10~50x faster for short texts.
+        """
         if not texts:
             return np.zeros((0, self.dim), dtype=np.float32)
 
-        all_embeddings = []
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i:i + batch_size]
-            batch_embeddings = []
-            for text in batch:
-                emb = self.encode(text)
-                batch_embeddings.append(emb)
-            all_embeddings.append(np.stack(batch_embeddings))
+        # Filter empty texts, remember positions
+        valid_indices = [i for i, t in enumerate(texts) if t and t.strip()]
+        if not valid_indices:
+            return np.zeros((len(texts), self.dim), dtype=np.float32)
 
-        return np.concatenate(all_embeddings, axis=0).astype(np.float32)
+        all_embeddings = [None] * len(texts)
+
+        for batch_start in range(0, len(valid_indices), batch_size):
+            batch_indices = valid_indices[batch_start:batch_start + batch_size]
+            batch_texts = [texts[i] for i in batch_indices]
+
+            # Dynamic padding: pad to longest in batch, not max_length
+            inputs = self._tokenizer(
+                batch_texts, padding=True, truncation=True,
+                max_length=self._max_length, return_tensors="np",
+            )
+            input_ids = inputs["input_ids"]
+            attention_mask = inputs["attention_mask"]
+
+            if input_ids.ndim == 1:
+                input_ids = input_ids.reshape(1, -1)
+            if attention_mask.ndim == 1:
+                attention_mask = attention_mask.reshape(1, -1)
+
+            outputs = self._session.run(
+                None, {
+                    "input_ids": input_ids.astype(np.int64),
+                    "attention_mask": attention_mask.astype(np.int64),
+                }
+            )
+            # outputs[0] shape: (batch, seq_len, dim)
+            token_embeddings = np.asarray(outputs[0])
+
+            # Mean pooling (batch-aware)
+            mask = np.expand_dims(attention_mask, axis=-1).astype(token_embeddings.dtype)
+            masked = token_embeddings * mask
+            summed = masked.sum(axis=1)        # (batch, dim)
+            count = np.maximum(mask.sum(axis=1), 1e-9)  # (batch, 1)
+            embeddings = summed / count         # (batch, dim)
+
+            # L2 normalize
+            norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+            embeddings = embeddings / (norms + 1e-9)
+
+            for idx, emb in zip(batch_indices, embeddings.astype(np.float32)):
+                all_embeddings[idx] = emb
+
+        # Fill empty texts with zero vectors
+        zero = np.zeros(self.dim, dtype=np.float32)
+        for i in range(len(texts)):
+            if all_embeddings[i] is None:
+                all_embeddings[i] = zero
+
+        return np.stack(all_embeddings).astype(np.float32)
 
     def _encode_long(self, text: str, segment_size: int = 450) -> np.ndarray:
         """Encode long text by segmenting and mean pooling segment vectors."""
@@ -305,3 +353,168 @@ def _mean_pool(token_embeddings: np.ndarray, attention_mask: np.ndarray) -> np.n
     count = mask.sum(axis=1)  # (batch, 1)
     count = np.maximum(count, 1e-9)
     return (summed / count).squeeze(0)  # (dim,)
+
+
+class MicroBatchEncoder:
+    """微批处理编码器 — 解决逐条到达场景的性能问题。
+
+    逐条编码每条 ~260ms（padding 浪费），批量编码每条 ~8ms。
+    本类通过两个策略降低单条延迟：
+
+    1. 微批处理：将短时间内到达的多条文本攒成一个 batch 一起编码
+    2. 文本缓存：相同文本直接返回缓存向量，零延迟
+
+    用法：
+        encoder = MicroBatchEncoder(embedder, max_batch=32, max_wait_ms=50)
+
+        # 逐条提交（内部自动攒批）
+        vec = encoder.encode("数据库优化")   # 可能等待最多 max_wait_ms
+        vec = encoder.encode("机器学习")     # 如果上一条还在等待窗口内，会合并
+
+        # 关闭时刷新剩余
+        encoder.shutdown()
+    """
+
+    def __init__(self, embedder: Embedder, max_batch: int = 32,
+                 max_wait_ms: float = 50, cache_size: int = 10000):
+        """
+        Args:
+            embedder: 底层 Embedder 实例
+            max_batch: 最大批量大小
+            max_wait_ms: 最长等待时间（毫秒），到期即处理，不等满
+            cache_size: 缓存容量（LRU），0 表示禁用缓存
+        """
+        import threading
+        from collections import OrderedDict
+
+        self._embedder = embedder
+        self._max_batch = max_batch
+        self._max_wait = max_wait_ms / 1000.0
+        self._cache_size = cache_size
+
+        # 缓存：text -> vector (LRU)
+        self._cache: OrderedDict[str, np.ndarray] = OrderedDict()
+        self._cache_hits = 0
+        self._cache_misses = 0
+
+        # 微批处理队列
+        self._lock = threading.Lock()
+        self._queue: list[tuple[str, threading.Event, dict]] = []
+        self._flush_timer: Optional[threading.Timer] = None
+        self._running = True
+
+    def encode(self, text: str) -> np.ndarray:
+        """编码单条文本（同步阻塞，内部自动微批处理）。
+
+        Args:
+            text: 要编码的文本
+
+        Returns:
+            归一化后的向量 (dim,)
+        """
+        import threading
+
+        # 1. 查缓存
+        if self._cache_size > 0:
+            with self._lock:
+                if text in self._cache:
+                    self._cache.move_to_end(text)
+                    self._cache_hits += 1
+                    return self._cache[text].copy()
+
+        self._cache_misses += 1
+
+        # 2. 加入微批队列
+        event = threading.Event()
+        result_box = {"vec": None}
+
+        with self._lock:
+            self._queue.append((text, event, result_box))
+            queue_len = len(self._queue)
+
+            # 达到 batch 上限，立即刷新
+            if queue_len >= self._max_batch:
+                self._cancel_timer()
+                self._flush()
+                # 不需要设 timer，直接返回
+            elif queue_len == 1:
+                # 队列从空变非空，启动等待 timer
+                self._start_timer()
+            # else: 已有 timer 在跑，等它到期
+
+        # 3. 阻塞等待结果
+        event.wait()
+        return result_box["vec"]
+
+    def _start_timer(self):
+        """启动超时刷新定时器。"""
+        import threading
+        if self._flush_timer is not None:
+            self._cancel_timer()
+        self._flush_timer = threading.Timer(self._max_wait, self._on_timer)
+        self._flush_timer.daemon = True
+        self._flush_timer.start()
+
+    def _cancel_timer(self):
+        if self._flush_timer is not None:
+            self._flush_timer.cancel()
+            self._flush_timer = None
+
+    def _on_timer(self):
+        """定时器到期，刷新当前队列。"""
+        with self._lock:
+            if self._queue:
+                self._flush()
+
+    def _flush(self):
+        """处理当前队列中的所有文本（必须在持有锁时调用）。"""
+        if not self._queue:
+            return
+
+        batch = self._queue[:]
+        self._queue.clear()
+        self._cancel_timer()
+
+        # 释放锁进行编码（编码可能耗时较长）
+        texts = [b[0] for b in batch]
+
+        # 分批编码（处理超过 max_batch 的情况）
+        all_vecs = []
+        for i in range(0, len(texts), self._max_batch):
+            chunk = texts[i:i + self._max_batch]
+            vecs = self._embedder.encode_batch(chunk, batch_size=len(chunk))
+            all_vecs.append(vecs)
+        if all_vecs:
+            vecs = np.concatenate(all_vecs, axis=0)
+        else:
+            vecs = np.zeros((0, self._embedder.dim), dtype=np.float32)
+
+        # 写入缓存 + 唤醒等待者
+        for i, (text, event, result_box) in enumerate(batch):
+            result_box["vec"] = vecs[i]
+
+            if self._cache_size > 0:
+                self._cache[text] = vecs[i].copy()
+                self._cache.move_to_end(text)
+                # LRU 淘汰
+                while len(self._cache) > self._cache_size:
+                    self._cache.popitem(last=False)
+
+            event.set()
+
+    def get_stats(self) -> dict:
+        """获取统计信息。"""
+        total = self._cache_hits + self._cache_misses
+        return {
+            "cache_hits": self._cache_hits,
+            "cache_misses": self._cache_misses,
+            "cache_hit_rate": self._cache_hits / max(total, 1),
+            "cache_size": len(self._cache),
+            "queue_depth": len(self._queue),
+        }
+
+    def shutdown(self):
+        """关闭编码器，刷新队列中剩余的文本。"""
+        self._running = False
+        with self._lock:
+            self._flush()
