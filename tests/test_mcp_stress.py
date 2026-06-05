@@ -47,6 +47,7 @@ def fast_encode_batch(embedder, texts: list[str], batch_size: int = 64) -> list[
     import numpy as np
     all_vecs = []
     total = len(texts)
+    _embed_t0 = time.time()
 
     for start in range(0, total, batch_size):
         batch = texts[start:start + batch_size]
@@ -88,8 +89,11 @@ def fast_encode_batch(embedder, texts: list[str], batch_size: int = 64) -> list[
             all_vecs.append(vec)
 
         done = min(start + batch_size, total)
-        if done % (batch_size * 20) == 0 or done == total:
-            print(f"  [FAST-EMBED] {done}/{total} ({done*100//total}%)", flush=True)
+        if done % (batch_size * 5) == 0 or done == total:
+            elapsed = time.time() - _embed_t0
+            rate = done / max(elapsed, 0.001)
+            print(f"  [FAST-EMBED] {done}/{total} ({done*100//total}%) "
+                  f"elapsed={elapsed:.1f}s rate={rate:.0f} texts/s", flush=True)
 
     return all_vecs
 

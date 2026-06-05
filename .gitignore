@@ -19,3 +19,6 @@ Thumbs.db
 # NASKB runtime data
 NASKB_data/
 .codegraph/
+
+# VS Code local settings
+.vscode/
