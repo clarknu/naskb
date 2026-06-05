@@ -71,10 +71,26 @@ class BaseVectorStore(ABC):
 class VectorStore(BaseVectorStore):
     """Vector database using LanceDB (embedded, zero-dependency server)."""
 
-    def __init__(self, db_path: str, dim: int = 768):
+    def __init__(self, db_path: str, dim: int = 768,
+                 index_type: str = "ivf_hnsw_sq",
+                 index_auto_threshold: int = 5000,
+                 index_num_partitions: int = 0,
+                 index_num_sub_vectors: int = 96,
+                 index_ef_construction: int = 300,
+                 index_m: int = 20,
+                 index_metric: str = "cosine"):
         self._db_path = Path(db_path)
         self._db_path.mkdir(parents=True, exist_ok=True)
         self._dim = dim
+
+        # ── 索引配置 ──
+        self._index_type = index_type
+        self._index_auto_threshold = index_auto_threshold
+        self._index_num_partitions = index_num_partitions
+        self._index_num_sub_vectors = index_num_sub_vectors
+        self._index_ef_construction = index_ef_construction
+        self._index_m = index_m
+        self._index_metric = index_metric
 
         self._db = lancedb.connect(str(self._db_path))
 
@@ -305,15 +321,66 @@ class VectorStore(BaseVectorStore):
             pass
 
     def optimize(self) -> None:
-        """Build IVF-PQ index for faster search (for large datasets)."""
+        """Build vector index for faster search.
+
+        Index type and parameters are read from config (db.index section).
+        Skipped if record count is below auto_index_threshold or type is "flat".
+        """
+        count = self.count("files")
+
+        if self._index_type == "flat":
+            print(f"[naskb] Index type is 'flat', using brute-force search.")
+            return
+
+        if count < self._index_auto_threshold:
+            print(f"[naskb] {count} records < threshold {self._index_auto_threshold}, "
+                  f"skipping index build (brute-force is faster).")
+            return
+
+        # 自动计算分区数
+        num_partitions = self._index_num_partitions
+        if num_partitions <= 0:
+            num_partitions = max(256, int(count ** 0.5))
+
         try:
-            count = self.count("files")
-            if count > 10000:
+            index_type_upper = self._index_type.upper()
+
+            if index_type_upper == "IVF_PQ":
                 self._files_table.create_index(
                     vector_column_name="vector",
                     index_type="IVF_PQ",
-                    num_partitions=max(256, int(count ** 0.5)),
+                    num_partitions=num_partitions,
+                    num_sub_vectors=self._index_num_sub_vectors,
+                    metric=self._index_metric,
                 )
-                print(f"[naskb] Built IVF-PQ index for {count} vectors.")
+            elif index_type_upper == "IVF_HNSW_SQ":
+                self._files_table.create_index(
+                    vector_column_name="vector",
+                    index_type="IVF_HNSW_SQ",
+                    num_partitions=num_partitions,
+                    metric=self._index_metric,
+                )
+            else:
+                print(f"[naskb] Unknown index type '{self._index_type}', "
+                      f"falling back to IVF_HNSW_SQ.")
+                self._files_table.create_index(
+                    vector_column_name="vector",
+                    index_type="IVF_HNSW_SQ",
+                    num_partitions=num_partitions,
+                    metric=self._index_metric,
+                )
+
+            print(f"[naskb] Built {self._index_type} index for {count} vectors "
+                  f"(partitions={num_partitions}, metric={self._index_metric}).")
         except Exception as e:
-            print(f"[naskb] Index optimization skipped: {e}")
+            print(f"[naskb] Index build failed: {e}")
+
+    def get_index_info(self) -> dict:
+        """Return current index configuration and status."""
+        return {
+            "type": self._index_type,
+            "metric": self._index_metric,
+            "auto_threshold": self._index_auto_threshold,
+            "num_partitions": self._index_num_partitions,
+            "record_count": self.count("files"),
+        }

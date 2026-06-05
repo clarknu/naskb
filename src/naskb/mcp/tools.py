@@ -33,7 +33,7 @@ def _get_work_path() -> str:
 def _init_components(work_path: str):
     """初始化所有核心组件。"""
     from ..common.config import Config
-    from ..common.embedder import Embedder
+    from ..common.embedder import Embedder, MicroBatchEncoder
     from ..common.model_manager import ModelManager
     from ..common.sources import SourceManager
     from ..common.state import StateManager
@@ -51,16 +51,36 @@ def _init_components(work_path: str):
         intra_op_threads=config.intra_op_threads,
         inter_op_threads=config.inter_op_threads,
     )
-    vector_store = VectorStore(config.db_path, config.model_dim)
+    vector_store = VectorStore(
+        config.db_path, config.model_dim,
+        index_type=config.index_type,
+        index_auto_threshold=config.index_auto_threshold,
+        index_num_partitions=config.index_num_partitions,
+        index_num_sub_vectors=config.index_num_sub_vectors,
+        index_ef_construction=config.index_ef_construction,
+        index_m=config.index_m,
+        index_metric=config.index_metric,
+    )
     state = StateManager(config.state_path)
     source_manager = SourceManager(config)
-    async_indexer = AsyncIndexer(config, embedder, vector_store, state, source_manager)
+
+    # 微批处理编码器（用于实时查询场景）
+    micro_encoder = MicroBatchEncoder(
+        embedder,
+        max_batch=config.mb_max_batch,
+        max_wait_ms=config.mb_max_wait_ms,
+        cache_size=config.mb_cache_size,
+    )
+
+    async_indexer = AsyncIndexer(config, embedder, vector_store, state,
+                                 source_manager, micro_encoder=micro_encoder)
     job_queue = JobQueue()
     watcher = FileWatcher(job_queue)
 
     return {
         "config": config,
         "embedder": embedder,
+        "micro_encoder": micro_encoder,
         "vector_store": vector_store,
         "state": state,
         "source_manager": source_manager,
@@ -275,6 +295,10 @@ def kb_status(source_id: str | None = None) -> str:
     stats = state.get_stats()
     job_stats = job_queue.get_stats()
 
+    index_info = vector_store.get_index_info()
+    micro_stats = comp.get("micro_encoder", None)
+    mb_stats = micro_stats.get_stats() if micro_stats else {}
+
     lines = [
         "# NASKB MCP 状态报告",
         "",
@@ -283,6 +307,18 @@ def kb_status(source_id: str | None = None) -> str:
         f"- 推理后端: {config.execution_provider}",
         f"- 工作路径: `{config.work_path}`",
         f"- 向量库路径: `{config.db_path}`",
+        "",
+        "## 索引配置",
+        f"- 索引类型: {index_info['type']}",
+        f"- 距离度量: {index_info['metric']}",
+        f"- 自动索引阈值: {index_info['auto_threshold']:,}",
+        f"- 当前记录数: {index_info['record_count']:,}",
+        "",
+        "## 微批处理",
+        f"- 最大批量: {config.mb_max_batch}",
+        f"- 最大等待: {config.mb_max_wait_ms}ms",
+        f"- 缓存容量: {config.mb_cache_size:,}",
+        f"- 缓存命中率: {mb_stats.get('cache_hit_rate', 0)*100:.1f}%",
         "",
         "## 索引统计",
         f"- 已索引文件: {vector_store.count('files')}",

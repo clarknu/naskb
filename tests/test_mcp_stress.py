@@ -290,6 +290,13 @@ enabled = true
     @classmethod
     def teardown_class(cls):
         """清理临时环境。"""
+        # 关闭微批编码器
+        try:
+            me = cls.components.get("micro_encoder")
+            if me:
+                me.shutdown()
+        except Exception:
+            pass
         for key in ("state", "vector_store"):
             try:
                 obj = cls.components.get(key)

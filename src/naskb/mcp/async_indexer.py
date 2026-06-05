@@ -38,13 +38,15 @@ class AsyncIndexer:
     def __init__(self, config: Config, embedder: Embedder,
                  vector_store: VectorStore, state: StateManager,
                  source_manager: SourceManager,
-                 max_io_workers: int = 8):
+                 max_io_workers: int = 8,
+                 micro_encoder=None):
         self._config = config
         self._embedder = embedder
         self._vector_store = vector_store
         self._state = state
         self._source_manager = source_manager
         self._io_executor = ThreadPoolExecutor(max_workers=max_io_workers)
+        self._micro_encoder = micro_encoder
 
     # ── 全量索引 ──
 
@@ -436,8 +438,19 @@ class AsyncIndexer:
     async def search(self, query: str, top_k: int = 10,
                      threshold: float = 0.5,
                      source_id: Optional[str] = None) -> list:
-        """异步语义搜索。"""
-        query_vec = await asyncio.to_thread(self._embedder.encode, query)
+        """异步语义搜索。
+
+        使用 MicroBatchEncoder（如果可用）进行向量化，
+        支持微批处理和缓存，降低单条查询延迟。
+        """
+        if self._micro_encoder is not None:
+            query_vec = await asyncio.to_thread(
+                self._micro_encoder.encode, query
+            )
+        else:
+            query_vec = await asyncio.to_thread(
+                self._embedder.encode, query
+            )
         return self._vector_store.search(
             query_vec, top_k=top_k, threshold=threshold,
             source_id=source_id,

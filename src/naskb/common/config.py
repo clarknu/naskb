@@ -40,9 +40,25 @@ class Config:
         # ONNX model path (under work_path/models/)
         self.onnx_path: str = str(Path(self.work_path) / "models" / self.model_name)
 
+        # ── [model.microbatch] ──
+        mb_cfg = model_cfg.get("microbatch", {})
+        self.mb_max_batch: int = int(mb_cfg.get("max_batch", 32))
+        self.mb_max_wait_ms: float = float(mb_cfg.get("max_wait_ms", 50))
+        self.mb_cache_size: int = int(mb_cfg.get("cache_size", 10000))
+
         # ── [db] ──
         db_cfg = data.get("db", {})
         self.db_path: str = self._resolve_path(db_cfg.get("path", "db/"))
+
+        # ── [db.index] ──
+        idx_cfg = db_cfg.get("index", {})
+        self.index_type: str = idx_cfg.get("type", "ivf_hnsw_sq")
+        self.index_auto_threshold: int = int(idx_cfg.get("auto_index_threshold", 5000))
+        self.index_num_partitions: int = int(idx_cfg.get("num_partitions", 0))
+        self.index_num_sub_vectors: int = int(idx_cfg.get("num_sub_vectors", 96))
+        self.index_ef_construction: int = int(idx_cfg.get("ef_construction", 300))
+        self.index_m: int = int(idx_cfg.get("m", 20))
+        self.index_metric: str = idx_cfg.get("metric", "cosine")
 
         # ── [state] ──
         state_cfg = data.get("state", {})
@@ -101,9 +117,27 @@ class Config:
         lines.append(f'name = "{self.model_name}"')
         lines.append(f'execution_provider = "{self.execution_provider}"')
         lines.append(f"batch_size = {self.batch_size}")
+        if self.intra_op_threads > 0:
+            lines.append(f"intra_op_threads = {self.intra_op_threads}")
+        if self.inter_op_threads > 0:
+            lines.append(f"inter_op_threads = {self.inter_op_threads}")
+        lines.append("")
+        lines.append("[model.microbatch]")
+        lines.append(f"max_batch = {self.mb_max_batch}")
+        lines.append(f"max_wait_ms = {self.mb_max_wait_ms}")
+        lines.append(f"cache_size = {self.mb_cache_size}")
         lines.append("")
         lines.append("[db]")
         lines.append(f'path = "{db_rel}"')
+        lines.append("")
+        lines.append("[db.index]")
+        lines.append(f'type = "{self.index_type}"')
+        lines.append(f"auto_index_threshold = {self.index_auto_threshold}")
+        lines.append(f"num_partitions = {self.index_num_partitions}")
+        lines.append(f"num_sub_vectors = {self.index_num_sub_vectors}")
+        lines.append(f"ef_construction = {self.index_ef_construction}")
+        lines.append(f"m = {self.index_m}")
+        lines.append(f'metric = "{self.index_metric}"')
         lines.append("")
         lines.append("[state]")
         lines.append(f'path = "{state_rel}"')
@@ -159,8 +193,22 @@ class Config:
             "model_dim": self.model_dim,
             "execution_provider": self.execution_provider,
             "batch_size": self.batch_size,
+            "microbatch": {
+                "max_batch": self.mb_max_batch,
+                "max_wait_ms": self.mb_max_wait_ms,
+                "cache_size": self.mb_cache_size,
+            },
             "onnx_path": self.onnx_path,
             "db_path": self.db_path,
+            "db_index": {
+                "type": self.index_type,
+                "auto_index_threshold": self.index_auto_threshold,
+                "num_partitions": self.index_num_partitions,
+                "num_sub_vectors": self.index_num_sub_vectors,
+                "ef_construction": self.index_ef_construction,
+                "m": self.index_m,
+                "metric": self.index_metric,
+            },
             "state_path": self.state_path,
             "sources": self.sources,
             "exclusions": self.exclusions,

@@ -110,6 +110,13 @@ enabled = true
     def teardown_class(cls):
         """清理临时环境。"""
         import gc, time
+        # 关闭微批编码器
+        try:
+            me = cls.components.get("micro_encoder")
+            if me:
+                me.shutdown()
+        except Exception:
+            pass
         # 关闭所有数据库连接
         for key in ("state", "vector_store"):
             try:
