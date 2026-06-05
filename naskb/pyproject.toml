@@ -1,0 +1,42 @@
+[project]
+name = "naskb"
+version = "0.3.0"
+description = "NAS Knowledge Base — 本地向量知识库系统 (Skill/CLI + MCP/Service 双形态)"
+requires-python = ">=3.10"
+dependencies = [
+    "lancedb>=0.17",
+    "click>=8.0",
+    "fsspec>=2024",
+    "numpy>=1.24",
+    "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+# DirectML GPU 加速 (Windows)
+directml = ["onnxruntime-directml>=1.18"]
+# CPU 回退
+cpu = ["onnxruntime>=1.18"]
+# 模型导出工具 (仅开发)
+dev = ["optimum[onnxruntime]>=1.20", "transformers>=4.40", "torch>=2.0"]
+# WebDAV 支持
+webdav = ["webdav4>=0.10"]
+# MCP 服务器模式 (持续服务 + 文件监控)
+mcp = [
+    "mcp>=1.0",
+    "watchdog>=3.0",
+]
+# 测试
+test = ["pytest>=8.0", "pytest-asyncio>=0.21"]
+
+[project.scripts]
+# Skill 形态入口
+naskb = "naskb.skill.cli:main"
+# MCP 形态入口
+naskb-mcp = "naskb.mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
