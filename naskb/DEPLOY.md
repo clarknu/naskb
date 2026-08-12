@@ -1,155 +1,93 @@
-# NASKB 部署指南
+# NASKB 部署指南（v2）
 
-## 项目文件说明
+NASKB v2 是**独立命令行工具**：`naskb` 命令自己调用 AI（DeepSeek/MiMo/MinerU），
+不需要任何外部 AI 编排。所有识别原数据写入被分析目录的隐藏仓库 `.naskb/`。
+
+## 项目结构
 
 ```
-naskb/                    # 项目根（可分发）
-├── SKILL.md              # Copilot Skill 声明（Skill 形态使用）
-├── MCP.md                # MCP 接口参考手册（MCP 形态使用）
-├── mcp.json              # MCP 配置模板（复制到 .vscode/ 使用）
-├── pyproject.toml        # Python 包声明 + 依赖 + 入口点
-└── src/                  # 源代码
-    └── naskb/
-        ├── common/       # 共享核心（Skill + MCP 均依赖）
-        ├── skill/        # Skill/CLI 实现
-        └── mcp/          # MCP 服务实现
-
-.vscode/
-└── mcp.json              # VS Code 当前激活的 MCP 配置
+naskb/                    # Skill/MCP 声明（Reasonix/Copilot 形态使用）
+├── SKILL.md              # Copilot Skill 声明
+├── MCP.md                # MCP 接口参考
+├── mcp.json              # MCP 配置模板
+├── DEPLOY.md             # 本文档
+└── ...
+pyproject.toml            # Python 包声明 + 依赖 + naskb 命令入口（仓库根）
+src/naskb/                # 源代码
+├── common/               # 核心：fs(WebDAV/本地) / desc_store(.naskb 仓库) /
+│                         #      analyzer(文档/图片/音频/视频/MinerU) / llm / retrieval
+├── skill/cli.py          # CLI 入口（naskb 命令）
+└── mcp/                  # MCP 服务模式（可选）
+config.example.toml       # 配置模板（复制为工作区 config.toml）
 ```
 
----
-
-## 部署 Skill (CLI) 形态
+## 独立部署（CLI 形态）
 
 ### 1. 安装
 
 ```bash
-cd naskb/
-pip install -e .                # 开发模式安装
-# 或
-pip install ".[directml]"       # 生产安装 + GPU 加速
+pip install .                    # 从仓库根目录；生成 naskb 命令
+pip install ".[analyze]"        # + 文档分析依赖（PDF/Word/Excel 提取，推荐）
+pip install ".[llm]"            # + LLM 调用（httpx）
+pip install ".[media]"          # + 图片/音频/视频分析（需系统 ffmpeg）
 ```
 
-### 2. 初始化
+### 2. 配置（API Key）
 
 ```bash
-naskb init --work-path D:/NASKB_data
-naskb source add "我的文档" "D:/Documents"
-naskb index --full
+mkdir NASKB_data
+cp config.example.toml NASKB_data/config.toml
+# 编辑 NASKB_data/config.toml 填入 DeepSeek / 小米 MiMo 的 api_key
+# （或设环境变量 DEEPSEEK_API_KEY / MIMO_API_KEY）
 ```
 
-### 3. 分发
-
-打包为 Copilot Skill 时，只需分发以下文件：
-```
-naskb/
-├── SKILL.md
-├── pyproject.toml
-└── src/naskb/
-    ├── common/
-    └── skill/
-```
-
-mcp/ 目录在 Skill 部署时不需要。
-
----
-
-## 部署 MCP (Service) 形态
-
-### 1. 安装（含 MCP 依赖）
+### 3. 使用（工具调 AI，全自动）
 
 ```bash
-cd naskb/
-pip install -e ".[mcp, directml]"
+naskb desc analyze "D:/NAS/合同.pdf" --llm     # 文档：提取全文 → DeepSeek 摘要/标签/分类
+                                                #   扫描件自动走 MinerU OCR
+naskb desc analyze "D:/NAS/照片.jpg" --llm      # 图片：EXIF + MiMo 视觉描述
+naskb desc analyze "D:/NAS/录音.mp3" --llm      # 音频：ffmpeg 分段 + MiMo 转写
+naskb desc analyze "D:/NAS/录像.mp4" --llm      # 视频：ffprobe + 分级（影视仅元数据/教学抽帧/个人全量）
+naskb desc analyze-folder "D:/NAS/项目" -r      # 目录级描述（每个子目录生成 folder.json）
+naskb desc split "D:/NAS"                       # 旧格式 index.json → 每文件独立原数据文件
+naskb desc search "房租多少" --root "D:/NAS"     # BM25 模糊搜索（基于 .naskb 完整原数据）
+naskb desc ask "月租金是多少？和谁签的？" --root "D:/NAS"   # RAG 问答（DeepSeek 带来源）
 ```
 
-### 2. 配置 MCP 服务器
+### 4. 产物（全部在 NAS 本地，工具失效不丢失）
 
-复制 `naskb/mcp.json` 到 VS Code 配置位置：
+```
+被分析目录/
+├── 合同.pdf
+└── .naskb/                    ← 隐藏描述仓库（与源文件同目录）
+    ├── meta.json              ← 仓库元数据
+    ├── index.json             ← 轻量索引（摘要/分类/标签/hash，保持小体积）
+    ├── folder.json            ← 目录级描述
+    ├── files/                 ← ★ 每源文件一个独立原数据文件（全文/转写/描述/EXIF）
+    │   └── 合同.pdf.json
+    └── artifacts/             ← MinerU 解析产物（md/html/middle.json/images）
+```
+
+### 5. WebDAV（NAS 远程模式）
 
 ```bash
-# VS Code: 复制到 .vscode/mcp.json
-cp naskb/mcp.json .vscode/mcp.json
-
-# Claude Desktop: 编辑 ~/Library/Application Support/Claude/claude_desktop_config.json
+naskb -w NASKB_data desc scan webdav://主机:5006/HomeBuilding  # 本地模式为默认
+# 或编程方式：FileSystemAdapter.create("webdav", url, auth)
 ```
 
-### 3. 启动
+## 依赖清单
 
-```bash
-# stdio 模式（IDE 集成）
-python -m naskb.mcp.server
+| 依赖 | 用途 | 安装 |
+|------|------|------|
+| click / httpx | CLI / LLM 调用 | 基础 |
+| pymupdf / python-docx / openpyxl / chardet | PDF/Word/Excel/编码 | `[analyze]` |
+| webdav4 | WebDAV 访问 | `[webdav]` |
+| MinerU（独立 venv，Python<3.14） | 扫描件 OCR / 复杂版面 | `[mineru]` |
+| ffmpeg（系统） | 音频/视频处理 | 系统包 |
 
-# HTTP/SSE 模式（外部网络调用）
-python -m naskb.mcp.server --transport sse --port 8765 --host 0.0.0.0
-```
+## 常见问题
 
-### 4. 分发
-
-打包 MCP 服务器时：
-```
-naskb/
-├── MCP.md
-├── mcp.json
-├── pyproject.toml
-└── src/naskb/
-    ├── common/
-    └── mcp/
-```
-
-skill/ 目录在 MCP 部署时不需要。
-
----
-
-## 配置优化
-
-### config.toml 推荐配置
-
-```toml
-[model]
-name = "bge-large-zh-v1.5"   # MCP 推荐 large（精度优先）
-execution_provider = "directml"
-batch_size = 32
-intra_op_threads = 4           # 单次推理内部并行线程数
-inter_op_threads = 1           # 计算图节点并行（通常设 1）
-hf_endpoint = ""               # 留空使用官方源，或填镜像如 https://hf-mirror.com
-
-[db]
-path = "db/"
-
-[state]
-path = "state.db"
-```
-
-### 模型下载加速
-
-如果 HuggingFace 官方源下载慢，设置镜像：
-
-```toml
-[model]
-hf_endpoint = "https://hf-mirror.com"
-```
-
-或设置环境变量：
-```bash
-export HF_ENDPOINT=https://hf-mirror.com
-```
-
-### 推理并发调优
-
-| 参数 | 作用 | 建议值 |
-|------|------|--------|
-| `intra_op_threads` | 单个推理操作的内部并行 | CPU 核心数 / 2 |
-| `inter_op_threads` | 计算图节点间并行 | 1（通常不需要） |
-| `batch_size` | 批量嵌入大小 | 16-64 |
-
----
-
-## MCP 接口说明
-
-使用者查看 **MCP.md** 即可了解全部接口：
-- 16 个 Tools 的完整签名和参数
-- 2 个 Resources（config / stats）
-- 2 个 Prompts（search / organize）
-- 典型工作流和错误处理
+- **`naskb init` 卡住**：init 是 v1 向量库模式（下载 embedding 模型）。v2 的 desc 体系不需要 init——直接 `naskb desc analyze` 即可，仓库自动创建。
+- **扫描件 PDF 识别**：需安装 MinerU（Python<3.14 独立环境），并在 config.toml 的 `[analyzer.mineru] bin` 填可执行文件路径。
+- **中文文件名乱码**：Windows 下临时文件已用 ASCII 安全命名，无影响。

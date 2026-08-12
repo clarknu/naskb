@@ -22,3 +22,12 @@ NASKB_data/
 
 # VS Code local settings
 .vscode/
+
+# Reasonix session artifacts
+.reasonix/
+
+# Reasonix session artifacts
+.reasonix/
+
+# MinerU 独立环境
+.venv-mineru/

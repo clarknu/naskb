@@ -1,0 +1,46 @@
+# NASKB v2 配置模板 —— 复制为 <工作区>/config.toml 后填写 API Key 即可独立使用
+#
+# 使用方式：
+#   1. pip install .                     # 安装（生成 naskb 命令）
+#   2. mkdir NASKB_data && cp 本文件 NASKB_data/config.toml
+#   3. 填写下方 api_key（或设环境变量 DEEPSEEK_API_KEY / MIMO_API_KEY）
+#   4. naskb desc analyze <文件> --llm   # 工具自己调用 AI，无需任何外部编排
+
+[llm]
+# ── v2 模型分工 ──
+# 文本（分类/摘要）→ DeepSeek；图片/音频多模态 → 小米 MiMo V2.5
+# key 支持从 config.toml 或环境变量读取（DEEPSEEK_API_KEY / MIMO_API_KEY）
+
+[llm.text]
+provider = "deepseek"
+model = "deepseek-chat"
+base_url = "https://api.deepseek.com"
+api_key = ""            # ← 填 DeepSeek key（https://platform.deepseek.com）
+
+[llm.vision]
+provider = "mimo"
+model = "mimo-v2.5"
+base_url = "https://api.xiaomimimo.com/v1"
+api_key = ""            # ← 填小米 MiMo key（https://platform.xiaomimimo.com）
+
+[llm.audio]
+provider = "mimo"
+model = "mimo-v2.5"
+base_url = "https://api.xiaomimimo.com/v1"
+api_key = ""            # ← 填小米 MiMo key（与 vision 可同一 key）
+split_minutes = 25      # 长音频每 25 分钟分段转写（MiMo 单次上限）
+diarization = false     # 说话人分离（部分模型不支持）
+
+[analyzer.mineru]
+enabled = true
+extra_formats = ["html"]
+return_middle_json = true
+fast_text_ratio = 0.3
+min_text_chars = 500    # 快速路径文本量下限：低于此视为疑似扫描件 → MinerU OCR
+model_source = "modelscope"   # 国内模型源（huggingface 超时用）
+bin = ""                # MinerU 可执行文件路径；留空则从 PATH 找。
+                        # MinerU 要求 Python<3.14：pip install mineru 到独立 venv 后填其 Scripts/mineru.exe
+
+[analyzer]
+max_chars = 100000      # 单文件提取文本上限（字符）
+max_file_mb = 100       # 超过此大小的文件跳过下载分析

@@ -1,7 +1,8 @@
 # NASKB 实现计划
 
-> 版本: v0.2  
-> 创建: 2026-06-04  
+> 版本: v0.3
+> 创建: 2026-06-04
+> 更新: 2026-08-10（v2 分析引擎变更，见 [analysis-engine-v2.md](./analysis-engine-v2.md)）
 > 依赖: [requirement.md](./requirement.md)
 
 ---
@@ -17,9 +18,12 @@ Phase 2: 核心引擎        (3-5 天)
 Phase 3: 文件系统层      (2-3 天)
 Phase 4: CLI & Skill     (2-3 天)
 Phase 5: 测试 & 文档     (2-3 天)
+Phase 6: v2 分析引擎     (5-8 天)   ← 2026-08-10 新增：目录隐藏仓库 + MinerU + 多模态
 ────────────────────────────────
-合计预估: 11-18 天
+合计预估: 16-26 天
 ```
+
+> **v2 变更说明（2026-08-10）**：Phase 1-5 已完成（v0.3 代码）。新方案以目录隐藏仓库 `.naskb/` 取代 sidecar 同行机制，文档解析统一走 MinerU（双路径），图片/音频走 MiMo 多模态、文本走 DeepSeek，视频分级处理。完整设计见 [analysis-engine-v2.md](./analysis-engine-v2.md)，Phase 6 为 v2 改造与新增的实施计划。
 
 ---
 
@@ -251,6 +255,68 @@ Phase 5: 测试 & 文档     (2-3 天)
 
 ---
 
+## Phase 6: v2 分析引擎（目录隐藏仓库 + MinerU + 多模态）🏗
+
+> 依赖: [analysis-engine-v2.md](./analysis-engine-v2.md)
+> 目标: 完成 v2 变更——`.naskb/` 目录隐藏仓库取代 sidecar 同行、文档解析统一 MinerU、图片/音频走 MiMo、视频分级。
+
+### 6.1 描述存储改造（核心）
+
+| # | 任务 | 详细 |
+|---|------|------|
+| 6.1.1 | `NaskbStore` | 新建 `naskb/common/desc_store.py`：读写 `.naskb/index.json` + `folder.json` + `meta.json`；原子写（tmp+rename）+ 文件锁 |
+| 6.1.2 | index.json schema | `files[]` 条目（path/file_hash/analysis/images/transcription/processing_policy/provenance），兼容旧 SidecarData 字段语义 |
+| 6.1.3 | folder.json | 目录级描述：structure + 文件类型分布 + 摘要 |
+| 6.1.4 | 校验 | `check()`：读 index.json 比对 hash → valid/stale/missing |
+| 6.1.5 | 跟随移动 | 目录内改 path；跨目录旧删新加 + 操作日志 |
+| 6.1.6 | 孤儿/重建 | 孤儿条目清理；遍历全部 `.naskb/` 重建本地索引 |
+| 6.1.7 | 迁移命令 | `naskb desc migrate`：旧 `.sidecar.json` → index.json，旧 `.kbdes` 只读兼容 |
+
+### 6.2 文档解析（MinerU）
+
+| # | 任务 | 详细 |
+|---|------|------|
+| 6.2.1 | MinerU 集成 | `analyzer/mineru.py`：调 mineru API，产物落 `.naskb/artifacts/`（html/md/middle.json/images） |
+| 6.2.2 | 双路径判定 | PyMuPDF 快速提取 → 文本充足直接用；不足 → MinerU（扫描件/复杂版面） |
+| 6.2.3 | 全格式 | DOCX/PPTX/XLSX 统一走 MinerU（保留快速路径） |
+| 6.2.4 | 图区送检 | MinerU 抽图 → MiMo 逐图理解 → index.json files[].images |
+
+### 6.3 多模态分析器
+
+| # | 任务 | 详细 |
+|---|------|------|
+| 6.3.1 | LLM 多模态扩展 | `llm.py` OpenAICompatClient 支持 image_url / input_audio 消息；DeepSeek/MiMo provider 别名 |
+| 6.3.2 | `analyzer/image.py` | EXIF + MiMo 视觉描述；hash 去重 |
+| 6.3.3 | `analyzer/audio.py` | ffmpeg 16kHz wav + 分段 + MiMo 串行转写 + 拼接 + diarization 开关 |
+| 6.3.4 | `analyzer/video.py` | ffprobe 元数据 + 分级判定 + 音轨分离 + 关键帧抽取 |
+
+### 6.4 视频分级
+
+| # | 任务 | 详细 |
+|---|------|------|
+| 6.4.1 | 规则引擎 | category_paths（路径）+ category_keywords（关键词）+ 时长兜底 |
+| 6.4.2 | 处理策略 | processing_policy: metadata_only / keyframes_only / full；增量扫描跳过已标记 |
+
+### 6.5 配置与 CLI
+
+| # | 任务 | 详细 |
+|---|------|------|
+| 6.5.1 | config | `[llm.text/vision/audio]`、`[analyzer.video]`、`[analyzer.mineru]` 段 |
+| 6.5.2 | CLI | `sidecar` → `desc` 命令组（check/scan/analyze/move/orphans/migrate） |
+| 6.5.3 | scanner | 默认排除 `.naskb/` |
+
+### 6.6 验收标准
+
+- [ ] 对本地目录执行 `naskb desc analyze`：生成 `.naskb/index.json`，图片/文档/音频/视频各类型描述正确
+- [ ] 修改文件后 `naskb desc check` 报 stale；不变报 valid
+- [ ] 跨目录移动后两个目录 index.json 均正确，provenance 记录完整
+- [ ] 复杂 PDF（扫描件）经 MinerU 产出 HTML/images，抽取图片经 MiMo 生成结构描述
+- [ ] 音频经 MiMo 分段转写拼接成功；视频按分级策略执行（影视仅元数据、教学抽帧、个人录像全量）
+- [ ] `naskb desc migrate` 将旧 `.sidecar.json` 数据完整迁入 `.naskb/`
+- [ ] 全量测试通过（含 v2 新增用例）
+
+---
+
 ## 技术决策速查
 
 | 决策点 | 选择 | 备选 |
@@ -265,6 +331,14 @@ Phase 5: 测试 & 文档     (2-3 天)
 | 状态存储 | **SQLite**（路径可配） | JSON |
 | 配置格式 | **TOML** (`config.toml`) | YAML |
 | 代码分发 | Skill 只含源码 + pyproject.toml | 打包 .whl |
+| 描述存储 | **`.naskb/` 目录隐藏仓库**（index.json + folder.json，v2 起取代 sidecar 同行） | sidecar 同行（已废弃） |
+| 文档解析 | **MinerU 全格式**（PDF/DOCX/PPTX/XLSX → md/html/json，双路径：PyMuPDF 快速 + MinerU 复杂） | 仅 PyMuPDF/python-docx/openpyxl |
+| 文档产物 | **HTML 为主**（人看 + 大模型看）+ md + middle.json | 仅 markdown |
+| 文本 LLM | **DeepSeek**（deepseek-chat，便宜） | GPT-4o-mini |
+| 多模态 LLM | **小米 MiMo V2.5**（mimo-v2.5，图片/音频，OpenAI 兼容） | Claude / Gemini |
+| 音频转写 | **MiMo input_audio**（ffmpeg 分段 25min → 串行转写 → 拼接） | 本地 whisper（已弃，效果差） |
+| 视频策略 | **分级**：关键词+路径规则 → metadata_only / keyframes_only / full | 全部全量解析 |
+| MinerU 加速 | **CPU**（Windows+AMD 无 DirectML；AMD 加速仅 Linux ROCm） | Linux ROCm 小主机 |
 
 ---
 
