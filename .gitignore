@@ -28,3 +28,6 @@ NASKB_data/
 
 # MinerU 独立环境
 .venv-mineru/
+
+# Playwright MCP
+.playwright-mcp/
