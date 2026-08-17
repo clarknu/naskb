@@ -305,6 +305,7 @@ class Config:
             lines.append(f"webdav_https = {str(bool(entry.get('webdav_https', True))).lower()}")
             lines.append(f"verify_ssl = {str(bool(entry.get('verify_ssl', False))).lower()}")
             lines.append("")
+            lines.append("")
 
 
         # ── [analyzer] ──

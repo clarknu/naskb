@@ -16,6 +16,7 @@ class FileStat:
     mtime: float = 0.0
     is_dir: bool = False
     ext: str = ""
+    ctime: float = 0.0    # 创建时间（epoch 秒）；取不到为 0.0 = 缺失（免检必要条件，ADR-20260816-4）
 
 
 class FileSystemAdapter(ABC):
@@ -47,6 +48,15 @@ class FileSystemAdapter(ABC):
 
     def read_chunks(self, path: str, chunk_size: int = 1 << 20):
         """Yield file content in chunks (for hashing large files)."""
+        raise NotImplementedError
+
+    def read_ranges(self, path: str, ranges: list[tuple[int, int]]) -> bytes:
+        """Read specific byte ranges [(start, length), ...] and return them
+        concatenated in order (采样 hash 用，ADR-20260816-4)。
+
+        读取总量必须等于 sum(length)；不足说明文件正在变化/已缩短，
+        实现应抛异常（调用方按"内容已变"处理，不静默降级）。
+        """
         raise NotImplementedError
 
     def resolve_path(self, path: str) -> str:

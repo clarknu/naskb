@@ -24,6 +24,8 @@ mineru = ["mineru>=2.0"]
 media = ["pillow>=10.0"]
 # 语义向量检索（bge-small-zh ONNX + numpy 余弦；BM25 为内置降级）
 vectors = ["onnxruntime>=1.18", "tokenizers>=0.15"]
+# PostgreSQL + pgvector 多 NAS 向量库（REQ-R4；可选增强，未装则 PG 功能不可用）
+pg = ["psycopg[binary]>=3.1", "pgvector>=0.3"]
 # 测试
 test = ["pytest>=8.0", "pytest-asyncio>=0.21"]
 

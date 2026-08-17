@@ -63,6 +63,7 @@ class LocalAdapter(FileSystemAdapter):
                 mtime=st.st_mtime,
                 is_dir=False,
                 ext=entry.suffix.lower() or "",
+                ctime=_ctime_of(st),
             ))
 
         return results
@@ -85,6 +86,7 @@ class LocalAdapter(FileSystemAdapter):
                 mtime=st.st_mtime,
                 is_dir=p.is_dir(),
                 ext=p.suffix.lower() or "",
+                ctime=_ctime_of(st),
             )
         except OSError:
             return None
@@ -108,6 +110,19 @@ class LocalAdapter(FileSystemAdapter):
                 if not chunk:
                     break
                 yield chunk
+
+    def read_ranges(self, path: str, ranges: list[tuple[int, int]]) -> bytes:
+        """按偏移读取多段并拼接（采样 hash 用）。"""
+        out = bytearray()
+        with open(self._resolve(path), "rb") as f:
+            for start, length in ranges:
+                f.seek(start)
+                data = f.read(length)
+                if len(data) != length:
+                    raise OSError(
+                        f"short read at {start}+{length} (got {len(data)})")
+                out.extend(data)
+        return bytes(out)
 
     def write_bytes(self, path: str, data: bytes) -> None:
         """Write raw bytes, creating parent dirs if needed."""
@@ -140,3 +155,16 @@ class LocalAdapter(FileSystemAdapter):
             return os.access(str(p), os.R_OK)
         except OSError:
             return False
+
+
+def _ctime_of(st) -> float:
+    """创建时间：优先 st_birthtime（Python 3.12+ 跨平台），退回 st_ctime。
+
+    注意：POSIX 上 st_ctime 是 inode 变更时间（非创建时间）——LocalAdapter
+    主要服务 Windows 本机（NTFS 上 st_ctime 即创建时间）；Linux 本地场景
+    由 st_birthtime 覆盖，两者都不可用时返回 0.0（=缺失，走 hash 复核）。
+    """
+    birth = getattr(st, "st_birthtime", None)
+    if birth:
+        return float(birth)
+    return float(getattr(st, "st_ctime", 0.0))

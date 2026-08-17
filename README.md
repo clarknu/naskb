@@ -1,5 +1,7 @@
 # NASKB — 智能 NAS 知识库（v2）
 
+> 需求基线：`design/requirement.md`（功能/架构设计的来源与出发点，持续更新）
+
 对本地目录或 NAS（WebDAV）建立 `.naskb/` 描述仓库：AI 分类/摘要/标签、图片音频识别、
 PDF/DOCX 扫描件 OCR、目录整理规划与检索。以 **Reasonix Skill** 形态交付：
 AI 通过 `naskb/SKILL.md` 了解能力，调用 `naskb desc` 命令完成"扫描-分析-检索-整理-更新"闭环。
@@ -26,7 +28,10 @@ tests/                      ← 测试（164 passed）
 | `analyze <file>` | 单文件分析（文档 DeepSeek 摘要、图片/音频 MiMo、docx 图文流） |
 | `analyze-tree <root> --llm` | 批量分析（增量幂等：hash 对比，一致跳过/变更重分析/删除清孤儿） |
 | `analyze-folder <root> --recursive` | 目录级描述 folder.json |
-| `search <query>` / `ask <question>` | 语义向量检索（bge-small-zh 本地嵌入）/ RAG 问答（DeepSeek 生成，带来源）；无向量索引自动降级 BM25 |
+| `search <query>` / `ask <question>` | 语义向量检索（bge-small-zh 本地嵌入）/ RAG 问答（DeepSeek 生成，带来源）；无向量索引自动降级 BM25；`--pg` 走 PG 多 NAS 向量库（失败自动回退） |
+| `serve [--host --port --root --open --pg]` | 内置问答服务：Web UI + `/api/search` `/api/ask`（向量/BM25 自动选择，`/api/reload` 热刷新）；`--pg` 启用 PG 多 NAS 下拉 |
+| `sync-vectors <root> [--nas --rebuild]` | 同步 .naskb → PG 多 NAS 向量库（五要素身份/独立 schema/增改删移增量） |
+| `sync-status <root> [--nas]` / `pg-status` | 只读一致性报告 / PG 已注册 NAS 向量库清单 |
 | `index-vectors <root>` | 构建语义向量索引（首次自动下载 ~24MB 模型到工作区） |
 | `plan-reorganize <root> [--apply]` | AI 生成整理方案并执行（整仓跟随/级联更新/空目录清理） |
 | `migrate` | v1 `.sidecar.json` → v2 `.naskb` 迁移 |

@@ -68,9 +68,10 @@ class WebDAVAdapter(FileSystemAdapter):
         if self._username and self._password:
             self._client = _WebDAVClient(
                 self._base_url, auth=(self._username, self._password),
-                verify=self._verify)
+                verify=self._verify, timeout=60, retry=False)
         else:
-            self._client = _WebDAVClient(self._base_url, verify=self._verify)
+            self._client = _WebDAVClient(self._base_url, verify=self._verify,
+                                         timeout=60, retry=False)
 
     @property
     def root(self) -> str:
@@ -106,6 +107,7 @@ class WebDAVAdapter(FileSystemAdapter):
                     mtime=_to_timestamp(entry.get("modified")),
                     is_dir=False,
                     ext=Path(name).suffix.lower() or "",
+                    ctime=_to_timestamp(entry.get("created")),
                 ))
         except Exception as e:
             print(f"[naskb] WebDAV list error for {root}: {e}")
@@ -137,6 +139,33 @@ class WebDAVAdapter(FileSystemAdapter):
         finally:
             resp.close()
 
+    def read_ranges(self, path: str, ranges: list[tuple[int, int]]) -> bytes:
+        """按 HTTP Range 逐段读取并拼接（采样 hash 用，每段一个请求）。
+
+        服务器不支持 Range（返回 200 全量）时也能正确截取对应偏移；
+        读取不足说明文件已缩短/变化，抛异常由调用方按"内容已变"处理。
+        """
+        remote_path = self._to_remote_path(path)
+        out = bytearray()
+        for start, length in ranges:
+            end = start + length - 1
+            resp = self._client._request(  # type: ignore[union-attr]
+                "GET", remote_path,
+                headers={"Range": f"bytes={start}-{end}"})
+            try:
+                body = resp.read()
+            finally:
+                resp.close()
+            if resp.status_code in (200, 206):
+                data = body[start:] if resp.status_code == 200 else body
+                if len(data) != length:
+                    raise OSError(
+                        f"short range read at {start}+{length} (got {len(data)})")
+                out.extend(data)
+            else:
+                raise OSError(f"Range request failed: HTTP {resp.status_code}")
+        return bytes(out)
+
     def write_bytes(self, path: str, data: bytes) -> None:
         """Write raw bytes to the WebDAV server."""
         import io
@@ -166,8 +195,13 @@ class WebDAVAdapter(FileSystemAdapter):
             if not part:
                 continue
             acc = acc + "/" + part
-            if not self._client.exists(acc):  # type: ignore[union-attr]
-                self._client.mkdir(acc)  # type: ignore[union-attr]
+            if not self.exists(acc):
+                try:
+                    self._client.mkdir(acc)  # type: ignore[union-attr]
+                except Exception:
+                    # mkdir 幂等：并发/误判下目录已存在不算错误
+                    if not self.exists(acc):
+                        raise
 
     def delete(self, path: str) -> None:
         """Delete a file on the WebDAV server."""
@@ -196,12 +230,31 @@ class WebDAVAdapter(FileSystemAdapter):
                 mtime=_to_timestamp(info.get("modified")),
                 is_dir=info.get("type", "") == "directory",
                 ext=Path(fname).suffix.lower() or "",
+                ctime=_to_timestamp(info.get("created")),
             )
         except Exception:
             return None
 
     def exists(self, path: str) -> bool:
-        return self.stat(path) is not None
+        """HEAD 探测存在性（无响应体，绕开 PROPFIND multistatus 解析挂起）。
+
+        部分 NAS 对目录的 HEAD 返回 404（不支持）——404 或请求失败时
+        回退 PROPFIND stat 复核（Client 已带 timeout=60 + retry=False）。
+        """
+        remote_path = self._to_remote_path(path)
+        try:
+            resp = self._client._request("HEAD", remote_path)  # type: ignore[union-attr]
+            try:
+                if resp.status_code < 400:
+                    return True
+                if resp.status_code == 404:
+                    return False
+            finally:
+                resp.close()
+        except Exception:
+            pass
+        st = self.stat(path)
+        return st is not None
 
     def is_dir(self, path: str) -> bool:
         st = self.stat(path)

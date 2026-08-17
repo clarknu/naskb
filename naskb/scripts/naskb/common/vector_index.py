@@ -106,3 +106,7 @@ class VectorIndex:
 
     def count(self) -> int:
         return len(self._meta.get("paths", []))
+
+    def paths(self) -> list[str]:
+        """索引覆盖的文档路径列表（用于与当前文档集合比对，判断陈旧）。"""
+        return list(self._meta.get("paths", []))

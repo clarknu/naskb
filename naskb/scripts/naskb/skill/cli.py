@@ -111,6 +111,13 @@ def _make_desc_store(ctx, fs_type="local", url=None, auth=None, path_hint=None):
         auth = {"username": wd.get("user") or "",
                 "password": wd.get("password") or "",
                 "verify_ssl": config.webdav_verify_ssl}
+        # NAS 为国内服务器：显式加入 NO_PROXY，防止 VPN 分流绕路导致
+        # 上传断流截断（2026-08-13 教训：3MB index.json 上传被 VPN 截断损坏）
+        import urllib.parse
+        host = urllib.parse.urlparse(url).hostname or ""
+        if host:
+            cur = os.environ.get("NO_PROXY", "")
+            os.environ["NO_PROXY"] = f"{cur},{host}" if cur else host
     if fs_type == "local" and not url:
         # 默认以当前目录为根（与命令行传入的相对路径基准一致）
         url = str(Path.cwd())
@@ -566,6 +573,23 @@ def desc_analyze_tree(ctx, root, llm, workers, no_mineru, limit, force):
     from ..common.batch import analyze_tree
 
     store, fs, config = _make_desc_store(ctx, path_hint=root)
+
+    # ── 单实例锁：防止多个 analyze-tree 进程并发写同一 .naskb/index.json ──
+    # 教训（2026-08-13）：残留进程与续跑任务双进程并发，read-modify-write
+    # 互相覆盖导致 index.json 条目大面积丢失（files/ 数据完好但索引损坏）。
+    import os
+    lock_path = os.path.join(config.work_path, "tmp", "analyze-tree.lock")
+    os.makedirs(os.path.dirname(lock_path), exist_ok=True)
+    try:
+        with open(lock_path, "x") as lf:
+            lf.write(f"pid={os.getpid()} root={root}")
+    except FileExistsError:
+        print("[naskb] 拒绝启动：检测到另一个 analyze-tree 实例正在运行")
+        print(f"        （锁文件: {lock_path}）")
+        print("        若确认无其他实例，删除该锁文件后重试。")
+        fs.close()
+        return
+
     last = [0]
 
     def _progress(done, total, name, status):
@@ -584,6 +608,7 @@ def desc_analyze_tree(ctx, root, llm, workers, no_mineru, limit, force):
         print(f"  文件总数: {result.total}（支持 {result.supported}，不支持 {result.unsupported}）")
         print(f"  新分析: {result.analyzed}")
         print(f"  增量跳过: {result.skipped}")
+        print(f"  指纹升级: {result.fingerprint_upgraded}（旧条目补算采样 hash，未重析）")
         print(f"  忽略文件记录: {result.ignored_recorded}（仅名称推断，未分析内容）")
         print(f"  目录描述更新: {result.folder_updated}")
         print(f"  孤儿条目清理: {result.orphans_removed}（文件已删除）")
@@ -591,6 +616,10 @@ def desc_analyze_tree(ctx, root, llm, workers, no_mineru, limit, force):
         print(f"  耗时: {result.elapsed / 60:.1f} 分钟")
     finally:
         fs.close()
+        try:
+            os.remove(lock_path)
+        except OSError:
+            pass
 
 
 @desc.command("split")
@@ -639,12 +668,12 @@ def desc_migrate(ctx, root, do_delete):
             if not f.name.endswith(".sidecar.json"):
                 continue
             src = f.path[: -len(".sidecar.json")]  # 旧 sidecar 同行：源文件路径
-            try:
-                data = SidecarData.from_dict(
-                    json.loads(fs.read_text(f.path)))
-            except Exception:
+            from ..common.desc_store import _fs_read_json
+            data = _fs_read_json(fs, f.path)
+            if data is None:
                 print(f"[naskb] 跳过损坏的 sidecar: {f.path}")
                 continue
+            data = SidecarData.from_dict(data)
             if not data.file_hash:
                 continue
             entry = _entry_from_sidecar(data)
@@ -739,14 +768,32 @@ def desc_analyze_folder(ctx, path, llm, recursive):
 @click.option("--top-k", "-k", default=10, show_default=True)
 @click.option("--vector/--no-vector", "vector", default=None,
               help="强制向量/BM25 检索；默认有向量索引用向量、否则 BM25")
+@click.option("--pg", "pg_flag", is_flag=True, default=False,
+              help="走 PG 向量库检索（多 NAS；未配置/失败自动回退本地引擎）")
+@click.option("--nas", "nas_alias", default=None,
+              help="[[nas]] 别名（--pg 时选择 NAS；缺省按当前连接方式推断）")
 @click.pass_context
-def desc_search(ctx, query, root, top_k, vector):
-    """基于 .naskb 描述数据的语义（向量）/BM25 搜索（不读文件原文）。"""
+def desc_search(ctx, query, root, top_k, vector, pg_flag, nas_alias):
+    """基于 .naskb 描述数据的语义（向量）/BM25 搜索（不读文件原文）。
+
+    引擎选择链：--pg → PG 向量库（失败自动回退）；否则向量索引 → BM25。
+    """
     from ..common.retrieval import BM25Index, collect_docs
 
     store, fs, config = _make_desc_store(ctx, path_hint=root)
     emb = None
     try:
+        if pg_flag:
+            engine, schema = _pg_engine_or_none(ctx, config, fs, nas_alias)
+            if engine is not None:
+                try:
+                    hits = engine.search(query, top_k=top_k, schema=schema)
+                    print(f"[naskb] PG 语义搜索 \"{query}\" → {len(hits)} 条"
+                          f"（schema {schema}）")
+                    _print_hits(hits)
+                    return
+                finally:
+                    engine.close()
         docs = collect_docs(fs, root)
         if not docs:
             print("[naskb] 没有找到任何描述数据（先运行 desc analyze）")
@@ -784,7 +831,9 @@ def desc_search(ctx, query, root, top_k, vector):
 
 def _print_hits(hits) -> None:
     for i, h in enumerate(hits, 1):
-        print(f"  {i}. [{h['score']:.3f}] {h['path']}（{h['category'] or '未分类'}）")
+        stale = " ⚠️过期" if h.get("stale") else ""
+        print(f"  {i}. [{h['score']:.3f}] {h['path']}"
+              f"（{h['category'] or '未分类'}{stale}）")
         if h["summary"]:
             print(f"     {h['summary'][:100]}")
         if h.get("tags"):
@@ -799,16 +848,34 @@ def _print_hits(hits) -> None:
               help="检索条数（上下文大小）")
 @click.option("--vector/--no-vector", "vector", default=None,
               help="强制向量/BM25 检索；默认有向量索引用向量、否则 BM25")
+@click.option("--pg", "pg_flag", is_flag=True, default=False,
+              help="走 PG 向量库检索（多 NAS；未配置/失败自动回退本地引擎）")
+@click.option("--nas", "nas_alias", default=None,
+              help="[[nas]] 别名（--pg 时选择 NAS；缺省按当前连接方式推断）")
 @click.pass_context
-def desc_ask(ctx, question, root, top_k, vector):
-    """RAG 问答：语义/BM25 检索 .naskb 描述 → DeepSeek 生成回答（带来源）。"""
+def desc_ask(ctx, question, root, top_k, vector, pg_flag, nas_alias):
+    """RAG 问答：检索 .naskb 描述（--pg 走 PG 向量库）→ DeepSeek 生成（带来源）。"""
     from ..common.llm import LLMConfig, create_llm_client
     from ..common.retrieval import BM25Index, ask, collect_docs
 
     store, fs, config = _make_desc_store(ctx, path_hint=root)
     llm_client = None
     emb = None
+    pg_engine = None
     try:
+        if pg_flag:
+            pg_engine, schema = _pg_engine_or_none(ctx, config, fs, nas_alias)
+            if pg_engine is not None:
+                llm_client = create_llm_client(
+                    LLMConfig.from_dict(config.llm_text))
+                result = ask(llm_client, pg_engine, question, top_k=top_k)
+                result["engine"] = "pg"
+                print(f"[naskb] PG 问答（schema {schema}）:\n{result['answer']}")
+                if result["sources"]:
+                    print("\n来源:")
+                    for s in result["sources"]:
+                        print(f"  {s}")
+                return
         docs = collect_docs(fs, root)
         if not docs:
             print("[naskb] 没有找到任何描述数据（先运行 desc analyze）")
@@ -846,6 +913,11 @@ def desc_ask(ctx, question, root, top_k, vector):
     finally:
         if llm_client:
             llm_client.close()
+        if pg_engine is not None:
+            try:
+                pg_engine.close()
+            except Exception:
+                pass
         if emb:
             emb.close()
         fs.close()
@@ -881,6 +953,298 @@ def desc_index_vectors(ctx, root):
         if emb:
             emb.close()
         fs.close()
+
+
+@desc.command("serve")
+@click.option("--host", default="127.0.0.1", show_default=True,
+              help="监听地址（局域网访问用 0.0.0.0）")
+@click.option("--port", default=8765, show_default=True)
+@click.option("--root", "roots", multiple=True, default=None,
+              help="扫描根目录（含 .naskb/ 描述数据），可多次传入；默认 .")
+@click.option("--open", "open_browser", is_flag=True, default=False,
+              help="启动后自动打开浏览器")
+@click.option("--pg", "pg_flag", is_flag=True, default=False,
+              help="启用 PG 多 NAS 向量库后端（页面 NAS 下拉；失败自动回退本地引擎）")
+@click.pass_context
+def desc_serve(ctx, host, port, roots, open_browser, pg_flag):
+    """启动内置知识库服务：Web UI 搜索/问答 + /api/search + /api/ask。
+
+    引擎选择与 desc search/ask 一致：--pg 启用 PG 向量库（多 NAS 下拉
+    选择，失败自动回退）；否则有向量索引用向量（索引与当前文档集合
+    不一致时视为陈旧，降级 BM25），无索引 BM25 兜底。
+    问答依赖 [llm.text] 配置（DeepSeek）。
+    """
+    from ..common.llm import LLMConfig, create_llm_client
+    from ..common.retrieval import collect_docs
+    from ..common.serve import KnowledgeCore, serve
+
+    store, fs, config = _make_desc_store(
+        ctx, path_hint=(roots[0] if roots else "."))
+    roots = list(roots) or ["."]
+    docs: list = []
+    for r in roots:
+        docs.extend(collect_docs(fs, r))
+    if not docs:
+        print("[naskb] 没有找到任何描述数据（先运行 desc analyze / analyze-tree）")
+        fs.close()
+        return
+
+    def _reload_docs() -> list:
+        out: list = []
+        for r in roots:
+            out.extend(collect_docs(fs, r))
+        return out
+
+    pg_engine = None
+    if pg_flag:
+        pg_engine, _schema = _pg_engine_or_none(ctx, config, fs, None)
+        if pg_engine is not None:
+            print("[naskb] PG 后端已启用（页面可选 NAS 向量库）")
+
+    core = KnowledgeCore(config.work_path, _reload_docs,
+                         pg_engine=pg_engine)
+    core.load(docs)
+
+    llm_client = None
+    try:
+        llm_client = create_llm_client(LLMConfig.from_dict(config.llm_text))
+    except Exception as e:
+        print(f"[naskb] LLM 未就绪（/api/ask 不可用）: {e}")
+    core.set_llm(llm_client)
+
+    try:
+        serve(core, host, port, open_browser=open_browser)
+    finally:
+        if pg_engine is not None:
+            try:
+                pg_engine.close()
+            except Exception:
+                pass
+        if llm_client is not None:
+            try:
+                llm_client.close()
+            except Exception:
+                pass
+        fs.close()
+
+
+def _pg_engine_or_none(ctx, config, fs, nas_alias: Optional[str]):
+    """构造 PgSearchEngine + 目标 schema；未配置/失败返回 (None, None)。"""
+    if not config.pg_enabled:
+        return None, None
+    try:
+        from ..common.pgstore import PgStore
+        from ..common.pgsearch import PgSearchEngine
+        pg = PgStore(config)
+        protocol, host, port, username = _resolve_nas_identity(
+            ctx, config, nas_alias, fs, pg_mode=True)
+        nas = pg.get_or_create_nas(protocol, host, port, username)
+        engine = PgSearchEngine(pg, config.work_path,
+                                default_schema=nas["schema_name"])
+        return engine, nas["schema_name"]
+    except Exception as e:
+        print(f"[naskb] PG 不可用（回退本地引擎）: {e}")
+        return None, None
+
+
+def _resolve_nas_identity(ctx, config, nas_alias: Optional[str], fs=None,
+                          pg_mode: bool = False):
+    """解析 NAS 五要素身份。
+
+    优先级：--nas alias > fs 实际连接类型 > （pg_mode：本地 fs 但配置了
+    webdav → 视为检索 webdav NAS 库）> local。
+    pg_mode=True 用于 search/ask/serve 的 --pg：本地执行但目标是 NAS 的
+    向量库；同步类命令（sync-vectors/sync-status）用默认模式，本地 root
+    保持 local 身份。
+    """
+    from ..common.pgstore import normalize_identity
+
+    if nas_alias:
+        for nas in config.nas_list:
+            if nas.get("alias") == nas_alias:
+                return normalize_identity(
+                    str(nas.get("protocol", "webdav")),
+                    str(nas.get("host", "")),
+                    int(nas.get("port") or 0),
+                    str(nas.get("username", "")))
+        raise click.ClickException(
+            f"config.toml [[nas]] 中找不到别名: {nas_alias}")
+    import urllib.parse
+
+    def _webdav_identity(url: str, user: str):
+        p = urllib.parse.urlparse(url)
+        port = p.port or (443 if p.scheme == "https" else 80)
+        return normalize_identity("webdav", p.hostname or "", port, user or "")
+
+    if fs is not None:
+        # 以 fs 实际类型为准（本地 root 不能因 config 配了 webdav 而误判）
+        try:
+            from ..common.fs.webdav import WebDAVAdapter
+        except ImportError:
+            WebDAVAdapter = None  # type: ignore[assignment]
+        if WebDAVAdapter is not None and isinstance(fs, WebDAVAdapter):
+            wd = (ctx.obj or {}).get("desc_webdav") or {}
+            return _webdav_identity(fs.root, wd.get("user") or config.webdav_user)
+    if pg_mode and config.webdav_url:
+        # 本地执行但显式要求 PG 检索 → 目标是已配置的 webdav NAS
+        return _webdav_identity(config.webdav_url, config.webdav_user)
+    return normalize_identity("local", "local", 0, "")
+
+
+@desc.command("sync-vectors")
+@click.argument("root", required=False, default=".")
+@click.option("--nas", "nas_alias", default=None,
+              help="[[nas]] 别名（缺省按当前连接方式推断 NAS 身份）")
+@click.option("--rebuild", is_flag=True, default=False,
+              help="清空该 NAS 向量库全量重建（慎用；模型更换/结构升级时用）")
+@click.pass_context
+def desc_sync_vectors(ctx, root, nas_alias, rebuild):
+    """把 .naskb 描述同步进 PG 多 NAS 向量库（REQ-R4）。
+
+    增量四操作：增/改/删/移（hash 匹配识别移动）；NAS 身份 =
+    协议+主机+端口+账号（五要素），每 NAS 一个独立 schema 向量库。
+    未配置 [pg] 时本命令直接跳过（PG 为可选增强，不影响既有功能）。
+    """
+    from ..common.pgstore import PgStore
+    from ..common.retrieval import collect_docs
+
+    store, fs, config = _make_desc_store(ctx, path_hint=root)
+    try:
+        if not config.pg_enabled:
+            print("[naskb] config.toml 未配置 [pg]，跳过（PG 为可选增强）")
+            return
+        protocol, host, port, username = _resolve_nas_identity(
+            ctx, config, nas_alias, fs)
+        pg = PgStore(config)
+        nas = pg.get_or_create_nas(protocol, host, port, username)
+        schema = nas["schema_name"]
+        print(f"[naskb] NAS 身份: {protocol}://{host}:{port} "
+              f"(user={username or '-'}) → schema {schema}")
+        if rebuild:
+            with pg.connect() as conn:
+                with conn.cursor() as cur:
+                    from psycopg import sql
+                    cur.execute(sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE")
+                                .format(sql.Identifier(schema)))
+            print(f"[naskb] 已清空 {schema}，开始全量重建")
+        docs = collect_docs(fs, root)
+        if not docs:
+            print("[naskb] 没有找到描述数据（先运行 desc analyze-tree）")
+            return
+        file_docs = [d for d in docs if d.kind == "file"]
+        print(f"[naskb] 收集到 {len(file_docs)} 条文件描述，开始同步…")
+        stats = pg.sync_vectors(schema, docs)
+        print("[naskb] ═══ 同步汇总 ═══")
+        print(f"  新增: {stats['added']}  更新: {stats['updated']}  "
+              f"移动: {stats['moved']}  删除: {stats['deleted']}")
+        print(f"  未变化: {stats['unchanged']}  嵌入计算: {stats['embedded']}")
+        if stats["errors"]:
+            print(f"  异常: {len(stats['errors'])} 条（见前 3 条）")
+            for e in stats["errors"][:3]:
+                print(f"    - {e}")
+    except Exception as e:
+        raise click.ClickException(f"PG 同步失败: {e}")
+    finally:
+        fs.close()
+
+
+@desc.command("sync-status")
+@click.argument("root", required=False, default=".")
+@click.option("--nas", "nas_alias", default=None,
+              help="[[nas]] 别名（缺省按当前连接方式推断 NAS 身份）")
+@click.pass_context
+def desc_sync_status(ctx, root, nas_alias):
+    """只读一致性报告：.naskb 与 PG 向量库的差异清单（不写任何数据）。"""
+    from ..common.pgstore import PgStore
+    from ..common.retrieval import collect_docs
+
+    store, fs, config = _make_desc_store(ctx, path_hint=root)
+    try:
+        if not config.pg_enabled:
+            print("[naskb] config.toml 未配置 [pg]")
+            return
+        protocol, host, port, username = _resolve_nas_identity(
+            ctx, config, nas_alias, fs)
+        pg = PgStore(config)
+        nas = pg.get_or_create_nas(protocol, host, port, username)
+        schema = nas["schema_name"]
+        docs = [d for d in collect_docs(fs, root) if d.kind == "file"]
+        by_path = {pg._rel_of(d.path): d for d in docs}
+        pg_rows = pg.resource_rows(schema) if _schema_exists(pg, schema) else {}
+        to_add = [p for p in by_path if p not in pg_rows]
+        to_del = [p for p in pg_rows if p not in by_path]
+        to_upd = [p for p in pg_rows if p in by_path and (
+            pg_rows[p]["hash_algorithm"] != by_path[p].hash_algorithm
+            or pg_rows[p]["file_hash"] != by_path[p].file_hash)]
+        # 删除候选中的"移动"识别
+        moves, deletes = [], []
+        hashes = {(d.hash_algorithm, d.file_hash): p
+                  for p, d in by_path.items() if d.file_hash}
+        for p in to_del:
+            key = (pg_rows[p]["hash_algorithm"], pg_rows[p]["file_hash"])
+            moves.append((p, hashes[key])) if key in hashes else deletes.append(p)
+        print(f"[naskb] 一致性报告（{schema}）")
+        print(f"  .naskb 条目: {len(by_path)}  PG 资源: {len(pg_rows)}")
+        print(f"  待新增: {len(to_add)}  待更新: {len(to_upd)}  "
+              f"待移动: {len(moves)}  待删除: {len(deletes)}")
+        for p in to_add[:5]:
+            print(f"    + {p}")
+        for p in to_upd[:5]:
+            print(f"    ~ {p}")
+        for old_p, new_p in moves[:5]:
+            print(f"    → {old_p} => {new_p}")
+        for p in deletes[:5]:
+            print(f"    - {p}")
+        if len(to_add) + len(to_upd) + len(moves) + len(deletes) > 20:
+            print("    …（其余略，运行 desc sync-vectors 同步）")
+    finally:
+        fs.close()
+
+
+def _schema_exists(pg, schema: str) -> bool:
+    from psycopg import sql
+    try:
+        with pg.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT 1 FROM pg_namespace WHERE nspname = %s", (schema,))
+                return cur.fetchone() is not None
+    except Exception:
+        return False
+
+
+@desc.command("pg-status")
+@click.pass_context
+def desc_pg_status(ctx):
+    """列出 PG 中已注册的 NAS 向量库与各自统计。"""
+    from ..common.config import Config
+    from ..common.pgstore import PgStore
+
+    config = Config.from_work_path(_get_work_path(ctx.obj.get("work_path")))
+    if not config.pg_enabled:
+        print("[naskb] config.toml 未配置 [pg]")
+        return
+    pg = PgStore(config)
+    nas_list = pg.list_nas()
+    if not nas_list:
+        print("[naskb] PG 中还没有注册任何 NAS（先运行 desc sync-vectors）")
+        return
+    print(f"[naskb] PG {config.pg_host}:{config.pg_port}/{config.pg_database} "
+          f"— {len(nas_list)} 个 NAS 向量库:")
+    for nas in nas_list:
+        try:
+            s = pg.nas_stats(nas["schema_name"])
+        except Exception:
+            s = None
+        label = nas["label"] or f"{nas['protocol']}://{nas['host']}:{nas['port']}"
+        if s:
+            print(f"  {label} (u={nas['username'] or '-'}) [{nas['schema_name']}]")
+            print(f"    资源 {s['resources']}（ok {s['ok']} / stale_vector "
+                  f"{s['stale_vector']} / stale_source {s['stale_source']}）"
+                  f"  向量 {s['vectors']}")
+        else:
+            print(f"  {label} (u={nas['username'] or '-'}) "
+                  f"[{nas['schema_name']}] 未初始化")
 
 
 @desc.command("plan-reorganize")

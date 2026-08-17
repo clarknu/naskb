@@ -25,6 +25,9 @@ applyTo: "*"
 | 构建语义向量索引 | `naskb desc index-vectors <root>`（bge-small-zh 本地嵌入，首次自动下载 ~24MB 模型） |
 | 检索文件 | `naskb desc search "关键词"`（有向量索引 → 语义检索；无 → BM25 自动降级；`--no-vector` 强制 BM25） |
 | 问答（RAG） | `naskb desc ask "问题"`（语义/BM25 召回 top-k → DeepSeek 生成，带来源） |
+| 内部问答服务 | `naskb desc serve [--host 127.0.0.1 --port 8765 --open]`（Web UI + `/api/search` `/api/ask`，见下） |
+| 同步 PG 向量库 | `naskb desc sync-vectors <root> [--nas <alias>] [--rebuild]`（.naskb → PG 多 NAS 独立 schema，增/改/删/移增量；未配 `[pg]` 自动跳过） |
+| PG 一致性报告 | `naskb desc sync-status <root> [--nas]`（只读差异清单）/ `naskb desc pg-status`（已注册 NAS 向量库统计） |
 | 目录整理规划 | `naskb desc plan-reorganize <root>`（DeepSeek 出方案，只输出不动） |
 | 执行整理 | 确认方案后 `naskb desc plan-reorganize <root> --apply` |
 | 更新（手工增删改后） | `naskb desc analyze-tree <root> --llm`（hash 对比：一致跳过/变更重分析/删除清孤儿） |
@@ -43,6 +46,20 @@ NAS 场景：`naskb desc --webdav-url <url> [--webdav-user <u> --webdav-pass <p>
    - 子路径先移（防"先移整目录后抽子目录"失败）。
 4. **检索**：`desc search` / `desc ask` 默认语义向量检索（bge-small-zh ONNX 本地嵌入 + numpy 余弦，索引存工作区 `db/vectors.npz`），无索引自动降级 BM25 关键词检索。**检索索引只用文件的摘要+描述（用户拍板：全文不参与向量/关键词检索，避免高频词稀释主题）；全文（ocr_text 等）保留为元数据，仅在 RAG 生成阶段作为上下文**。两者输出同构，RAG（`desc ask`）召回 top-k → DeepSeek 生成带来源回答。
 5. **模型分工**：DeepSeek（文本分类/摘要/方案）并发；MiMo（图片/音频）严格串行（并行会触发平台风控冻结 key）；MinerU（扫描件 OCR）严格串行；401 时停止重试，提示检查 key。
+
+## 内置问答服务（desc serve）
+
+`naskb desc serve` 启动本地 Web 服务（标准库实现，零依赖），浏览器访问即用：
+
+- **Web UI**：搜索（top-10 结果 + 摘要/标签）+ 问答（DeepSeek RAG，带来源）；`--open` 自动开浏览器，局域网用 `--host 0.0.0.0`。
+- **接口**（未来 MaxKB 扩展包实现同一契约即可切换后端，换实现不换接口）：
+  - `GET /api/search?q=<query>&top_k=10` → `{engine, hits, total_docs}`
+  - `POST /api/ask {"question": ..., "top_k": 5}` → `{answer, sources, engine}`
+  - `POST /api/reload`（analyze 之后热刷新描述数据）
+  - `GET /api/stats`（引擎/文档数/向量索引状态）
+- **引擎选择**：有向量索引且与当前文档集合一致 → 向量；否则 BM25 兜底（索引陈旧会提示重跑 `desc index-vectors`）。
+- 多根目录：`--root` 可多次传入（如本地目录 + NAS 挂载点各自含 .naskb）。
+- 建议以计划任务/开机自启常驻，本机收藏页面日常使用。
 
 ## 配置（工作区 config.toml）
 

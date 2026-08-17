@@ -1,476 +1,243 @@
-# NASKB — 本地知识库 Skill 系统设计规格
+# NASKB 需求基线（Requirements Baseline）
 
-> 版本: v0.2  
-> 状态: 草稿  
-> 最后更新: 2026-06-04
-
----
-
-## 1. 项目概述
-
-### 1.1 项目名称
-
-**NASKB** — NAS Knowledge Base，一个面向个人/团队知识管理的本地向量知识库系统，封装为 VS Code Copilot Skill，通过 CLI 即可完成全部操作。
-
-### 1.2 核心目标
-
-构建一个**纯本地运行、零外部服务依赖、中文友好**的向量知识库。以文件系统为数据源，自动索引文本文件与媒体文件的描述信息，支持灵活检索与增量更新。
-
-### 1.3 设计原则
-
-| 原则 | 说明 |
-|------|------|
-| **零服务依赖** | 不启动任何守护进程/服务，全部通过 CLI 命令完成 |
-| **本地优先** | Embedding 模型与向量数据库均本地运行 |
-| **自包含运行** | Skill 自带完整 Python 运行环境，不依赖系统 Python 包 |
-| **代码与数据分离** | 代码只读，所有数据（数据库、配置、模型）存储在用户指定路径 |
-| **中文友好** | 模型选型以中文语义理解为首要指标 |
-| **广泛 GPU 兼容** | 优先支持 Vulkan / DirectML 等通用 GPU 加速 API，兼容老旧显卡 |
-| **文件即数据** | 以文件系统为唯一数据源，保持"所见即所得" |
+> 版本: v1.0
+> 状态: 现行（living document）
+> 创建: 2026-08-16
+> 定位: 本文件是 NASKB 全部功能设计、架构设计、代码实践的**来源与出发点**。
+>       所有设计文档（design/*.md）与代码实现都应能回溯到本文件的某条需求/决策；
+>       每次需求变化先改本文件，再改设计与代码。
 
 ---
 
-## 2. 技术选型
+## 0. 维护约定（如何更新本文件）
 
-### 2.1 向量化模型 (Embedding)
-
-#### 2.1.1 模型选择
-
-**最终模型在 `bge-large-zh-v1.5` 与 `bge-base-zh-v1.5` 之间以实测结果为准。**
-
-| 候选模型 | 维度 | 中文支持 | Token 上限 | 模型大小 | 推荐用途 |
-|----------|------|----------|------------|----------|----------|
-| `bge-large-zh-v1.5` | **1024** | ★★★★★ | 512 | ~326 MB | 精度优先，GPU 推理 |
-| `bge-base-zh-v1.5` | **768** | ★★★★★ | 512 | ~102 MB | 速度优先，CPU/GPU 均可 |
-
-- 两个模型均转为 ONNX 格式运行，方便在多种 GPU 后端间切换。
-- 维度更高（768 / 1024）意味着更丰富的语义表达，对中文检索更有利。
-- 长文本策略：超过 512 token 的内容采用**分段嵌入 + 均值池化**，使单文件始终对应一个向量。
-
-#### 2.1.2 GPU 推理运行时
-
-核心约束：需兼容**不支持最新 CUDA Compute Capability** 的老旧 GPU，优先走 Vulkan / DirectML / OpenGL 等通用 3D/GPU 计算 API。
-
-**方案：ONNX Runtime + 多 Execution Provider 自适应**
-
-```
-优先级: DirectML → CPU (最终保底)
-```
-
-| Execution Provider | 底层 API | 适用场景 | 兼容性 |
-|--------------------|----------|----------|--------|
-| **DirectML** | DirectX 12 | Windows，几乎所有 DX12 显卡 | ★★★★★ 最广泛 |
-| **OpenVINO** | OpenCL / Vulkan | Intel 集显 + 部分独显 | ★★★☆ |
-| **CPU (默认)** | — | 无 GPU 或 GPU 不支持时 | ★★★★★ 始终可用 |
-
-- **DirectML** 是 Windows 上兼容性最好的 GPU 加速方案，从 2015 年后的几乎所有显卡都支持 DX12。
-- ONNX Runtime 的 DirectML EP 已成熟稳定，无需额外安装驱动 SDK。
-- 模型导出为 ONNX 格式后，同一份模型文件可在不同 EP 间无缝切换。
-- 仅在模型导出阶段使用 PyTorch + HuggingFace Optimum；**运行时零 PyTorch 依赖**。
-
-**备选路线**（若 DirectML 不可用）：[ncnn](https://github.com/Tencent/ncnn) 的 Vulkan 后端，腾讯开源，对老旧 GPU 兼容性极好，但需将模型转为 ncnn 格式。
-
-#### 2.1.3 推理性能预估
-
-| 模型 | 维度 | CPU 单条 | GPU(DirectML) 单条 | 批量(32) |
-|------|------|----------|---------------------|----------|
-| bge-base-zh-v1.5 | 768 | ~30ms | ~5ms | ~80ms |
-| bge-large-zh-v1.5 | 1024 | ~60ms | ~8ms | ~150ms |
+1. **需求编号只增不改**：每条需求有唯一编号（如 `REQ-R1-02`）。已发编号永不复用；
+   需求废弃时不删除，改为在"状态"标注 `已废弃（被 REQ-x 取代）`。
+2. **变更必须记录**：任何增删改都要在第 8 节"变更历史"追加一行（日期 / 编号 / 摘要）。
+3. **拍板决策入 ADR**：用户拍板过的关键取舍记入第 5 节"决策记录（ADR）"，
+   写明日期、决策、理由；ADR 编号 `ADR-<日期>-<序号>`，永不修改只可追加"后续变更"。
+4. **设计文档引用需求**：design/ 下各详细设计文档在头部声明"依据 REQ-xxx"。
+5. **状态取值**：`已实现`（代码已落地且有测试）/ `设计已确认`（方案已确认，待实施）/
+   `设计草案`（有设计稿，待确认）/ `规划中`（列入路线，尚未设计）/ `已废弃`。
 
 ---
 
-### 2.2 向量数据库
+## 1. 项目定位与演进脉络
 
-**选型方向**：嵌入式数据库，无需启动服务，通过文件直接读写。
+**NASKB（NAS Knowledge Base）**：对本地目录或 NAS（WebDAV）建立 `.naskb/` 描述仓库，
+完成"扫描 — AI 分析（分类/摘要/标签、图片音频识别、扫描件 OCR）— 检索/问答 — 目录整理"闭环，
+以 **Reasonix Skill** 形态交付（AI 通过 `naskb/SKILL.md` 调用 `naskb desc` 命令）。
 
-| 候选方案 | 嵌入模式 | 百万级 | 备注 |
-|----------|----------|--------|------|
-| **LanceDB** | ✅ 原生嵌入 | ✅ | 基于 Lance 列存格式，零服务 |
-| ChromaDB | ⚠️ 支持 | ✅ | 默认需服务，嵌入模式功能受限 |
-| FAISS | ✅ 纯库 | ✅ | 需自行管理索引持久化 |
-| Qdrant | ⚠️ 支持 | ✅ | 嵌入模式实验性 |
+演进脉络（历史事实，用于理解现状的由来）：
 
-**推荐选型**: **LanceDB**
-- 理由：原生嵌入设计，无需任何服务进程；基于 Apache Arrow / Lance 列式存储，读写高效；支持百万级数据；Python API 简洁；支持元数据过滤；存储位置可通过路径参数自由指定。
-
----
-
-### 2.3 文件系统抽象层
-
-使用 **[fsspec](https://filesystem-spec.readthedocs.io/)** 作为统一文件系统接口。**每个知识库来源可指定独立的连接目标（文件系统类型 + 路径 + 认证）。**
-
-| 后端 | 协议 | 用途 |
-|------|------|------|
-| `local` | `file://` | 本地文件系统 |
-| `webdav` | `webdav://` | WebDAV 远程存储（NAS 常见） |
-| `sftp` | `sftp://` | SFTP / SSH |
-| `smb` | `smb://` | SMB / NAS 网络共享 |
-| `s3` | `s3://` | 对象存储 |
+| 阶段 | 时间 | 内容 | 文档 |
+|---|---|---|---|
+| v0.1/v0.2 早期设计 | 2026-06 | 选型稿（LanceDB、bge-large、DirectML、fsspec）——多数选型已随演进被替代 | `design/requirement-v0.2-archived.md` |
+| v1 sidecar 机制 | 2026-06~08 | 同行 `.sidecar.json` 描述 | 已废弃（ADR-20260810-1） |
+| v2 描述仓库 | 2026-08-10 | `.naskb/` 隐藏仓库、MinerU 全格式、DeepSeek+MiMo 分工 | `design/analysis-engine-v2.md` |
+| 检索层定型 | 2026-08-11 | 索引只用摘要+描述；向量（numpy）+BM25 | ADR-20260811-1 |
+| 内置问答服务 | 2026-08-16 | `desc serve`（Web UI + API 契约） | `naskb/scripts/naskb/common/serve.py` |
+| 多 NAS 向量库 | 2026-08-16 | PG + pgvector、五要素身份、哈希校验体系（设计已确认） | `design/pg-vector-multi-nas.md` |
+| MaxKB 扩展包 | 规划中 | 社区版 RAG 扩展，后端同契约切换 | `design/pg-vector-multi-nas.md` §8 / 本文件 REQ-R5 |
 
 ---
 
-### 2.4 自包含 Python 运行环境
+## 2. 术语表
 
-**Skill 代码目录自身不包含任何运行时数据。** 首次启动时自动在用户指定的工作路径下创建隔离的 Python 虚拟环境。
-
-```
-启动流程:
-  1. 检查工作路径是否存在 Python venv
-  2. 不存在 → 自动创建 venv + 安装依赖（首次约 2-5 分钟）
-  3. 存在 → 直接激活使用
-```
-
-实现方式：
-
-| 方案 | 说明 |
-|------|------|
-| **uv** (推荐) | Rust 写的极速 Python 包管理器，创建 venv 毫秒级，安装依赖秒级 |
-| venv + pip | Python 标准库自带，兼容性最好，速度较慢 |
-
-- Skill 分发时附带 `requirements.txt` / `pyproject.toml`（约 2KB），不含任何 .whl 或预编译包。
-- 运行时所有依赖安装在工作路径下的 `.venv/` 中，系统 Python 环境完全不受影响。
-- 卸载 Skill  =  删除 Skill 目录 + 删除工作路径，系统不留残留。
+| 术语 | 含义 |
+|---|---|
+| **NAS** | 网络存储，身份由五要素定义（REQ-R4-01）；当前支持 webdav/local 两种协议接入 |
+| **.naskb 描述仓库** | 每个目录下的隐藏目录，存该目录的文件级/目录级描述（`meta.json`/`index.json`/`files/`/`folder.json`/`artifacts/`） |
+| **描述条目** | 一个文件的 AI 分析结果（摘要、分类、标签、转写、OCR 文本、指纹等） |
+| **工作区（NASKB_data）** | 工具的数据目录：config.toml、模型、db/（向量快照）、日志 |
+| **向量库** | 每个 NAS（五要素）在 PG 中的一个独立 schema（resources + vectors） |
+| **Doc.text / Doc.context** | 检索索引文本（仅摘要+描述）/ RAG 上下文（含全文）——AD-R2-01 的分层 |
+| **事实源** | NAS 文件；`.naskb` 是抽取快照；PG 是派生库（可重建） |
 
 ---
 
-### 2.5 语言与工具链
+## 3. 需求清单
 
-| 层级 | 选型 | 理由 |
-|------|------|------|
-| 核心引擎 | Python 3.10+ | ONNX Runtime、LanceDB、fsspec 生态 |
-| 依赖安装 | `uv` | 极速创建隔离环境 |
-| CLI 框架 | `click` | 轻量、成熟 |
-| 模型导出 | PyTorch + Optimum | 仅开发/构建时使用，运行时不依赖 |
+### R1 内容采集与分析（已实现）
 
----
+| 编号 | 需求 | 状态 |
+|---|---|---|
+| REQ-R1-01 | 对本地目录或 NAS（WebDAV）建立 `.naskb/` 描述仓库，AI 生成分类/摘要/标签 | 已实现 |
+| REQ-R1-02 | 仓库结构：`meta.json`（schema 版本/更新时间/采集身份 access_identity）+ `index.json`（文件级）+ `files/`（大条目拆分）+ `folder.json`（目录级）+ `artifacts/`（解析产物） | 已实现（access_identity 待 R4 实施时补） |
+| REQ-R1-03 | 文档解析双路径：PyMuPDF 快速提取 + MinerU 全格式（PDF/DOCX/PPTX/XLSX → md/html/middle.json）；疑似扫描件自动转 OCR | 已实现 |
+| REQ-R1-04 | 模型分工：文本（分类/摘要）→ DeepSeek；图片/音频多模态 → 小米 MiMo V2.5 | 已实现 |
+| REQ-R1-05 | 音频：ffmpeg 16kHz 分段（25 分钟/段）→ MiMo 严格串行转写 → 拼接 | 已实现 |
+| REQ-R1-06 | 图片描述全走 MiMo（不做纯 OCR）；按 hash 去重 | 已实现 |
+| REQ-R1-07 | 视频分级：路径规则 + 关键词规则 + 时长兜底 → processing_policy（metadata_only / keyframes_only / full） | 已实现 |
+| REQ-R1-08 | 目录级分析：代码/软件/发布包目录不逐文件，只分析结构 → folder.json | 已实现 |
+| REQ-R1-09 | 旧格式兼容：.doc 用 Word COM 优先 + olefile 兜底（MinerU 不支持 .doc/.xls） | 已实现 |
+| REQ-R1-10 | `analyze-tree` 增量幂等：**三级判定链**（L1 stat 免检 → L2 采样 hash 复核 → L3 重析），可反复跑可中断 | 已实现（L1/L2 待按 REQ-R1-13 升级） |
+| REQ-R1-13 | **指纹判定体系**：① 免检必要条件 = path+文件名+size+mtime+**ctime** 全一致，缺 ctime 不得免检（必须 hash 复核）；② 内容 hash 采样规则（见 ADR-20260816-4）：>512KB 文件取 8 段×64KB 均匀分布（首段含文件头、末段含文件尾，位置仅由 size 决定），≤512KB 全量；③ hash_algorithm 记录规则边界，算法变更须升版全量重析 | 已实现 |
+| REQ-R1-11 | 整理原则：移动不删除；`.naskb` 整仓跟随；源/目标/上层 folder.json 级联更新；搬空目录自动删除；子路径先移 | 已实现 |
+| REQ-R1-12 | 并发策略：DeepSeek 并发 4-6；MiMo 与 MinerU 严格串行（防风控/资源争抢） | 已实现 |
 
-## 3. 路径与存储架构
+### R2 检索与问答（已实现）
 
-### 3.1 三大路径概念
+| 编号 | 需求 | 状态 |
+|---|---|---|
+| REQ-R2-01 | **检索索引只用摘要+描述**（summary/category/tags/content_description）；全文不进索引（防高频词稀释主题） | 已实现（ADR-20260811-1） |
+| REQ-R2-02 | 全文照常提取、保留为元数据，仅作 RAG 生成阶段上下文（Doc.text / Doc.context 分层） | 已实现 |
+| REQ-R2-03 | 不做文档级 chunking：一个文件一条向量 | 已实现 |
+| REQ-R2-04 | 双引擎：语义向量（bge-small-zh-v1.5 ONNX 本地嵌入，512 维）+ BM25 关键词，无索引自动降级 | 已实现 |
+| REQ-R2-05 | 问答（`desc ask`）必须带来源路径，答案只依据检索内容生成 | 已实现 |
 
-```
-┌─────────────────────────────────────────────────────┐
-│  Skill 代码目录 (只读，分发用)                        │
-│  ~/.agents/skills/naskb/                            │
-│  ├── SKILL.md                                       │
-│  ├── pyproject.toml                                 │
-│  └── naskb/          ← Python 源码                  │
-└─────────────────────────────────────────────────────┘
-         │
-         │  naskb init --work-path D:/NASKB_data
-         ▼
-┌─────────────────────────────────────────────────────┐
-│  工作路径 (用户指定，所有运行时数据)                   │
-│  D:/NASKB_data/                                     │
-│  ├── .venv/              ← 隔离的 Python 环境        │
-│  ├── config.toml         ← 主配置文件                │
-│  ├── models/             ← ONNX 模型文件             │
-│  ├── db/                 ← LanceDB 向量数据库        │
-│  │   ├── files.lance/                               │
-│  │   └── folders.lance/                             │
-│  └── state.db            ← SQLite 索引状态           │
-└─────────────────────────────────────────────────────┘
-         │
-         │  知识库来源 (可多个，各自独立连接)
-         ▼
-┌──────────────────┐  ┌──────────────────┐
-│ 来源 1: 本地笔记   │  │ 来源 2: NAS WebDAV │
-│ file://D:/Notes  │  │ webdav://nas/lan  │
-│ .kbignore        │  │ .kbignore        │
-│ docs/            │  │ media/           │
-│   note.md        │  │   photo.jpg      │
-│                  │  │   photo.jpg.md   │
-└──────────────────┘  └──────────────────┘
-```
+### R3 内置问答服务（已实现）
 
-### 3.2 路径职责
+| 编号 | 需求 | 状态 |
+|---|---|---|
+| REQ-R3-01 | `desc serve`：标准库 Web UI（搜索 + 问答）+ `/api/search` `/api/ask` `/api/reload` `/api/stats` | 已实现 |
+| REQ-R3-02 | 引擎自动选择：向量索引与当前文档集合一致 → 向量；不一致标陈旧并降级 BM25 | 已实现 |
+| REQ-R3-03 | `/api/reload` 热刷新（analyze 后无需重启） | 已实现 |
+| REQ-R3-04 | **接口契约 = 检索后端抽象边界**：未来任何后端（PG、MaxKB）实现同一契约即可切换，前端不动 | 已实现（ADR-20260816-2） |
 
-| 路径 | 环境变量 | 说明 | 示例 |
-|------|----------|------|------|
-| **Skill 代码目录** | `NASKB_HOME` | 只读，Python 源码所在位置 | `~/.agents/skills/naskb/` |
-| **工作路径** | `NASKB_WORK` | 运行时环境、模型、数据库、状态 | `D:/NASKB_data/` |
-| **来源路径** | (配置项 `sources[]`) | 被索引的知识库内容，可多个 | `D:/Notes`, `webdav://nas/doc` |
+### R4 多 NAS 向量库（PG + pgvector，设计已确认）
 
-### 3.3 设计要点
+详细设计见 `design/pg-vector-multi-nas.md`（v2）。以下为需求条目：
 
-- **代码与数据彻底分离**：Skill 目录可随时替换/升级，不影响数据库和索引。
-- **数据库可备份**：用户只需复制工作路径下的 `db/` 和 `state.db` 即可完整备份。
-- **模型独立存放**：ONNX 模型放在工作路径下，多知识库可共享同一份模型。
-- **来源灵活组合**：一个知识库可同时索引本地文件夹和远程 WebDAV 目录。
+| 编号 | 需求 | 状态 |
+|---|---|---|
+| REQ-R4-01 | NAS 身份 = **协议 + 主机 + 端口 + 用户账号**（五要素；账号视图不同即不同库）；五要素相同 = 同一 NAS 库 | 设计已确认 |
+| REQ-R4-02 | 一个工具支持多个 NAS；每个 NAS 在 PG 中一个**独立 schema**（向量库），schema 名由五要素确定性生成（账号只入 sha1 前 12 位） | 设计已确认 |
+| REQ-R4-03 | 资源按 NAS 内目录（分类文件夹）组织结构保存：rel_path + parent_dir（支持按目录范围检索），category/tags 与目录结构并存 | 设计已确认 |
+| REQ-R4-04 | 每条向量必含四要素：① 向量数据 vector(512)；② 用于向量化的内容摘要 summary_text；③ 完整文本内容 full_text（纯文本，不含二进制）；④ 指向原始 NAS 资源（resource_id → resources.rel_path）。**任何向量可对应回一个 NAS 文件** | 设计已确认 |
+| REQ-R4-05 | 哈希校验体系：指纹四元组（**ctime** + mtime + size + 内容采样 hash）；hash_algorithm 记录算法边界，算法变化须升版全量重析 | 设计已确认 |
+| REQ-R4-06 | 三层版本对齐：NAS 文件 → .naskb 快照 → PG 行；任何一层落后可检出 | 设计已确认 |
+| REQ-R4-07 | 新鲜度状态机：`ok` / `stale_vector`（快照重析、PG 未跟上）/ `stale_source`（NAS 已变、快照落后）；检索/问答带状态徽章，过期内容在问答上下文中显式标注 | 设计已确认 |
+| REQ-R4-08 | 同步四操作：增/改/删/移，以 rel_path 为键 + hash 匹配区分"移动"与"删除+新增"（移动保留 resource_id）；增量幂等；批量提交；失败记日志不中断 | 设计已确认 |
+| REQ-R4-09 | 版本自证：vectors.source_hash = 生成向量时的文件 hash；resources.prev_hashes 审计链（最近 N 版）——可回答"这条向量描述的是哪个文件版本、是否已过期" | 设计已确认 |
+| REQ-R4-10 | sync 预检：WebDAV PROPFIND 取 mtime/size 与 .naskb 对比（零下载）；疑似变化只标记不重析（重析是 analyze-tree 职责）；`--verify-hash` 可选深度校验 | 设计已确认 |
+| REQ-R4-11 | 采集身份固化：.naskb/meta.json 记录 access_identity，sync 校验身份不一致拒绝同步（防串库） | 设计已确认 |
+| REQ-R4-12 | 检索接入：search/ask/serve 的 PG 后端 + 多 NAS 选择（--nas；serve 下拉）；`--nas all` 每库 top-k 合并（分数不跨库比较） | 已实现（--nas all 跨库合并留待 R5 阶段） |
+| REQ-R4-13 | **回退链**：PG 不可用自动回退 numpy 向量 → BM25；现状功能完全保留（PG 是增强不是替换） | 已实现 |
+| REQ-R4-14 | 身份迁移：NAS 主机变更（换 IP）可 `pg-rebind` 重绑五要素，不丢库 | 设计已确认 |
+| REQ-R4-15 | PG 安全：专用库 naskb + 专用账号最小权限；密码明文存 config（与 llm key 同策略）；代码/日志不打印连接串 | 设计已确认 |
 
----
+### R5 演进与扩展（规划中）
 
-## 4. 数据模型
+| 编号 | 需求 | 状态 |
+|---|---|---|
+| REQ-R5-01 | MaxKB 扩展包（独立目录，可选依赖）：前期用 NASKB 内部问答；后期需要深度 RAG/工作流/多用户时接入 MaxKB **社区版**（免费），不预设专业版费用 | 规划中 |
+| REQ-R5-02 | 内容管道：export-maxkb（.naskb 干净文本导出 Markdown/ZIP）+ sync-maxkb（管理 API 增量同步，hash 对比；API 不稳定则降级手动导入） | 规划中 |
+| REQ-R5-03 | Backend B：实现与 REQ-R3-04 相同的 search/ask 契约，config 开关切换 MaxKB 后端 | 规划中 |
+| REQ-R5-04 | 分级检索（进阶可选）：NASKB 检索封装为 MCP server 接入 MaxKB 工作流（精库优先、全库兜底） | 规划中 |
+| REQ-R5-05 | 混合检索（可选增强）：PG 全文检索（tsvector，仅摘要文本）+ 向量 RRF 融合排序 | 设计草案（pg-vector-multi-nas.md §8.1） |
 
-### 4.1 文件索引记录 (FileRecord)
+### R6 非功能与实践要求（现行）
 
-```
-FileRecord {
-    id:          str        # 唯一 ID (来源标识 + 相对路径的 hash)
-    source_id:   str        # 所属来源标识
-    path:        str        # 文件完整路径 (含协议前缀)
-    rel_path:    str        # 相对来源根目录的路径
-    name:        str        # 文件名
-    ext:         str        # 扩展名 (含 .)
-    type:        enum       # text | binary
-    size_bytes:  int        # 文件大小
-    mtime:       float      # 修改时间 (Unix timestamp)
-    vector:      float[]    # 向量 (768 或 1024 维)
-    indexed_at:  float      # 入库时间戳
-    status:      enum       # indexed | outdated | missing_desc | skipped
-    orig_file:   str|null   # 若为描述文件，指向原始文件路径
-}
-```
-
-### 4.2 文件夹索引记录 (FolderRecord)
-
-```
-FolderRecord {
-    id:          str        # 唯一 ID
-    source_id:   str        # 所属来源标识
-    path:        str        # 文件夹路径
-    name:        str        # 文件夹名
-    summary:     str        # 聚合描述文本
-    source:      enum       # auto_generated | manual_description_md
-    vector:      float[]    # 描述文本的向量
-    file_count:  int        # 文件夹内文件总数
-    indexed_at:  float      # 入库时间戳
-}
-```
-
-### 4.3 知识库来源 (KnowledgeSource)
-
-```
-KnowledgeSource {
-    id:          str        # 来源唯一标识
-    name:        str        # 人类可读名称 (如 "本地笔记", "NAS 媒体库")
-    fs_type:     enum       # local | webdav | sftp | smb | s3
-    root_url:    str        # 连接 URL (如 "file://D:/Notes", "webdav://192.168.1.1/doc")
-    auth:        dict|null  # 认证信息 (用户名/密码/token)
-    enabled:     bool       # 是否启用
-}
-```
-
-### 4.4 排除规则 (ExclusionRule)
-
-```
-ExclusionRule {
-    id:          str
-    source_id:   str        # 适用的来源 (空 = 全局)
-    rule_type:   enum       # ext | folder | folder_summary
-    pattern:     str        # 匹配模式 (如 ".pdf", "node_modules/")
-    note:        str        # 备注说明
-}
-```
+| 编号 | 需求 | 状态 |
+|---|---|---|
+| REQ-R6-01 | 写任何文本文件一律 UTF-8（无 BOM，除非场景明确要求其他编码） | 已实现（全局铁律） |
+| REQ-R6-02 | 密钥管理：DeepSeek/MiMo key 存工作区 config.toml 或环境变量（DEEPSEEK_API_KEY / MIMO_API_KEY）；不加密、不打印 | 已实现 |
+| REQ-R6-03 | 风控纪律：MiMo 多模态调用严格串行（并行触发平台风控冻结 key）；401/超时停止重试并提示检查 key | 已实现 |
+| REQ-R6-04 | NAS 国内服务器连接显式加 NO_PROXY（防 VPN 分流导致上传断流截断——2026-08-13 教训） | 已实现 |
+| REQ-R6-05 | 部署自包含：拷贝 naskb/ + NASKB_data/ 即可用；向量模型首次运行自动下载（~24MB）；MinerU 需独立 venv（Python<3.14） | 已实现 |
+| REQ-R6-06 | 环境事实：分析在本机 Windows；PG 192.168.5.2:25432（PostgreSQL 18.6 + pgvector 0.8.6，Debian）；MaxKB 部署于用户 Linux 主机 | 现行 |
 
 ---
 
-## 5. 功能规格
+## 4. 架构原则（贯穿所有功能）
 
-### 5.1 索引策略
-
-#### 5.1.1 纯文本文件 (.md / .txt / .rst / .org 等)
-
-- 直接读取文件内容 → 向量化 → 入库。
-- 一个文件对应**一条**向量记录。
-- 长文本（超过模型 token 上限）分段嵌入后均值池化为单向量。
-
-#### 5.1.2 非纯文本文件（媒体、二进制、PDF、Office 等）
-
-- 不直接向量化原始文件。
-- 查找**同目录下同名 `.md` 描述文件**（如 `photo.jpg` → `photo.jpg.md`）。
-  - 若存在：读取描述文件内容 → 向量化 → 入库，`orig_file` 指向原始文件。
-  - 若不存在：标记为 `missing_desc`，不参与检索，但记录到"缺失列表"中。
-- 检索命中时，同时返回描述文件和原始文件路径。
-
-#### 5.1.3 文件夹描述
-
-- 每个文件夹在索引时生成一条聚合向量：
-  - 若存在 `description.md`：使用该文件内容（人工撰写）。
-  - 否则：自动拼接文件夹下所有已索引文件的文件名 + 首行摘要，生成聚合文本。
-- 用途：支持"这个文件夹是干什么的"这类语义查询。
-
-### 5.2 索引生命周期管理
-
-| 操作 | CLI 命令 | 说明 |
-|------|----------|------|
-| 初始化工作路径 | `naskb init --work-path <path>` | 创建 venv + 目录结构 + 配置模板 |
-| 添加来源 | `naskb source add <name> <url>` | 添加知识库来源 |
-| 全量构建 | `naskb index --full` | 扫描所有来源，全量重建 |
-| 增量更新 | `naskb index --update` | 仅处理变更（mtime/size/新增） |
-| 单来源更新 | `naskb index --source <id>` | 仅更新指定来源 |
-| 单文件更新 | `naskb index --file <path>` | 手动更新指定文件 |
-| 文件夹更新 | `naskb index --folder <path>` | 更新某文件夹下所有文件 |
-| 检索 | `naskb search "<query>"` | 语义检索，返回 top-k 结果 |
-| 状态查看 | `naskb status` | 索引进度、各来源统计 |
-| 缺失列表 | `naskb missing` | 列出缺少描述文件的条目 |
-| 删除索引 | `naskb index --remove <path>` | 移除指定文件索引 |
-| 配置管理 | `naskb config` | 查看/修改配置 |
-
-### 5.3 变更检测
-
-增量更新时，通过以下三元组判断文件是否变更：
-
-1. **mtime** — 文件修改时间是否晚于上次索引时间
-2. **size_bytes** — 文件大小是否变化
-3. **existence** — 文件是否仍然存在
-
-若三者均未变化 → 跳过。任一项变化 → 重新索引。
-
-### 5.4 排除规则
-
-支持三种粒度的排除，规则按来源独立配置：
-
-| 类型 | 示例 | 行为 |
-|------|------|------|
-| 扩展名排除 | `ext:.pdf,.mp4,.png` | 跳过该类型文件的索引 |
-| 文件夹排除 | `folder:node_modules,.git` | 跳过整个文件夹，不递归进入 |
-| 文件夹摘要模式 | `folder_summary:vendor` | 该文件夹仅索引 `description.md`（若有），不深入内部文件，不报告缺失 |
-
-排除规则存放在**来源根目录**的 `.kbignore` 文件中。全局规则放在工作路径的 `config.toml` 中。
-
-### 5.5 Skill 封装
-
-作为 VS Code Copilot Skill（`SKILL.md`），对外暴露以下能力：
-
-- **知识检索**：接收自然语言查询 → 返回相关文件路径 + 内容摘要
-- **索引管理**：通过对话触发索引更新 / 重建
-- **状态查询**：回答"哪些文件还没索引"等问题
+1. **确定性层与 AI 编排层分离**：确定性操作（抽取/入库/检索/移动/同步）由代码实现；
+   柔性判断（分类/摘要/方案）由代码组织现状给 LLM，LLM 反馈后代码执行落地。
+2. **内容处理层是长期资产**：无论检索后端如何演进（numpy → PG → MaxKB），
+   `.naskb` 描述仓库不变、不重做——后端是可插拔的壳。
+3. **事实源唯一**：NAS 文件是事实源，`.naskb` 是抽取快照，PG 是可重建派生库；
+   任何派生层挂了都能从上游重建。
+4. **轻量起步、按需升级**：当前量级（数千条目）numpy 快照即可；PG 向量库解决多 NAS/持久化/
+   一致性；MaxKB 解决深度 RAG。每步升级都有明确触发条件，不做超前建设。
 
 ---
 
-## 6. 接口设计
+## 5. 决策记录（ADR）
 
-### 6.1 CLI 接口
+### ADR-20260810-1：v2 架构拍板（取代 Phase 1 sidecar 机制）
+- **决策**：废弃 `.sidecar.json` 同行文件，全面改 `.naskb/` 目录隐藏仓库；MinerU 全格式双路径；
+  DeepSeek 文本 + MiMo 多模态分工；视频分级；并发策略（DeepSeek 4-6 并发、MiMo/MinerU 串行）；
+  旧 .doc/.xls 用 Word COM 兜底。
+- **理由**：sidecar 同行文件与文件移动/复制不同步、脆弱；仓库化统一管理产物与溯源。
+- **详细设计**：`design/analysis-engine-v2.md`。
 
-```
-naskb
-├── naskb init --work-path <path>              # 初始化工作路径
-│
-├── naskb source
-│   ├── add <name> <url>                       # 添加知识库来源
-│   ├── remove <id>                            # 移除来源
-│   ├── list                                   # 列出所有来源
-│   └── update <id>                            # 更新来源配置
-│
-├── naskb index
-│   ├── --full                                 # 全量索引 (所有来源)
-│   ├── --update                               # 增量更新 (所有来源)
-│   ├── --source <id> [--full|--update]        # 指定来源
-│   ├── --file <path>                          # 单文件
-│   └── --folder <path>                        # 文件夹
-│
-├── naskb search <query>
-│   ├── --top-k <n>                            # 返回数量 (默认 10)
-│   ├── --threshold <float>                    # 相似度阈值 (默认 0.5)
-│   └── --source <id>                          # 限定来源
-│
-├── naskb status                               # 索引进度概览
-├── naskb missing [--source <id>]              # 缺失描述文件列表
-├── naskb remove <path>                        # 删除索引记录
-└── naskb config [set <key> <value>]           # 查看/修改配置
-```
+### ADR-20260811-1：检索索引只用摘要+描述
+- **决策**：向量/BM25 索引只用 summary/category/tags/content_description；全文不进索引，
+  仅作 RAG 生成阶段上下文（Doc.text/context 分层）；不做文档级 chunking。
+- **理由**：全文进索引用高频词稀释主题、拖慢索引；描述是 AI 浓缩语义，检索更精准。
+- **适用边界**：REQ-R2 全部；PG 后端（R4）与混合检索（R5-05）同样遵守。
 
-所有命令通过 `--work-path` 或环境变量 `NASKB_WORK` 定位工作路径。
+### ADR-20260816-1：MaxKB 阶段方案（内部问答优先，扩展包后置）
+- **决策**：前期以 NASKB 自身提供内部问答（serve + 现有检索）；MaxKB 不买专业版（4 万+），
+  将来需要时以扩展包形式接入**社区版**，复用 .naskb 内容，后端同契约切换。
+- **理由**：前期内容处理与检索本身已有价值；MaxKB 短板（OCR/音视频/思维导图）恰是 NASKB
+  已做的部分；社区版免费已覆盖 RAG 核心能力。
 
-### 6.2 配置文件 (config.toml)
+### ADR-20260816-2：serve API 契约 = 检索后端抽象边界
+- **决策**：`/api/search` `/api/ask` 定为稳定契约；PG 后端、MaxKB 后端都实现该契约，
+  config 开关切换，前端零改动。
+- **理由**：让"换后端"变成"换实现不换接口"，前期代码全部保留。
 
-```toml
-# 工作路径下的 config.toml
+### ADR-20260816-3：PG 多 NAS 向量库设计 v2（五要素身份 + 哈希校验体系）
+- **决策**：NAS 身份 = protocol+host+port+**username**；每 NAS 一个 PG schema；
+  resources/vectors 两表；指纹三元组（sha256+mtime+size）；三层版本对齐；
+  ok/stale_vector/stale_source 状态机；增/改/删/移四操作同步（hash 匹配识别移动）；
+  vectors.source_hash + prev_hashes 版本审计；sync 做零下载 PROPFIND 预检；
+  .naskb/meta.json 固化 access_identity 防串库；PG 不可用回退 numpy→BM25。
+- **理由**：账号视图隔离是真实需求（不同账号看到不同文件夹）；"向量对应哪个文件版本、
+  是否过期"必须有体系支撑而非散落逻辑。
+- **用户确认**：2026-08-16 全部 7 条决策点确认（含 folder 条目暂不入库、物理删除+审计、
+  precheck 默认开、--nas all 每库 top-k 合并、授权建 naskb 专用库/账号）。
+- **详细设计**：`design/pg-vector-multi-nas.md`（v2）。
 
-[model]
-name = "bge-large-zh-v1.5"       # 或 "bge-base-zh-v1.5"
-onnx_path = "models/"             # ONNX 模型存放子目录
-execution_provider = "directml"   # directml | cpu
-batch_size = 32
-
-[db]
-path = "db/"                      # LanceDB 数据目录 (相对工作路径)
-# 或绝对路径: path = "E:/Backup/naskb_db/"
-
-[state]
-path = "state.db"                 # SQLite 状态库路径
-
-[[sources]]
-id = "local-notes"
-name = "本地笔记"
-fs_type = "local"
-root_url = "file://D:/Documents/Notes"
-enabled = true
-
-[[sources]]
-id = "nas-media"
-name = "NAS 媒体库"
-fs_type = "webdav"
-root_url = "webdav://192.168.1.100:5005/media"
-auth = { username = "user", password = "pass" }
-enabled = true
-
-[exclusions]
-# 全局排除规则 (对所有来源生效)
-ext = [".exe", ".dll", ".bin", ".iso"]
-folder = [".git", ".svn", "__pycache__"]
-```
-
-### 6.3 Python API
-
-```python
-from naskb import KnowledgeBase
-
-# 根据工作路径初始化（自动读取 config.toml）
-kb = KnowledgeBase(work_path="D:/NASKB_data")
-
-# 全量索引所有来源
-kb.index_full()
-
-# 增量更新
-kb.index_incremental()
-
-# 搜索
-results = kb.search("如何配置 WebDAV", top_k=10, threshold=0.6)
-for r in results:
-    print(f"[{r.score:.3f}] {r.path}")
-    print(f"  {r.snippet}")
-
-# 状态
-status = kb.get_status()
-print(f"已索引: {status.indexed_count}, 待更新: {status.outdated_count}")
-```
-
-### 6.4 Skill 声明 (SKILL.md 概要)
-
-```yaml
-name: naskb
-description: >
-  本地向量知识库。语义检索本地文档、NAS 文件、笔记。
-  代码与数据分离，自带 Python 环境，不污染系统。
-tools:
-  - naskb_search    # 语义检索
-  - naskb_status    # 索引进度
-  - naskb_index     # 触发增量索引
-```
+### ADR-20260816-4：指纹判定体系（ctime 必要要素 + 采样 hash 规则）
+- **决策（用户 2026-08-16 确认）**：
+  1. **免检必要条件**：path + 文件名 + size + mtime + **ctime** 五项全一致才可跳过 hash 校验；
+     **ctime 必须参与**——取不到 ctime 就认为"无法完整获取文件摘要信息"，必须走 hash 复核（L2）。
+     atime 不参与判定（与内容无关且现代系统本身不可靠）。
+  2. **内容 hash 采样规则**：原始数据来源限定 512KB。文件 ≤512KB 全量 hash；
+     文件 >512KB 取 **8 段 × 64KB，均匀分布**：第 i 段（i=0..7）起始偏移
+     `start_i = i * (S - 64K) // 7`（整数运算，首段=文件头、末段=文件尾，位置仅由 size 决定，
+     同大小文件永远取同位置），按 i=0..7 顺序喂入 sha256。
+     目的：防止"文件头相同、后续内容不同"的伪装文件（如压缩包打包机制，前 1MB 相同 4GB 不同）。
+  3. `hash_algorithm` 记录规则边界（`sha256:full` / `sha256:sample8x64k`）；规则变更须升版并全量重析。
+- **理由**：NAS（WebDAV）场景算 hash 要下载内容；stat 免检最大化性能；
+  采样 hash 用有限读取覆盖文件头/中/尾，兼顾成本与防伪能力；
+  WebDAV 的 ctime（creationdate）可能缺失，缺失时 hash 复核兜底，不牺牲正确性。
+- **适用边界**：REQ-R1-13、REQ-R4-05/06/07；`.naskb` 与 PG resources 的指纹字段一致。
 
 ---
 
-## 7. 约束与风险
+## 6. 设计文档索引
 
-| 约束 | 应对策略 |
-|------|----------|
-| 老旧 GPU 无 CUDA 支持 | ONNX Runtime + DirectML（DX12），几乎覆盖所有 2015+ 显卡 |
-| GPU 完全不支持 DX12 | 自动回退 CPU 推理；bge-base 单条 ~30ms 可接受 |
-| 百万级数据检索性能 | LanceDB IVF-PQ 索引；bge-large 1024 维可接受 |
-| 长文本超 token 上限 | 分段嵌入 + 均值池化 |
-| 自包含环境首次初始化慢 | 使用 uv 加速安装；给用户明确进度提示 |
-| fsspec 远端认证失败 | 优雅降级，跳过该来源并报告，不阻塞其他来源 |
-| 模型与数据库路径硬编码 | 全部通过 config.toml 指定，无默认隐藏路径 |
+| 文档 | 对应需求 | 状态 |
+|---|---|---|
+| `design/requirement.md` | 本文件（需求基线） | 现行 |
+| `design/requirement-v0.2-archived.md` | 历史归档（v0.2 选型稿） | 已归档 |
+| `design/analysis-engine-v2.md` | R1（内容采集与分析详细设计） | 现行 |
+| `design/implementation-plan.md` | R1 早期实施计划 | 参考 |
+| `design/pg-vector-multi-nas.md` | R4（PG 多 NAS 向量库详细设计，v2） | 现行 |
+| `design/mcp-kb-design.md` / `mcp-tech-reassessment.md` | 早期 MCP 探索（R5-04 的前身） | 参考 |
+| `README.md` / `naskb/SKILL.md` | 能力速查（AI 操作手册） | 现行 |
 
 ---
 
-## 8. 后续扩展（非首期）
+## 7. 已知问题与待办（从需求反推）
 
-- 多模态 Embedding（CLIP 等）支持直接索引图片
-- 自动 OCR 提取图片中文字生成描述（连接外部 OCR Skill）
-- 定时自动增量索引（watch 模式）
-- Web UI 浏览与管理界面
-- 多知识库联合检索
-- PDF / Office 文档自动提取文本生成描述
+- R4 全部条目：设计已确认，**待实施**（阶段 0 PG 初始化 → 阶段 1 存储层 → 阶段 2 检索接入 → 阶段 3 收尾）。
+- REQ-R1-02 的 access_identity 落地随 R4 阶段 1 一起改 desc_store。
+- REQ-R5-05 混合检索：等 R4 落地后视检索质量决定是否实施。
+- serve 的访问口令（局域网多人使用场景）未排期（pg-vector-multi-nas.md §8.4）。
+
+---
+
+## 8. 变更历史
+
+| 日期 | 变更 |
+|---|---|
+| 2026-06-04 | v0.2 选型稿（现归档为 requirement-v0.2-archived.md） |
+| 2026-08-16 | v1.0 需求基线创建：整合 v2 架构、检索层决策、serve、PG 多 NAS 设计（含 5 条 ADR）；确立编号体系与维护约定 |
+| 2026-08-16 | 新增 ADR-20260816-4（指纹判定体系：ctime 必要要素 + 8×64KB 采样 hash）；新增 REQ-R1-13；REQ-R1-10/REQ-R4-05 更新 |
+| 2026-08-16 | 阶段 0+1 实施完成：PG 初始化（naskb 库/专用账号/vector 0.8.6）；三级判定链（fs ctime/read_ranges、hashing.py 采样规则、FileEntry ctime/hash_algorithm、batch.py L1/L2/L3）；pgstore.py（registry/schema/DDL/sync 四操作/检索）+ sync-vectors/sync-status/pg-status 命令；测试 117+ passed |
+| 2026-08-16 | 阶段 2 实施完成：pgsearch.py（PgSearchEngine 同构接口）；search/ask 增 --pg/--nas；serve 增 --pg（NAS 下拉/状态徽章）；PG 失败自动回退本地引擎链（REQ-R4-12/13）；端到端实测 PG 检索/问答/serve 全链路通过 |

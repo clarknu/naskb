@@ -28,6 +28,8 @@ import os
 import threading
 import time
 import uuid
+
+from .hashing import HASH_ALG_FULL, HASH_ALG_LEGACY, HASH_ALG_SAMPLE
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -56,11 +58,13 @@ class FileEntry:
     """index.json 中一个文件的描述条目。"""
     path: str = ""                      # 相对 .naskb 所在目录
     file_hash: str = ""
+    hash_algorithm: str = ""            # sha256:full | sha256:sample8x64k（空=旧算法，ADR-20260816-4）
     analyzed_at: str = ""
     analyzer_version: str = ""
     file_type: str = ""
     size_bytes: int = 0
     mtime: float = 0.0
+    ctime: float = 0.0                  # 创建时间；0.0=缺失（免检必要条件）
     processing_policy: str = "full"     # full | metadata_only | keyframes_only
     # analysis
     content_description: str = ""
@@ -86,11 +90,13 @@ class FileEntry:
         return {
             "path": self.path,
             "file_hash": self.file_hash,
+            "hash_algorithm": self.hash_algorithm,
             "analyzed_at": self.analyzed_at,
             "analyzer_version": self.analyzer_version,
             "file_type": self.file_type,
             "size_bytes": int(self.size_bytes),
             "mtime": float(self.mtime),
+            "ctime": float(self.ctime) if self.ctime else None,
             "processing_policy": self.processing_policy,
             "analysis": {
                 "content_description": self.content_description,
@@ -122,11 +128,13 @@ class FileEntry:
         return cls(
             path=str(data.get("path", "")),
             file_hash=str(data.get("file_hash", "")),
+            hash_algorithm=str(data.get("hash_algorithm", "")),
             analyzed_at=str(data.get("analyzed_at", "")),
             analyzer_version=str(data.get("analyzer_version", "")),
             file_type=str(data.get("file_type", "")),
             size_bytes=_int(data.get("size_bytes")),
             mtime=_float(data.get("mtime")),
+            ctime=_float(data.get("ctime")),
             processing_policy=str(data.get("processing_policy", "full")),
             content_description=str(analysis.get("content_description", "")),
             category=str(analysis.get("category", "")),
@@ -240,26 +248,32 @@ class NaskbStore:
 
     # ── 哈希 ──
 
-    def compute_hash(self, file_path: str) -> str:
-        """流式计算文件 sha256，返回 "sha256:<hex>"。
+    def compute_hash(self, file_path: str, size: Optional[int] = None) -> tuple[str, str]:
+        """计算内容指纹，返回 (hash_algorithm, "sha256:<hex>")。
 
-        未配置 hash_max_bytes 时默认截断前 16MB（大文件/WebDAV 下避免
-        全量下载计算哈希；变更检测对文档/媒体足够）。
+        采样规则（ADR-20260816-4，用户 2026-08-16 拍板）：
+        - 文件 ≤512KB：全量 sha256 → "sha256:full"
+        - 文件 >512KB：8 段 × 64KB 均匀分布（第 i 段起始偏移
+          i*(S-64K)//7，i=0 含文件头、i=7 含文件尾；位置仅由 size 决定），
+          按序喂入 sha256 → "sha256:sample8x64k"
+        - 读取量不足（文件正在变化）抛异常，调用方按"内容已变"处理
         """
+        from .hashing import sample_ranges
+
+        if size is None:
+            st = self._fs.stat(file_path)
+            if st is None:
+                raise FileNotFoundError(file_path)
+            size = st.size_bytes
+        ranges = sample_ranges(size)
         h = hashlib.sha256()
-        total = 0
-        limit = self._hash_max_bytes
-        if limit is None:
-            limit = 16 * 1024 * 1024
-        for chunk in self._fs.read_chunks(file_path):
-            if limit is not None:
-                remaining = limit - total
-                if remaining <= 0:
-                    break
-                chunk = chunk[:remaining]
-            h.update(chunk)
-            total += len(chunk)
-        return f"sha256:{h.hexdigest()}"
+        if ranges is None:  # 全量
+            for chunk in self._fs.read_chunks(file_path):
+                h.update(chunk)
+            return HASH_ALG_FULL, f"sha256:{h.hexdigest()}"
+        data = self._fs.read_ranges(file_path, ranges)
+        h.update(data)
+        return HASH_ALG_SAMPLE, f"sha256:{h.hexdigest()}"
 
     # ── meta ──
 
@@ -275,10 +289,7 @@ class NaskbStore:
         mp = self.meta_path(dir_path)
         if not self._fs.exists(mp):
             return None
-        try:
-            return json.loads(self._fs.read_text(mp))
-        except Exception:
-            return None
+        return _fs_read_json(self._fs, mp)
 
     def write_meta(self, dir_path: str, data: dict) -> bool:
         mp = self.meta_path(dir_path)
@@ -293,21 +304,37 @@ class NaskbStore:
         ip = self.index_path(dir_path)
         if not self._fs.exists(ip):
             return {"schema": INDEX_SCHEMA, "updated_at": "", "files": []}
-        try:
-            data = json.loads(self._fs.read_text(ip))
-            if not isinstance(data, dict):
-                return {"schema": INDEX_SCHEMA, "updated_at": "", "files": []}
-            if not isinstance(data.get("files"), list):
-                data["files"] = []
-            return data
-        except Exception:
+        data = _fs_read_json(self._fs, ip)
+        if data is None:
             return {"schema": INDEX_SCHEMA, "updated_at": "", "files": []}
+        if not isinstance(data.get("files"), list):
+            data["files"] = []
+        return data
 
     def _write_index(self, dir_path: str, data: dict) -> bool:
+        """写目录 index.json：PUT 直接覆盖 + 读回校验 + 重试。
+
+        WebDAV 教训（2026-08-13 群晖实测）：tmp+MOVE 覆盖已有文件时存在
+        "写入报告成功但服务器端回滚/截断"问题（VPN 分流绕路放大了断流风险），
+        PUT 覆盖经实测可靠。读写校验保证 index 不丢条目。
+        """
         ip = self.index_path(dir_path)
         data.setdefault("schema", INDEX_SCHEMA)
         data["updated_at"] = _now_iso()
-        return self._write_json_atomic(ip, data)
+        payload = json.dumps(data, ensure_ascii=False,
+                             indent=2).encode("utf-8")
+        want = hashlib.sha256(payload).hexdigest()
+        with _write_lock:
+            for attempt in range(3):
+                try:
+                    self._fs.write_bytes(ip, payload)
+                    back = self._fs.read_bytes(ip, max_bytes=len(payload) + 4096)
+                    if hashlib.sha256(back).hexdigest() == want:
+                        return True
+                except Exception:
+                    pass
+                time.sleep(2)
+            return False
 
     def _write_json_atomic(self, path: str, data: dict) -> bool:
         """原子写：tmp 文件 + move。进程内锁串行化。"""
@@ -361,12 +388,10 @@ class NaskbStore:
             if df:
                 df_path = os.path.join(self.files_dir(dir_path),
                                        df).replace("\\", "/")
-                try:
-                    if self._fs.exists(df_path):
-                        return FileEntry.from_dict(
-                            json.loads(self._fs.read_text(df_path)))
-                except Exception:
-                    pass
+                if self._fs.exists(df_path):
+                    full = _fs_read_json(self._fs, df_path)
+                    if full is not None:
+                        return FileEntry.from_dict(full)
                 return FileEntry.from_dict(raw)  # data_file 缺失，降级轻量条目
             if self._entry_has_large(raw):
                 # 旧数据：index 里带全文 → 懒迁移到独立原数据文件
@@ -424,7 +449,8 @@ class NaskbStore:
         if not entry.analyzer_version:
             entry.analyzer_version = self._analyzer_version
         if not entry.file_hash:
-            entry.file_hash = self.compute_hash(file_path)
+            alg, entry.file_hash = self.compute_hash(file_path)
+            entry.hash_algorithm = entry.hash_algorithm or alg
 
         full = entry.to_dict()
         rel = entry.path
@@ -498,7 +524,7 @@ class NaskbStore:
         if entry is None:
             return "missing"
         try:
-            current = self.compute_hash(file_path)
+            _alg, current = self.compute_hash(file_path)
         except Exception:
             return "stale"
         return "valid" if current == entry.file_hash else "stale"
@@ -597,24 +623,21 @@ class NaskbStore:
         result: list[FileEntry] = []
         for f in self._fs.list_files(root, recursive=True):
             if f.name == "index.json" and REPO_DIR_NAME in f.path.replace("\\", "/"):
-                try:
-                    data = json.loads(self._fs.read_text(f.path))
-                    for raw in data.get("files", []):
-                        df = raw.get("data_file")
-                        if df:
-                            df_path = os.path.join(
-                                os.path.dirname(f.path), FILES_DIR_NAME,
-                                df).replace("\\", "/")
-                            try:
-                                if self._fs.exists(df_path):
-                                    result.append(FileEntry.from_dict(
-                                        json.loads(self._fs.read_text(df_path))))
-                                    continue
-                            except Exception:
-                                pass
-                        result.append(FileEntry.from_dict(raw))
-                except Exception:
+                data = _fs_read_json(self._fs, f.path)
+                if data is None:
                     continue
+                for raw in data.get("files", []):
+                    df = raw.get("data_file")
+                    if df:
+                        df_path = os.path.join(
+                            os.path.dirname(f.path), FILES_DIR_NAME,
+                            df).replace("\\", "/")
+                        if self._fs.exists(df_path):
+                            full = _fs_read_json(self._fs, df_path)
+                            if full is not None:
+                                result.append(FileEntry.from_dict(full))
+                                continue
+                    result.append(FileEntry.from_dict(raw))
         return result
 
     # ── folder.json（目录级）──
@@ -623,10 +646,10 @@ class NaskbStore:
         fp = self.folder_path(dir_path)
         if not self._fs.exists(fp):
             return None
-        try:
-            return FolderEntry.from_dict(json.loads(self._fs.read_text(fp)))
-        except Exception:
+        data = _fs_read_json(self._fs, fp)
+        if data is None:
             return None
+        return FolderEntry.from_dict(data)
 
     def write_folder(self, dir_path: str, entry: FolderEntry) -> bool:
         self.ensure_repo(dir_path)
@@ -636,6 +659,25 @@ class NaskbStore:
 # ═══════════════════════════════════════════════════════════════════
 # 工具
 # ═══════════════════════════════════════════════════════════════════
+
+
+# index.json / folder.json / files/*.json 读取上限（32MB）。
+# WebDAV read_text 默认 64KB 截断，索引变大后会解析失败（2026-08-13 教训）。
+_JSON_READ_MAX = 32 * 1024 * 1024
+
+
+def _fs_read_json(fs: FileSystemAdapter, path: str) -> Optional[dict]:
+    """读 JSON 文件：避开 64KB 截断；VPN 断流截断时重试。"""
+    for _ in range(3):
+        try:
+            raw = fs.read_bytes(path, max_bytes=_JSON_READ_MAX)
+            data = json.loads(raw.decode("utf-8", errors="replace"))
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            pass
+        time.sleep(0.5)
+    return None
 
 
 def _rel_path(path: str, base_dir: str) -> str:

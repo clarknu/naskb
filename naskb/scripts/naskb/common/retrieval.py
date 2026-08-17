@@ -15,7 +15,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from .desc_store import REPO_DIR_NAME, FileEntry, FolderEntry
+from .desc_store import REPO_DIR_NAME, FileEntry, FolderEntry, _fs_read_json
 
 
 @dataclass
@@ -28,6 +28,13 @@ class Doc:
     category: str = ""
     tags: list[str] = field(default_factory=list)
     context: str = ""    # RAG 生成上下文（含全文，供 ask 回答细节问题）
+    # 指纹（REQ-R4-05 / ADR-20260816-4）：sync-vectors 与去重使用
+    file_hash: str = ""
+    hash_algorithm: str = ""
+    size_bytes: int = 0
+    mtime: float = 0.0
+    ctime: float = 0.0
+    analyzed_at: str = ""
 
 
 _TOKEN_RE = re.compile(r"[a-zA-Z0-9_]+")
@@ -132,33 +139,41 @@ def collect_docs(fs, root: str, repo_name: str = ".naskb") -> list[Doc]:
                 if df:
                     df_path = os.path.join(repo_dir, REPO_DIR_NAME, "files",
                                            df).replace("\\", "/")
-                    try:
-                        if fs.exists(df_path):
-                            entry = FileEntry.from_dict(
-                                json.loads(fs.read_text(df_path)))
-                    except Exception:
-                        pass
+                    if fs.exists(df_path):
+                        full = _fs_read_json(fs, df_path)
+                        if full is not None:
+                            entry = FileEntry.from_dict(full)
+                # 当前位置：检索/展示必须用文件当前所在路径（original_path
+                # 只是 provenance，可能是历史本地路径或迁移前路径）
+                cur_path = os.path.join(repo_dir, raw.get("path", "")) \
+                    .replace("\\", "/")
                 # 检索索引文本：只用摘要+描述（用户拍板——全文不参与向量/关键词检索，
                 # 避免全文高频词稀释主题）；全文保留在 context 供 RAG 生成阶段使用
                 text = "\n".join(x for x in (
-                    entry.original_path or raw.get("path", ""),
+                    cur_path,
                     entry.summary, entry.category, " ".join(entry.tags),
                     entry.content_description) if x)
                 context = "\n".join(x for x in (
-                    entry.original_path or raw.get("path", ""),
+                    cur_path,
                     entry.summary, entry.category, " ".join(entry.tags),
                     entry.content_description, entry.transcription,
                     entry.ocr_text) if x)
                 if not text.strip():
                     continue
                 docs.append(Doc(
-                    path=entry.original_path or raw.get("path", ""),
+                    path=cur_path,
                     kind="file",
                     text=text,
                     summary=entry.summary,
                     category=entry.category,
                     tags=entry.tags,
                     context=context,
+                    file_hash=entry.file_hash,
+                    hash_algorithm=entry.hash_algorithm,
+                    size_bytes=entry.size_bytes,
+                    mtime=entry.mtime,
+                    ctime=entry.ctime,
+                    analyzed_at=entry.analyzed_at,
                 ))
         else:  # folder.json
             entry = FolderEntry.from_dict(data)

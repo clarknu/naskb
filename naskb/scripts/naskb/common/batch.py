@@ -39,12 +39,45 @@ class BatchResult:
     ignored_recorded: int = 0 # 被忽略文件仅记录名称推断（未分析内容）
     folder_updated: int = 0   # 目录级描述 folder.json 更新数
     orphans_removed: int = 0  # 文件已删除，清理的孤儿条目数
+    fingerprint_upgraded: int = 0  # 旧条目指纹升级（补算法/ctime，未重析）
     elapsed: float = 0.0
     detail: list[dict] = field(default_factory=list)  # 每文件结果
 
 
 ProgressFn = Optional[Callable[[int, int, str, str], None]]
 # on_progress(done_count, total_count, filename, status)
+
+
+def _stat_unchanged(entry: FileEntry, f) -> bool:
+    """L1 免检判定（ADR-20260816-4）：size+mtime+ctime 全一致才免检。
+
+    ctime 是免检必要条件：任一侧缺失（0.0）→ 不得免检，必须走 hash 复核。
+    （path/文件名一致性由条目键保证——条目按路径查找。）
+    """
+    if not entry.ctime or not getattr(f, "ctime", 0.0):
+        return False
+    return (entry.size_bytes == f.size_bytes
+            and entry.mtime == f.mtime
+            and entry.ctime == f.ctime)
+
+
+def _upgrade_fingerprint(store: NaskbStore, f, old: FileEntry) -> bool:
+    """旧条目指纹升级：补算采样 hash + 补记 ctime/algorithm，不重析。
+
+    旧条目（hash_algorithm 为空）与当前采样规则不可比；在 stat 已判一致
+    或 hash 无法对比时信任既有分析内容仍有效，仅升级指纹。
+    严格校验可用 --verify-hash（深度兜底）。
+    """
+    try:
+        alg, h = store.compute_hash(f.path, size=f.size_bytes)
+        old.file_hash = h
+        old.hash_algorithm = alg
+        old.mtime = f.mtime
+        old.ctime = getattr(f, "ctime", 0.0)
+        old.size_bytes = f.size_bytes
+        return store.set_entry(f.path, old)
+    except Exception:
+        return False
 
 
 def _download_to_tmp(fs: FileSystemAdapter, remote_path: str,
@@ -434,22 +467,65 @@ def analyze_tree(fs: FileSystemAdapter, store: NaskbStore, config,
             ext = f.ext
             status = "analyzed"
             try:
-                # 增量跳过
+                # ── 增量判定：三级判定链（ADR-20260816-4）──
+                # L1 免检（stat 五项一致，含 ctime）→ L2 采样 hash 复核
+                # → L3 重析。L1 命中 WebDAV 零下载。
                 if not force:
                     old = store.get_entry(f.path)
-                    if old and old.file_hash == store.compute_hash(f.path):
+                    if old:
                         has_content = bool(old.summary) or bool(old.ocr_text) \
-                            or bool(old.transcription) or bool(old.content_description)
-                        if has_content:
+                            or bool(old.transcription) \
+                            or bool(old.content_description)
+                        if _stat_unchanged(old, f) and has_content:
+                            # L1 免检命中；旧指纹顺手升级（stat 一致=内容未变）
+                            if not old.hash_algorithm:
+                                if _upgrade_fingerprint(store, f, old):
+                                    result.fingerprint_upgraded += 1
                             result.skipped += 1
                             status = "skipped"
                             if on_progress:
                                 on_progress(i + 1, len(files), f.name, status)
                             continue
+                        if has_content:
+                            # L2：采样 hash 复核（算法可比才有效）
+                            alg = h = None
+                            try:
+                                alg, h = store.compute_hash(
+                                    f.path, size=f.size_bytes)
+                            except Exception:
+                                pass
+                            if alg and h and old.hash_algorithm == alg \
+                                    and old.file_hash == h:
+                                # 内容未变，仅回写 stat 字段（防时间戳误报）
+                                old.mtime = f.mtime
+                                old.ctime = getattr(f, "ctime", 0.0)
+                                old.size_bytes = f.size_bytes
+                                if store.set_entry(f.path, old):
+                                    result.skipped += 1
+                                    status = "skipped"
+                                    if on_progress:
+                                        on_progress(i + 1, len(files),
+                                                    f.name, status)
+                                    continue
+                            if not old.hash_algorithm:
+                                # 旧指纹与新规则不可比：信任内容未变，
+                                # 仅升级指纹（--verify-hash 可深度复核）
+                                if _upgrade_fingerprint(store, f, old):
+                                    result.fingerprint_upgraded += 1
+                                    result.skipped += 1
+                                    status = "skipped"
+                                    if on_progress:
+                                        on_progress(i + 1, len(files),
+                                                    f.name, status)
+                                    continue
+                        # 否则 → L3 重析（继续下方分析流程）
 
                 entry = FileEntry()
                 entry.original_path = f.path
                 entry.processing_policy = "full"
+                entry.mtime = f.mtime
+                entry.ctime = getattr(f, "ctime", 0.0)
+                entry.size_bytes = f.size_bytes
                 flow_text = ""   # docx 图文流（非 docx 恒为空）
 
                 if ext in DOC_EXTS:
@@ -686,15 +762,41 @@ def analyze_tree(fs: FileSystemAdapter, store: NaskbStore, config,
             _set_entry(path, entry)
 
         # ── 被忽略/过大文件：仅按文件名记录可能的内容意义（不分析内容）──
+        # 指纹统一走采样规则（ADR-20260816-4）：大文件 8×64KB Range 读取，
+        # 比旧的 64KB 头截断更防伪，成本仍远低于全量下载。
         for f, big in [(x, False) for x in ignored_files] + \
                       [(x, True) for x in big_files]:
             try:
                 if not force:
                     old = store.get_entry(f.path)
-                    if (old and old.summary
-                            and old.file_hash == store.compute_hash(f.path)):
-                        result.skipped += 1
-                        continue
+                    if old and old.summary:
+                        if _stat_unchanged(old, f):
+                            # L1 免检；旧指纹顺手升级
+                            if not old.hash_algorithm:
+                                if _upgrade_fingerprint(store, f, old):
+                                    result.fingerprint_upgraded += 1
+                            result.skipped += 1
+                            continue
+                        try:
+                            alg, h = store.compute_hash(
+                                f.path, size=f.size_bytes)
+                        except Exception:
+                            alg = h = None
+                        if alg and h and old.hash_algorithm == alg \
+                                and old.file_hash == h:
+                            # L2 内容未变，仅回写 stat
+                            old.mtime = f.mtime
+                            old.ctime = getattr(f, "ctime", 0.0)
+                            old.size_bytes = f.size_bytes
+                            if store.set_entry(f.path, old):
+                                result.skipped += 1
+                                continue
+                        if not old.hash_algorithm:
+                            # 旧指纹不可比：信任内容未变，仅升级指纹
+                            if _upgrade_fingerprint(store, f, old):
+                                result.fingerprint_upgraded += 1
+                                result.skipped += 1
+                                continue
                 meaning = meaning_of(f.name)
                 entry = FileEntry()
                 entry.original_path = f.path
@@ -702,6 +804,10 @@ def analyze_tree(fs: FileSystemAdapter, store: NaskbStore, config,
                 entry.file_type = guess_mime(f.name)
                 entry.size_bytes = f.size_bytes
                 entry.mtime = f.mtime
+                entry.ctime = getattr(f, "ctime", 0.0)
+                alg, entry.file_hash = store.compute_hash(
+                    f.path, size=f.size_bytes)
+                entry.hash_algorithm = alg
                 note = (f"（文件超过 {config.analyzer_max_file_mb}MB，未下载分析）"
                         if big else "（未分析内容，仅按文件名记录）")
                 entry.summary = f"可能为{meaning}：{f.name}{note}"
