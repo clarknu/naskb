@@ -2,7 +2,7 @@
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "naskb" / "scripts"))
 
 import pytest
 
@@ -158,6 +158,13 @@ class TestDoc:
         assert r.analyzer == "doc"
 
 
+try:
+    import xlrd
+except ImportError:
+    xlrd = None
+
+
+@pytest.mark.skipif(xlrd is None, reason="xlrd not installed (optional: old .xls format)")
 class TestXls:
     def test_not_xls_degrades(self, analyzer, tmp_path):
         """非 .xls 内容应优雅降级不抛异常。"""

@@ -31,6 +31,28 @@ api_key = ""            # ← 填小米 MiMo key（与 vision 可同一 key）
 split_minutes = 25      # 长音频每 25 分钟分段转写（MiMo 单次上限）
 diarization = false     # 说话人分离（部分模型不支持）
 
+# ── [nas] NAS 列表（每台一个 [[nas]] 块，各自命名）──
+# host 为 IP/域名；webdav_port 5006=https、5005=http；群晖/飞牛自签证书需 verify_ssl=false
+
+[[nas]]
+name = "本地 NAS"
+host = "192.168.5.2"
+user = "clarknu"
+password = ""           # ← 填登录密码
+webdav_port = 5006
+webdav_https = true
+verify_ssl = false
+
+# ── [pg] PostgreSQL 向量数据库（pgvector）──
+[pg]
+host = "192.168.5.2"
+port = 25432
+user = "postgres"
+password = ""           # ← 填 PG 密码
+database = "naskb"
+vector_table = "naskb_vectors"
+vector_dim = 512        # bge-small-zh 输出维度
+
 [analyzer.mineru]
 enabled = true
 extra_formats = ["html"]

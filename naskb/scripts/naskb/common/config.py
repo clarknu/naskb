@@ -104,12 +104,37 @@ class Config:
         self.mineru_model_source: str = mineru_cfg.get("model_source", "")
         self.mineru_bin: str = mineru_cfg.get("bin", "")  # 独立 venv 的 mineru 可执行文件
 
-        # ── [webdav]（NAS 连接信息）──
+        # ── [webdav]（NAS 连接信息，单台快捷方式）──
         webdav_cfg = data.get("webdav", {})
         self.webdav_url: str = webdav_cfg.get("url", "")
         self.webdav_user: str = webdav_cfg.get("user", "")
         self.webdav_password: str = webdav_cfg.get("password", "")
         self.webdav_verify_ssl: bool = bool(webdav_cfg.get("verify_ssl", True))
+
+        # ── [pg]（PostgreSQL 向量数据库）──
+        pg_cfg = data.get("pg", {})
+        self.pg_host: str = pg_cfg.get("host", "")
+        self.pg_port: int = int(pg_cfg.get("port", 5432))
+        self.pg_user: str = pg_cfg.get("user", "")
+        self.pg_password: str = pg_cfg.get("password", "")
+        self.pg_database: str = pg_cfg.get("database", "naskb")
+        self.pg_vector_table: str = pg_cfg.get("vector_table", "naskb_vectors")
+        self.pg_vector_dim: int = int(pg_cfg.get("vector_dim", 512))
+
+        # ── [nas]（NAS 列表：多台各自命名，主配置来源）──
+        self.nas_list: list[dict[str, Any]] = []
+        for entry in data.get("nas", []):
+            if not isinstance(entry, dict):
+                continue
+            self.nas_list.append({
+                "name": str(entry.get("name", "")),
+                "host": str(entry.get("host", "")),
+                "user": str(entry.get("user", "")),
+                "password": str(entry.get("password", "")),
+                "webdav_port": int(entry.get("webdav_port", 5006)),
+                "webdav_https": bool(entry.get("webdav_https", True)),
+                "verify_ssl": bool(entry.get("verify_ssl", False)),
+            })
 
 
         # ── [analyzer] ──
@@ -127,6 +152,23 @@ class Config:
             return str(p)
         return str(Path(self.work_path) / p)
 
+    def get_nas(self, name: str = "") -> Optional[dict[str, Any]]:
+        """按名称取 NAS 条目；name 为空时返回列表第一台；找不到返回 None。"""
+        if not self.nas_list:
+            return None
+        if not name:
+            return self.nas_list[0]
+        for entry in self.nas_list:
+            if entry.get("name") == name:
+                return entry
+        return None
+
+    def nas_webdav_url(self, entry: Optional[dict[str, Any]] = None) -> str:
+        """由 NAS 条目构造 WebDAV 基址，如 https://192.168.5.2:5006/。"""
+        entry = entry or self.get_nas() or {}
+        scheme = "https" if entry.get("webdav_https", True) else "http"
+        return f"{scheme}://{entry.get('host', '')}:{entry.get('webdav_port', 5006)}/"
+
     @classmethod
     def from_work_path(cls, work_path: str) -> "Config":
         """Load config.toml from work_path; use defaults if not found."""
@@ -140,6 +182,11 @@ class Config:
     def _format_path(self, p: str) -> str:
         """Format a path for TOML: use forward slashes and escape backslashes."""
         return p.replace("\\", "/")
+
+    @staticmethod
+    def _toml_str(s: str) -> str:
+        """转义 TOML 基本字符串（反斜杠与双引号）。"""
+        return s.replace("\\", "\\\\").replace('"', '\\"')
 
     def save(self) -> None:
         """Write current configuration back to config.toml."""
@@ -226,12 +273,38 @@ class Config:
 
         # ── [webdav]（NAS 连接信息）──
         lines.append("[webdav]")
-        lines.append(f'url = "{self.webdav_url}"')
-        lines.append(f'user = "{self.webdav_user}"')
+        lines.append(f'url = "{self._toml_str(self.webdav_url)}"')
+        lines.append(f'user = "{self._toml_str(self.webdav_user)}"')
         if self.webdav_password:
-            lines.append(f'password = "{self.webdav_password}"')
+            lines.append(f'password = "{self._toml_str(self.webdav_password)}"')
         lines.append(f"verify_ssl = {str(self.webdav_verify_ssl).lower()}")
         lines.append("")
+
+        # ── [pg]（PostgreSQL 向量数据库）──
+        if self.pg_host:
+            lines.append("[pg]")
+            lines.append(f'host = "{self._toml_str(self.pg_host)}"')
+            lines.append(f"port = {self.pg_port}")
+            lines.append(f'user = "{self._toml_str(self.pg_user)}"')
+            if self.pg_password:
+                lines.append(f'password = "{self._toml_str(self.pg_password)}"')
+            lines.append(f'database = "{self._toml_str(self.pg_database)}"')
+            lines.append(f'vector_table = "{self._toml_str(self.pg_vector_table)}"')
+            lines.append(f"vector_dim = {self.pg_vector_dim}")
+            lines.append("")
+
+        # ── [nas]（NAS 列表）──
+        for entry in self.nas_list:
+            lines.append("[[nas]]")
+            lines.append(f'name = "{self._toml_str(str(entry.get("name", "")))}"')
+            lines.append(f'host = "{self._toml_str(str(entry.get("host", "")))}"')
+            lines.append(f'user = "{self._toml_str(str(entry.get("user", "")))}"')
+            if entry.get("password"):
+                lines.append(f'password = "{self._toml_str(str(entry.get("password", "")))}"')
+            lines.append(f"webdav_port = {int(entry.get('webdav_port', 5006))}")
+            lines.append(f"webdav_https = {str(bool(entry.get('webdav_https', True))).lower()}")
+            lines.append(f"verify_ssl = {str(bool(entry.get('verify_ssl', False))).lower()}")
+            lines.append("")
 
 
         # ── [analyzer] ──
@@ -281,5 +354,14 @@ class Config:
                 "repo_name": self.desc_repo_name,
                 "analyzer_version": self.desc_analyzer_version,
                 "hash_max_bytes": self.desc_hash_max_bytes,
+            },
+            "nas": self.nas_list,
+            "pg": {
+                "host": self.pg_host,
+                "port": self.pg_port,
+                "user": self.pg_user,
+                "database": self.pg_database,
+                "vector_table": self.pg_vector_table,
+                "vector_dim": self.pg_vector_dim,
             },
         }

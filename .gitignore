@@ -26,8 +26,5 @@ NASKB_data/
 # Reasonix session artifacts
 .reasonix/
 
-# Reasonix session artifacts
-.reasonix/
-
 # MinerU 独立环境
 .venv-mineru/

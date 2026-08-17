@@ -116,7 +116,9 @@ def collect_docs(fs, root: str, repo_name: str = ".naskb") -> list[Doc]:
         if f"/{repo_name}/" not in rel:
             continue
         try:
-            data = json.loads(fs.read_text(f.path))
+            # index.json 可能很大（数百 KB），用 2MB 缓冲区读取
+            raw_bytes = fs.read_bytes(f.path, max_bytes=2_000_000)
+            data = json.loads(raw_bytes.decode("utf-8", errors="replace"))
         except Exception:
             continue
         if not isinstance(data, dict):

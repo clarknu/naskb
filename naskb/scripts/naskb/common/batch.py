@@ -579,7 +579,7 @@ def analyze_tree(fs: FileSystemAdapter, store: NaskbStore, config,
                     tmp = _download_to_tmp(fs, f.path, config.analyzer_tmp_dir)
                     if tmp:
                         ia = ImageAnalyzer(vision_client)
-                        desc_text, meta = ia.analyze(tmp)
+                        desc_text, meta = ia.analyze(tmp, filename_hint=f.name)
                         entry.summary = (desc_text or "")[:200]
                         entry.content_description = desc_text
                         entry.category = "图片"
