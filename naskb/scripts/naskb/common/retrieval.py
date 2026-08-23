@@ -30,6 +30,7 @@ class Doc:
     context: str = ""    # RAG 生成上下文（含全文，供 ask 回答细节问题）
     content_description: str = ""   # 内容描述（v3：入库 PG 独立列）
     file_type: str = ""             # 类型标记（扩展名/类别名，v3）
+    artifacts: dict = field(default_factory=dict)   # 解析产物登记（解析视图用）
     # 指纹（REQ-R4-05 / ADR-20260816-4）：sync-vectors 与去重使用
     file_hash: str = ""
     hash_algorithm: str = ""
@@ -170,6 +171,9 @@ def collect_docs(fs, root: str, repo_name: str = ".naskb") -> list[Doc]:
                     category=entry.category,
                     tags=entry.tags,
                     context=context,
+                    content_description=entry.content_description,
+                    file_type=entry.file_type,
+                    artifacts=entry.exif.get("mineru_artifacts") or {},
                     file_hash=entry.file_hash,
                     hash_algorithm=entry.hash_algorithm,
                     size_bytes=entry.size_bytes,

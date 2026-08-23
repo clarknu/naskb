@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS {schema}.resources (
   analyzed_at  timestamptz,
   status       text NOT NULL DEFAULT 'ok',
   prev_hashes  jsonb NOT NULL DEFAULT '[]',
+  artifacts    jsonb NOT NULL DEFAULT '{{}}',
   synced_at    timestamptz NOT NULL DEFAULT now(),
   UNIQUE (rel_path)
 );
@@ -128,7 +129,9 @@ CREATE INDEX IF NOT EXISTS idx_vectors_embedding ON {schema}.vectors
 # folders 独立目录描述表（ADR-20260818-1 决策 6）
 _MIGRATE_SOURCES = """
 ALTER TABLE {schema}.resources ADD COLUMN IF NOT EXISTS source_id uuid;
+ALTER TABLE {schema}.resources ADD COLUMN IF NOT EXISTS artifacts jsonb;
 UPDATE {schema}.resources SET source_id = {legacy}::uuid WHERE source_id IS NULL;
+UPDATE {schema}.resources SET artifacts = '{{}}'::jsonb WHERE artifacts IS NULL;
 ALTER TABLE {schema}.resources DROP CONSTRAINT IF EXISTS resources_rel_path_key;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_resources_source_path
   ON {schema}.resources (source_id, rel_path);
@@ -369,9 +372,10 @@ class PgStore:
                         "name, kind, category, tags, summary, "
                         "content_description, file_type, file_hash, "
                         "hash_algorithm, mtime, ctime, size_bytes, "
-                        "analyzer_version, analyzed_at, status, source_id) "
+                        "analyzer_version, analyzed_at, status, source_id, "
+                        "artifacts) "
                         "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"
-                        "%s,%s,%s,'ok',%s) RETURNING resource_id")
+                        "%s,%s,%s,'ok',%s,%s) RETURNING resource_id")
                         .format(sql.Identifier(schema_name)),
                         (rel, self._parent_of(rel),
                          rel.split("/")[-1], doc.kind, doc.category,
@@ -379,7 +383,8 @@ class PgStore:
                          doc.content_description or "", doc.file_type or "",
                          doc.file_hash, doc.hash_algorithm,
                          doc.mtime, doc.ctime or None, doc.size_bytes,
-                         "", self._ts(doc.analyzed_at), sid))
+                         "", self._ts(doc.analyzed_at), sid,
+                         Jsonb(doc.artifacts or {})))
                     rid = cur.fetchone()[0]
                     cur.execute(sql.SQL(
                         "INSERT INTO {}.vectors (resource_id, model, dim, "
@@ -401,6 +406,7 @@ class PgStore:
                         "hash_algorithm=%s, mtime=%s, ctime=%s, "
                         "size_bytes=%s, summary=%s, category=%s, tags=%s, "
                         "content_description=%s, file_type=%s, "
+                        "artifacts=%s, "
                         "prev_hashes = prev_hashes || %s::jsonb, "
                         "status='ok', synced_at=now() "
                         "WHERE resource_id=%s")
@@ -409,6 +415,7 @@ class PgStore:
                          doc.ctime or None, doc.size_bytes, doc.summary,
                          doc.category, doc.tags,
                          doc.content_description or "", doc.file_type or "",
+                         Jsonb(doc.artifacts or {}),
                          Jsonb([{"hash": row["file_hash"],
                                  "algorithm": row["hash_algorithm"],
                                  "replaced_at": now.isoformat()}]),
@@ -432,11 +439,12 @@ class PgStore:
         with conn.cursor() as cur:
             cur.execute(sql.SQL(
                 "UPDATE {}.resources SET summary=%s, category=%s, tags=%s, "
-                "content_description=%s, file_type=%s, status='ok', "
-                "synced_at=now() WHERE resource_id=%s")
+                "content_description=%s, file_type=%s, artifacts=%s, "
+                "status='ok', synced_at=now() WHERE resource_id=%s")
                 .format(ident),
                 (doc.summary, doc.category, doc.tags,
                  doc.content_description or "", doc.file_type or "",
+                 Jsonb(doc.artifacts or {}),
                  resource_id))
             cur.execute(sql.SQL(
                 "INSERT INTO {}.vectors (resource_id, model, dim, embedding, "
@@ -717,7 +725,7 @@ class PgStore:
                     "name, kind, category, tags, summary, "
                     "content_description, file_type, file_hash, "
                     "hash_algorithm, mtime, ctime, size_bytes, status, "
-                    "analyzed_at FROM {}.resources "
+                    "analyzed_at, artifacts FROM {}.resources "
                     "WHERE resource_id = %s").format(ident), (rid,))
                 row = cur.fetchone()
         if row is None:
@@ -726,12 +734,105 @@ class PgStore:
                 "name", "kind", "category", "tags", "summary",
                 "content_description", "file_type", "file_hash",
                 "hash_algorithm", "mtime", "ctime", "size_bytes", "status",
-                "analyzed_at")
+                "analyzed_at", "artifacts")
         d = dict(zip(cols, row))
         d["tags"] = list(d["tags"] or [])
+        d["artifacts"] = d["artifacts"] or {}
         d["resource_id"] = str(d["resource_id"])
         d["source_id"] = str(d["source_id"]) if d["source_id"] else ""
         return d
+
+    def all_rows(self, schema_name: str, source_id=None) -> list[dict]:
+        """来源全部资源行（export-repo 用，含 artifacts/全文主体字段）。"""
+        sid = None
+        if source_id is not None:
+            sid = uuid.UUID(str(source_id)) if source_id else LEGACY_SOURCE
+        ident = sql.Identifier(schema_name)
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                if sid is not None:
+                    cur.execute(sql.SQL(
+                        "SELECT resource_id, source_id, rel_path, parent_dir, "
+                        "name, kind, category, tags, summary, "
+                        "content_description, file_type, file_hash, "
+                        "hash_algorithm, mtime, ctime, size_bytes, status, "
+                        "analyzed_at, artifacts FROM {}.resources "
+                        "WHERE source_id=%s ORDER BY rel_path").format(ident),
+                        (sid,))
+                else:
+                    cur.execute(sql.SQL(
+                        "SELECT resource_id, source_id, rel_path, parent_dir, "
+                        "name, kind, category, tags, summary, "
+                        "content_description, file_type, file_hash, "
+                        "hash_algorithm, mtime, ctime, size_bytes, status, "
+                        "analyzed_at, artifacts FROM {}.resources "
+                        "ORDER BY rel_path").format(ident))
+                rows = cur.fetchall()
+        cols = ("resource_id", "source_id", "rel_path", "parent_dir",
+                "name", "kind", "category", "tags", "summary",
+                "content_description", "file_type", "file_hash",
+                "hash_algorithm", "mtime", "ctime", "size_bytes", "status",
+                "analyzed_at", "artifacts")
+        out = []
+        for row in rows:
+            d = dict(zip(cols, row))
+            d["tags"] = list(d["tags"] or [])
+            d["artifacts"] = d["artifacts"] or {}
+            d["resource_id"] = str(d["resource_id"])
+            d["source_id"] = str(d["source_id"]) if d["source_id"] else ""
+            out.append(d)
+        return out
+
+    def upsert_artifacts(self, schema_name: str, resource_id,
+                         artifacts: dict) -> None:
+        """更新单个资源行的解析产物登记（解析视图用）。"""
+        ident = sql.Identifier(schema_name)
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql.SQL(
+                    "UPDATE {}.resources SET artifacts=%s, synced_at=now() "
+                    "WHERE resource_id=%s").format(ident),
+                    (Jsonb(artifacts or {}), uuid.UUID(str(resource_id))))
+
+    def rebind_nas(self, old: dict, new: dict) -> dict:
+        """pg-rebind（REQ-R4-14）：NAS 主机/账号变更时重绑五要素不丢库。
+
+        old/new: {protocol?,host,port,username?,label?}。流程：
+        归一化新五要素 → 计算新 schema 名 → 若与旧名不同则改 schema 名
+        → 更新 registry 行。返回 {changed, old_schema, new_schema}。
+        """
+        old_proto, old_host, old_port, old_user = normalize_identity(
+            old.get("protocol", "webdav"), old.get("host", ""),
+            old.get("port", 0), old.get("username", ""))
+        old_schema = schema_name_for(old_proto, old_host, old_port, old_user)
+        new_proto, new_host, new_port, new_user = normalize_identity(
+            new.get("protocol", old_proto), new.get("host", old_host),
+            new.get("port", old_port), new.get("username", old_user))
+        new_schema = schema_name_for(new_proto, new_host, new_port, new_user)
+        self.ensure_registry()
+        changed = False
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT nas_id FROM public.nas_registry
+                    WHERE protocol=%s AND host=%s AND port=%s AND username=%s
+                """, (old_proto, old_host, old_port, old_user))
+                row = cur.fetchone()
+                if row is None:
+                    raise RuntimeError("未找到该 NAS 注册记录（先 sync-vectors 注册）")
+                nas_id = row[0]
+                if old_schema != new_schema:
+                    cur.execute(sql.SQL("ALTER SCHEMA {} RENAME TO {}")
+                                .format(sql.Identifier(old_schema),
+                                        sql.Identifier(new_schema)))
+                    changed = True
+                cur.execute("""
+                    UPDATE public.nas_registry SET host=%s, port=%s,
+                    username=%s, schema_name=%s
+                    WHERE nas_id=%s
+                """, (new_host, new_port, new_user, new_schema, nas_id))
+        return {"changed": changed, "old_schema": old_schema,
+                "new_schema": new_schema, "nas_id": str(nas_id)}
 
     def delete_source_rows(self, schema_name: str, source_id) -> int:
         """删除来源的全部行（vectors 级联；注销来源时用）。"""
