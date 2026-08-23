@@ -1,6 +1,8 @@
-# NASKB — 智能 NAS 知识库（v2）
+# NASKB — 智能 NAS 知识库（v2 工具形态 → v3 平台化演进中）
 
 > 需求基线：`design/requirement.md`（功能/架构设计的来源与出发点，持续更新）
+> 重定位方案：`design/platform-v3-design.md`（2026-08-18 拍板：工具 → 自持知识的知识库系统，
+> Web UI + 开放 API + 下载代理 + 在线预览；产品以 v0.1 重新起版）
 
 对本地目录或 NAS（WebDAV）建立 `.naskb/` 描述仓库：AI 分类/摘要/标签、图片音频识别、
 PDF/DOCX 扫描件 OCR、目录整理规划与检索。以 **Reasonix Skill** 形态交付：
@@ -13,11 +15,12 @@ naskb/                      ← Skill 根
 ├── SKILL.md                ← AI 入口（playbook）
 ├── DEPLOY.md               ← 部署指南
 └── scripts/naskb/          ← 代码
-    ├── common/             ← 确定性层：.naskb 仓库、fs(local/webdav)、llm 客户端、BM25 检索
+    ├── common/             ← 确定性层：.naskb 仓库、fs(local/webdav)、llm 客户端、检索、PG 向量库
     ├── analyzer/           ← AI 编排层：文档/图片/音频/视频/MinerU/目录/重组
-    └── skill/cli.py        ← desc 命令组
+    ├── mcp/                ← MCP Server（14 个 kb_* 工具，stdio）
+    └── skill/cli.py        ← desc 命令组（18 命令）
 NASKB_data/                 ← 工作区：config.toml（DeepSeek/MiMo key、WebDAV、MinerU）
-tests/                      ← 测试（164 passed）
+tests/                      ← 测试（253 用例）
 ```
 
 ## 核心能力（`naskb desc ...`）
@@ -33,8 +36,9 @@ tests/                      ← 测试（164 passed）
 | `sync-vectors <root> [--nas --rebuild]` | 同步 .naskb → PG 多 NAS 向量库（五要素身份/独立 schema/增改删移增量） |
 | `sync-status <root> [--nas]` / `pg-status` | 只读一致性报告 / PG 已注册 NAS 向量库清单 |
 | `index-vectors <root>` | 构建语义向量索引（首次自动下载 ~24MB 模型到工作区） |
-| `plan-reorganize <root> [--apply]` | AI 生成整理方案并执行（整仓跟随/级联更新/空目录清理） |
+| `plan-reorganize <root> [--apply]` | AI 生成整理方案并执行（整仓跟随/级联更新/空目录清理）；方案持久化 plan_id，apply 凭 id 复校验执行 |
 | `migrate` | v1 `.sidecar.json` → v2 `.naskb` 迁移 |
+| `serve-mcp [--root X] [--pg]` | **MCP Server（stdio）**：14 个 `kb_*` 工具（检索/问答/入库/整理）供外部 Agent 调用，长任务返回 job_id；`mcp.json` 模板见仓库根 |
 
 NAS 场景：`naskb desc --webdav-url <url> analyze-tree /path`（config.toml 配好 [webdav] 后可省略）。
 
