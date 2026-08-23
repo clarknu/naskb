@@ -162,6 +162,8 @@ class TestCore:
 
         monkeypatch.setattr("naskb.common.embeddings.Embedder", _FakeEmb)
         monkeypatch.setattr("naskb.common.vector_index.VectorIndex", _StaleVector)
+        monkeypatch.setattr("naskb.common.embeddings.model_ready",
+                            lambda *a: True)  # 模拟模型已下载
         core, fs = _make_core(tmp_path, repo_dir)
         s = core.stats()
         assert s["engine"] == "bm25"
@@ -195,6 +197,8 @@ class TestCore:
 
         monkeypatch.setattr("naskb.common.embeddings.Embedder", _FakeEmb)
         monkeypatch.setattr("naskb.common.vector_index.VectorIndex", _FreshVector)
+        monkeypatch.setattr("naskb.common.embeddings.model_ready",
+                            lambda *a: True)  # 模拟模型已下载
         core, fs = _make_core(tmp_path, repo_dir)
         s = core.stats()
         assert s["engine"] == "vector"

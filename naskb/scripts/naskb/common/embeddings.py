@@ -45,6 +45,17 @@ def ensure_model(work_path: str) -> str:
     return model_dir
 
 
+def model_ready(work_path: str) -> bool:
+    """模型是否已下载（快速存在性检查，不触发联网下载）。
+
+    读路径（search/ask/serve/MCP 检索内核）用它先判定：模型缺失时直接
+    回退 BM25，而不是静默发起 180s×N 的下载阻塞——下载只由显式的
+    index-vectors / kb_index_vectors 触发。
+    """
+    model_file = os.path.join(work_path, MODEL_DIR, MODEL_NAME, "model.onnx")
+    return os.path.isfile(model_file) and os.path.getsize(model_file) > 100_000
+
+
 class Embedder:
     """bge-small-zh ONNX 嵌入器：tokenize → CLS embedding → L2 归一化。"""
 

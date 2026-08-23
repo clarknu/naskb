@@ -74,9 +74,13 @@ class KnowledgeCore:
         self._vector_stale = False
         emb = None
         try:
-            from .embeddings import Embedder
+            from .embeddings import Embedder, model_ready
             from .vector_index import VectorIndex
 
+            if not model_ready(self._work_path):
+                # 读路径不触发联网下载（下载由 desc index-vectors 显式触发），
+                # 模型缺失直接回退 BM25，避免无网环境 180s×N 阻塞
+                raise RuntimeError("向量模型未下载（运行 desc index-vectors 下载并建索引）")
             emb = Embedder(self._work_path)
             vindex = VectorIndex(emb, self._work_path)
             if vindex.load():

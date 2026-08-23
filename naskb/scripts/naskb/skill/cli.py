@@ -1,11 +1,14 @@
 """Command-line interface for NASKB (v2).
 
-Usage:
-    naskb desc scan <root>
-    naskb desc analyze <file>
-    naskb desc analyze-tree <root> [--llm] [--workers N]
-    naskb desc plan-reorganize <root> [--apply]
-    naskb desc search <query>
+Usage (naskb desc <command>):
+    仓库检查/扫描:  check | scan | orphans [--delete]
+    分析入库:       analyze <file> | analyze-tree <root> [--llm --workers --limit --force]
+                    analyze-folder <path> [-r] | split <root>
+    整理迁移:       move <src> <dst> | plan-reorganize <root> [--apply] | migrate [root] [--delete]
+    检索问答:       search <query> | ask <question>   [--root -k --vector/--no-vector --pg --nas]
+    向量索引:       index-vectors [root]
+    服务接口:       serve [--host --port --root --open --pg] | serve-mcp [--root --pg]
+    PG 多 NAS 库:   sync-vectors <root> [--nas --rebuild] | sync-status <root> [--nas] | pg-status
 """
 import os
 import sys
@@ -800,8 +803,10 @@ def desc_search(ctx, query, root, top_k, vector, pg_flag, nas_alias):
             return
         if vector is not False:
             try:
-                from ..common.embeddings import Embedder
+                from ..common.embeddings import Embedder, model_ready
                 from ..common.vector_index import VectorIndex
+                if not model_ready(config.work_path):
+                    raise RuntimeError("向量模型未下载（运行 desc index-vectors）")
                 emb = Embedder(config.work_path)
                 index = VectorIndex(emb, config.work_path)
                 if index.load():
@@ -883,8 +888,10 @@ def desc_ask(ctx, question, root, top_k, vector, pg_flag, nas_alias):
         index = None
         if vector is not False:
             try:
-                from ..common.embeddings import Embedder
+                from ..common.embeddings import Embedder, model_ready
                 from ..common.vector_index import VectorIndex
+                if not model_ready(config.work_path):
+                    raise RuntimeError("向量模型未下载（运行 desc index-vectors）")
                 emb = Embedder(config.work_path)
                 index = VectorIndex(emb, config.work_path)
                 if index.load():
@@ -1028,9 +1035,28 @@ def desc_serve(ctx, host, port, roots, open_browser, pg_flag):
         fs.close()
 
 
+@desc.command("serve-mcp")
+@click.option("--root", "roots", multiple=True, default=None,
+              help="知识库根目录（含 .naskb/ 描述数据），可多次传入；默认 .")
+@click.option("--pg", "pg_flag", is_flag=True, default=False,
+              help="启用 PG 多 NAS 向量库后端")
+@click.pass_context
+def desc_serve_mcp(ctx, roots, pg_flag):
+    """启动 MCP server（stdio 传输）：本地 Agent（Claude Desktop/Cursor 等）接入。
+
+    工具面 14 个 kb_*（检索/问答/入库/整理）；分钟级操作返回 job_id，
+    用 kb_job_status 查询。在 mcp.json 里配 command 为
+    `naskb desc serve-mcp --root <库目录>` 即可接入。
+    """
+    from ..mcp.server import run_stdio
+
+    wp = _get_work_path(ctx.obj.get("work_path"))
+    roots = list(roots) or ["."]
+    run_stdio(wp, roots, pg=pg_flag)
+
+
 def _pg_engine_or_none(ctx, config, fs, nas_alias: Optional[str]):
-    """构造 PgSearchEngine + 目标 schema；未配置/失败返回 (None, None)。"""
-    if not config.pg_enabled:
+    """构造 PgSearchEngine + 目标 schema；未配置/失败返回 (None, None)。"""    if not config.pg_enabled:
         return None, None
     try:
         from ..common.pgstore import PgStore
@@ -1264,9 +1290,11 @@ def desc_plan_reorganize(ctx, root, apply, output, max_items):
     文件很多时清单按 --max-items 抽样，方案覆盖代表性文件。
     """
     from ..common.llm import LLMConfig, create_llm_client
+    from ..common.plan_store import load_plan, mark_applied, save_plan
     from ..common.reorganizer import Reorganizer
 
     store, fs, config = _make_desc_store(ctx, path_hint=root)
+    work_path = ctx.obj.get("work_path") or _get_work_path(None)
     llm_client = None
     try:
         # 重组方案 moves 列表长，需要大输出上限（默认 2048 会截断坏 JSON）
@@ -1275,6 +1303,10 @@ def desc_plan_reorganize(ctx, root, apply, output, max_items):
         llm_client = create_llm_client(cfg)
         rz = Reorganizer(llm_client, max_files=max_items)
         plan = rz.plan(store, root)
+        # P1-1: 持久化方案（snapshot 为内部复检指纹，不落方案正文）
+        snapshot = plan.pop("snapshot", {})
+        plan_id = save_plan(work_path, plan, snapshot,
+                            root=plan.get("root") or str(Path(root).resolve()))
         print(f"[naskb] 重组方案: {plan['plan_name'] or '(未命名)'}")
         print(f"  说明: {plan['rationale']}")
         if plan["new_folders"]:
@@ -1284,16 +1316,46 @@ def desc_plan_reorganize(ctx, root, apply, output, max_items):
         for m in moves:
             print(f"    {m['from']}")
             print(f"      → {m['to']}  ({m['reason']})")
+        if plan.get("rejected"):
+            print(f"  [注意] 剔除不合法条目 {len(plan['rejected'])} 条（越界/不存在）:")
+            for r in plan["rejected"]:
+                print(f"    {r['from']} → {r['to']}: {r['reason']}")
+        print(f"  plan_id: {plan_id}（apply 时凭此执行）")
         if apply:
-            result = rz.apply(store, plan)
+            rec = load_plan(work_path, plan_id)
+            if rec is None:
+                raise click.ClickException("方案记录不存在，无法执行")
+            plan2 = rec["plan"]
+            # P1-2: 服务方法——越界复校验 + 快照复检 + 冲突三档 +
+            #        级联 folder.json + 整理后同步（本地索引 remap / PG）
+            result = rz.apply_with_housekeeping(
+                store, plan2, rec.get("snapshot") or {},
+                llm_client=llm_client, config=config, sync=True)
             print(f"[naskb] 已执行: 成功 {len(result['moved'])}，失败 {len(result['failed'])}")
-            for src, dst, err in result["failed"]:
-                print(f"  失败 {src} → {dst}: {err}")
+            if result.get("noops"):
+                print(f"  [跳过] 目标内容相同未移动: {len(result['noops'])} 条")
+            if result.get("meta_onlys"):
+                print(f"  [元数据] 目标无分析，已迁移源元数据（文件未动）: "
+                      f"{len(result['meta_onlys'])} 条")
+            if result["failed"]:
+                from collections import Counter
+                reasons = Counter(f["reason"] for f in result["failed"])
+                print("  失败分类: " + ", ".join(
+                    f"{r}:{n}" for r, n in reasons.most_common()))
+                for f in result["failed"][:5]:
+                    detail = f"（{f['detail']}）" if f.get("detail") else ""
+                    print(f"    {f['src']} → {f['dst']}: {f['reason']}{detail}")
+            if result.get("rejected"):
+                print(f"  [注意] 执行前拦截越界条目 {len(result['rejected'])} 条")
             if result.get("removed_dirs"):
                 print(f"[naskb] 已清理搬空的源目录: {len(result['removed_dirs'])} 个")
-            # 级联更新源/目标及上层目录的 folder.json（必须：内容已变化）
-            _refresh_folders(store, fs, config, llm_client, root,
-                             result.get("affected_dirs") or [])
+            sync_st = result.get("sync") or {}
+            if sync_st:
+                print(f"[naskb] 整理后同步: 向量索引 "
+                      f"{sync_st.get('vector_index', 'skipped')} | PG "
+                      f"{sync_st.get('pg', 'skipped')}")
+            mark_applied(work_path, plan_id, result)
+            print(f"[naskb] 方案已标记执行: {plan_id}")
         else:
             print("\n[提示] 仅输出方案，未移动任何文件。确认后加 --apply 执行。")
         if output:
@@ -1303,41 +1365,6 @@ def desc_plan_reorganize(ctx, root, apply, output, max_items):
         if llm_client:
             llm_client.close()
         fs.close()
-
-
-def _refresh_folders(store, fs, config, llm_client, root: str,
-                     dirs: list[str]) -> None:
-    """对受影响目录（含祖先链，到 root 为止）级联重算 folder.json。
-
-    用于移动/增删文件后同步目录级描述；跳过不存在与仓库内部路径。
-    """
-    from ..common.analyzer.folder import FolderAnalyzer
-
-    fa = FolderAnalyzer(llm_client,
-                        excluded_folders=config.exclusions.get("folder", []))
-    repo_name = config.desc_repo_name
-    targets: set[str] = set()
-    root_abs = os.path.normcase(os.path.normpath(root))
-    for d in dirs or []:
-        cur = os.path.normcase(os.path.normpath(d))
-        while True:
-            if f"/{repo_name}/" in cur.replace("\\", "/"):
-                break
-            targets.add(cur)
-            if cur == root_abs or os.path.dirname(cur) == cur:
-                break
-            cur = os.path.normcase(os.path.normpath(os.path.dirname(cur)))
-    ok = 0
-    for t in sorted(targets):
-        if not fs.is_dir(t):
-            continue
-        try:
-            entry = fa.analyze(fs, t)
-            if store.write_folder(t, entry):
-                ok += 1
-        except Exception as e:
-            print(f"[naskb] 目录描述更新失败 {t}: {e}")
-    print(f"[naskb] 目录级描述级联更新: {ok}/{len(targets)} 个目录")
 
 
 def _write_plan_markdown(output: str, plan: dict, applied: bool = False) -> None:

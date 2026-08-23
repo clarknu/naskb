@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "naskb": {
+      "command": "C:/Sync/NASKB/.venv/Scripts/python.exe",
+      "args": [
+        "-m", "naskb.mcp.server",
+        "--work-path", "C:/Sync/NASKB/NASKB_data",
+        "--root", "C:/Temp/home",
+        "--pg"
+      ],
+      "env": {}
+    }
+  }
+}
