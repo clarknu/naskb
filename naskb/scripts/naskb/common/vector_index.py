@@ -110,3 +110,26 @@ class VectorIndex:
     def paths(self) -> list[str]:
         """索引覆盖的文档路径列表（用于与当前文档集合比对，判断陈旧）。"""
         return list(self._meta.get("paths", []))
+
+    def remap_paths(self, mapping: dict[str, str]) -> int:
+        """按映射 {旧路径: 新路径} 重写索引中的 paths 字段，返回受影响条数。
+
+        仅重写 vectors.json（向量矩阵不变：移动不改 summary 文本 → 向量
+        不变，无需重新嵌入）。映射键按 normcase+normpath 规范化匹配
+        （Windows 大小写不敏感）。索引未加载时返回 0。
+        """
+        if self._mat is None:
+            return 0
+        paths = self._meta.get("paths", [])
+        norm = {os.path.normcase(os.path.normpath(k)): v
+                for k, v in (mapping or {}).items()}
+        changed = 0
+        for i, p in enumerate(paths):
+            key = os.path.normcase(os.path.normpath(p))
+            if key in norm and norm[key] != p:
+                paths[i] = norm[key]
+                changed += 1
+        if changed:
+            with open(self._json, "w", encoding="utf-8") as f:
+                json.dump(self._meta, f, ensure_ascii=False)
+        return changed

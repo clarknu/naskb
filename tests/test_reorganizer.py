@@ -336,3 +336,441 @@ class TestApply:
         assert (root / "08_学习" / "本科" / "a.pdf").exists()
         assert (root / "03_工作与经营" / "原创文章" / "b.txt").exists()
         assert store.get_entry(str(root / "08_学习" / "本科" / "a.pdf")) is not None
+
+
+class TestSafetyValidation:
+    """P0-1 越界硬校验：plan 阶段过滤 + apply 阶段双保险。"""
+
+    def test_plan_rejects_out_of_root_to(self, messy_dir):
+        """目标路径越界（root 之外）→ 进 rejected，不进入 moves。"""
+        store = NaskbStore(LocalAdapter(str(messy_dir)))
+        outside = str(messy_dir.parent / "外来" / "发票1.pdf")
+        plan_data = {
+            "plan_name": "越界",
+            "rationale": "",
+            "new_folders": [],
+            "moves": [
+                {"from": str(messy_dir / "发票1.pdf"), "to": outside,
+                 "reason": "越界"},
+                {"from": str(messy_dir / "照片1.jpg"),
+                 "to": str(messy_dir / "图片" / "照片1.jpg"), "reason": "合法"},
+            ],
+        }
+        rz = Reorganizer(llm_client=_FakePlanLLM(plan_data))
+        plan = rz.plan(store, ".")
+        assert len(plan["moves"]) == 1
+        assert plan["moves"][0]["from"].endswith("照片1.jpg")
+        assert len(plan["rejected"]) == 1
+        assert "越界" in plan["rejected"][0]["reason"]
+
+    def test_plan_rejects_dotdot_and_naskb(self, messy_dir):
+        """`..` 穿越 与 .naskb 仓库内部路径 → 全部 rejected。"""
+        store = NaskbStore(LocalAdapter(str(messy_dir)))
+        plan_data = {
+            "plan_name": "攻击路径",
+            "rationale": "",
+            "new_folders": [],
+            "moves": [
+                {"from": str(messy_dir / "发票1.pdf"),
+                 "to": str(messy_dir / ".." / "逃逸.pdf"), "reason": ".."},
+                {"from": str(messy_dir / "照片1.jpg"),
+                 "to": str(messy_dir / ".naskb" / "x.jpg"), "reason": "仓库"},
+            ],
+        }
+        rz = Reorganizer(llm_client=_FakePlanLLM(plan_data))
+        plan = rz.plan(store, ".")
+        assert plan["moves"] == []
+        assert len(plan["rejected"]) == 2
+
+    def test_plan_rejects_source_not_in_listing(self, messy_dir):
+        """LLM 幻觉出不存在的源路径 → rejected（防移不存在的文件）。"""
+        store = NaskbStore(LocalAdapter(str(messy_dir)))
+        plan_data = {
+            "plan_name": "幻觉路径",
+            "rationale": "",
+            "new_folders": [],
+            "moves": [
+                {"from": str(messy_dir / "幻觉文件.pdf"),
+                 "to": str(messy_dir / "财务" / "幻觉文件.pdf"), "reason": "不存在"},
+            ],
+        }
+        rz = Reorganizer(llm_client=_FakePlanLLM(plan_data))
+        plan = rz.plan(store, ".")
+        assert plan["moves"] == []
+        assert len(plan["rejected"]) == 1
+        assert "清单" in plan["rejected"][0]["reason"]
+
+    def test_plan_allows_dir_move_via_ancestor(self, tmp_path):
+        """目录级 move：from 是含文件的目录（不在 items，但为文件祖先）→ 合法。"""
+        root = tmp_path / "tree"
+        (root / "发票").mkdir(parents=True)
+        (root / "发票" / "a.pdf").write_bytes(b"%PDF")
+        (root / "b.jpg").write_bytes(b"jpg")
+        store = NaskbStore(LocalAdapter(str(root)))
+        store.set_entry(str(root / "发票" / "a.pdf"),
+                        FileEntry(original_path="a.pdf", summary="票", category=""))
+        store.set_entry(str(root / "b.jpg"),
+                        FileEntry(original_path="b.jpg", summary="图", category=""))
+        plan_data = {
+            "plan_name": "目录归并",
+            "rationale": "",
+            "new_folders": ["财务"],
+            "moves": [
+                {"from": str(root / "发票"), "to": str(root / "财务" / "发票"),
+                 "reason": "整目录归财务"},
+            ],
+        }
+        rz = Reorganizer(llm_client=_FakePlanLLM(plan_data))
+        plan = rz.plan(store, ".")
+        assert len(plan["moves"]) == 1
+        assert plan["rejected"] == []
+
+    def test_apply_blocks_out_of_root_when_root_in_plan(self, messy_dir):
+        """apply 双保险：plan 带 root 时越界 move 被拦截且文件未移动。"""
+        store = NaskbStore(LocalAdapter(str(messy_dir)))
+        rz = Reorganizer(llm_client=None)
+        plan = {
+            "root": str(messy_dir),
+            "moves": [
+                {"from": str(messy_dir / "发票1.pdf"),
+                 "to": str(messy_dir.parent / "外部" / "发票1.pdf"), "reason": "越界"},
+            ],
+        }
+        result = rz.apply(store, plan)
+        assert result["moved"] == []
+        assert len(result["rejected"]) == 1
+        assert (messy_dir / "发票1.pdf").exists()      # 未移动
+        assert not (messy_dir.parent / "外部" / "发票1.pdf").exists()
+
+    def test_apply_legacy_plan_without_root_still_works(self, messy_dir):
+        """无 root 的旧 plan（现有调用方）行为不变：不拦截、正常移动。"""
+        store = NaskbStore(LocalAdapter(str(messy_dir)))
+        rz = Reorganizer(llm_client=None)
+        plan = {"moves": [
+            {"from": str(messy_dir / "发票1.pdf"),
+             "to": str(messy_dir / "财务" / "发票1.pdf"), "reason": ""},
+        ]}
+        result = rz.apply(store, plan)
+        assert len(result["moved"]) == 1
+        assert result["failed"] == []
+        assert result["rejected"] == []
+
+
+class TestSnapshotRecheck:
+    """P0-3 apply 快照复检：源消失 → not_found；内容已变 → stale_source。"""
+
+    def _store_with_hash(self, root, name, content):
+        store = NaskbStore(LocalAdapter(str(root)))
+        f = root / name
+        f.write_text(content, encoding="utf-8")
+        _alg, h = store.compute_hash(str(f))
+        store.set_entry(str(f), FileEntry(original_path=name, summary="s",
+                                          category="c", file_hash=h))
+        return store, f, h
+
+    def test_apply_moves_when_snapshot_matches(self, tmp_path):
+        root = tmp_path / "t"
+        root.mkdir(parents=True)
+        store, f, h = self._store_with_hash(root, "a.txt", "AAA")
+        rz = Reorganizer(llm_client=None)
+        plan = {"root": str(root),
+                "moves": [{"from": str(f), "to": str(root / "子" / "a.txt"),
+                           "reason": ""}]}
+        snap = {os.path.normcase(os.path.normpath(str(f))): h}
+        result = rz.apply(store, plan, snap)
+        assert len(result["moved"]) == 1
+        assert result["failed"] == []
+        assert (root / "子" / "a.txt").exists()
+
+    def test_apply_rejects_stale_source(self, tmp_path):
+        """plan 生成后文件内容被改动 → stale_source，不移动。"""
+        root = tmp_path / "t"
+        root.mkdir(parents=True)
+        store, f, h = self._store_with_hash(root, "a.txt", "AAA")
+        f.write_text("BBB", encoding="utf-8")          # 内容已变
+        rz = Reorganizer(llm_client=None)
+        plan = {"root": str(root),
+                "moves": [{"from": str(f), "to": str(root / "子" / "a.txt"),
+                           "reason": ""}]}
+        snap = {os.path.normcase(os.path.normpath(str(f))): h}
+        result = rz.apply(store, plan, snap)
+        assert result["moved"] == []
+        assert len(result["failed"]) == 1
+        assert result["failed"][0]["reason"] == "stale_source"
+        assert (root / "a.txt").exists()               # 未移动
+        assert not (root / "子" / "a.txt").exists()
+
+    def test_apply_rejects_not_found(self, tmp_path):
+        """plan 生成后源文件被删除 → not_found，不移动。"""
+        root = tmp_path / "t"
+        root.mkdir(parents=True)
+        store, f, h = self._store_with_hash(root, "a.txt", "AAA")
+        f.unlink()                                     # 文件消失
+        rz = Reorganizer(llm_client=None)
+        plan = {"root": str(root),
+                "moves": [{"from": str(f), "to": str(root / "子" / "a.txt"),
+                           "reason": ""}]}
+        snap = {os.path.normcase(os.path.normpath(str(f))): h}
+        result = rz.apply(store, plan, snap)
+        assert result["moved"] == []
+        assert len(result["failed"]) == 1
+        assert result["failed"][0]["reason"] == "not_found"
+
+    def test_plan_returns_snapshot_with_hash(self, tmp_path):
+        """plan 携带 snapshot：collect 中已分析条目的 file_hash 进入快照。"""
+        root = tmp_path / "t"
+        root.mkdir(parents=True)
+        store, f, h = self._store_with_hash(root, "a.txt", "AAA")
+        (root / "b.txt").write_text("B", encoding="utf-8")   # 无条目 → 无 hash
+        rz = Reorganizer(llm_client=None)
+        plan = rz.plan(store, ".")
+        snap = plan["snapshot"]
+        assert snap.get(os.path.normcase(os.path.normpath(str(f)))) == h
+        assert len(snap) == 1                                # 仅已分析条目
+
+
+class TestConflictThreeTier:
+    """P0-2 冲突三档：同内容 noop / 目标无元数据 meta_only / 否则 rename。"""
+
+    def _mk(self, tmp_path, name="a.txt", content="A"):
+        root = tmp_path / "t"
+        root.mkdir(parents=True)
+        f = root / name
+        f.write_text(content, encoding="utf-8")
+        return root, f
+
+    def test_same_content_noop(self, tmp_path):
+        """内容相同 → noop：两边文件都不动，源条目保留。"""
+        root, src = self._mk(tmp_path, content="same")
+        dst_dir = root / "目标"
+        dst_dir.mkdir()
+        dst = dst_dir / "a.txt"
+        dst.write_text("same", encoding="utf-8")
+        store = NaskbStore(LocalAdapter(str(root)))
+        store.set_entry(str(src), FileEntry(original_path="a.txt",
+                                            summary="s", category="c"))
+        rz = Reorganizer(llm_client=None)
+        plan = {"root": str(root),
+                "moves": [{"from": str(src), "to": str(dst), "reason": ""}]}
+        result = rz.apply(store, plan)
+        assert result["moved"] == []
+        assert result["failed"] == []
+        assert len(result["noops"]) == 1
+        assert src.exists() and dst.exists()         # 啥也不干
+        assert store.get_entry(str(src)) is not None  # 源条目保留
+
+    def test_meta_only_when_target_has_no_analysis(self, tmp_path):
+        """内容不同且目标无元数据 → meta_only：元数据迁移、文件不动、
+        目标指纹重算为目标实际值。"""
+        root, src = self._mk(tmp_path, content="source-content")
+        dst_dir = root / "目标"
+        dst_dir.mkdir()
+        dst = dst_dir / "a.txt"
+        dst.write_text("different-content", encoding="utf-8")
+        store = NaskbStore(LocalAdapter(str(root)))
+        store.set_entry(str(src), FileEntry(original_path="a.txt",
+                                            summary="源摘要", category="财务",
+                                            tags=["发票"]))
+        rz = Reorganizer(llm_client=None)
+        plan = {"root": str(root),
+                "moves": [{"from": str(src), "to": str(dst), "reason": ""}]}
+        result = rz.apply(store, plan)
+        assert result["moved"] == []
+        assert len(result["meta_onlys"]) == 1
+        assert src.exists() and dst.exists()         # 文件不动
+        t = store.get_entry(str(dst))
+        assert t is not None and t.category == "财务" and t.summary == "源摘要"
+        _alg, h = store.compute_hash(str(dst))
+        assert t.file_hash == h                      # 指纹为目标实际值
+
+    def test_rename_when_target_has_analysis(self, tmp_path):
+        """内容不同且目标已有元数据 → rename 后移动，目标不被覆盖。"""
+        root, src = self._mk(tmp_path, content="source-content")
+        dst_dir = root / "目标"
+        dst_dir.mkdir()
+        dst = dst_dir / "a.txt"
+        dst.write_text("different-content", encoding="utf-8")
+        store = NaskbStore(LocalAdapter(str(root)))
+        store.set_entry(str(src), FileEntry(original_path="a.txt",
+                                            summary="源", category="c"))
+        store.set_entry(str(dst), FileEntry(original_path="a.txt",
+                                            summary="目标已有", category="c"))
+        rz = Reorganizer(llm_client=None)
+        plan = {"root": str(root),
+                "moves": [{"from": str(src), "to": str(dst), "reason": ""}]}
+        result = rz.apply(store, plan)
+        assert len(result["moved"]) == 1
+        assert result["failed"] == []
+        assert not src.exists()                      # 源已移动
+        assert dst.exists()                          # 原目标未被覆盖
+        renamed = dst_dir / "a (1).txt"
+        assert renamed.exists()
+        assert result["moved"][0][1].endswith("a (1).txt")
+
+    def test_rename_increments_suffix(self, tmp_path):
+        """rename 后缀递增：` (1)` 被占用时用 ` (2)`。"""
+        root, src = self._mk(tmp_path, content="source-content")
+        dst_dir = root / "目标"
+        dst_dir.mkdir()
+        dst = dst_dir / "a.txt"
+        dst.write_text("different-1", encoding="utf-8")
+        (dst_dir / "a (1).txt").write_text("different-2", encoding="utf-8")
+        store = NaskbStore(LocalAdapter(str(root)))
+        store.set_entry(str(src), FileEntry(original_path="a.txt",
+                                            summary="源", category="c"))
+        store.set_entry(str(dst), FileEntry(original_path="a.txt",
+                                            summary="目标", category="c"))
+        rz = Reorganizer(llm_client=None)
+        plan = {"root": str(root),
+                "moves": [{"from": str(src), "to": str(dst), "reason": ""}]}
+        result = rz.apply(store, plan)
+        assert len(result["moved"]) == 1
+        assert (dst_dir / "a (2).txt").exists()
+
+    def test_file_vs_dir_conflict(self, tmp_path):
+        """文件移到已存在目录路径 → failed[conflict]，源不动。"""
+        root, src = self._mk(tmp_path, content="x")
+        dst_dir = root / "目标目录"
+        dst_dir.mkdir()
+        store = NaskbStore(LocalAdapter(str(root)))
+        store.set_entry(str(src), FileEntry(original_path="a.txt",
+                                            summary="s", category="c"))
+        rz = Reorganizer(llm_client=None)
+        plan = {"root": str(root),
+                "moves": [{"from": str(src), "to": str(dst_dir), "reason": ""}]}
+        result = rz.apply(store, plan)
+        assert result["moved"] == []
+        assert len(result["failed"]) == 1
+        assert result["failed"][0]["reason"] == "conflict"
+        assert src.exists()
+
+    def test_dir_merge_three_tier(self, tmp_path):
+        """目录合并：目标已有同名文件时逐文件三档判定。"""
+        root = tmp_path / "t"
+        src_dir = root / "源"
+        dst_dir = root / "目标"
+        src_dir.mkdir(parents=True)
+        dst_dir.mkdir(parents=True)
+        (src_dir / "same.txt").write_text("SAME", encoding="utf-8")
+        (src_dir / "new.txt").write_text("新文件", encoding="utf-8")
+        (dst_dir / "same.txt").write_text("SAME", encoding="utf-8")
+        store = NaskbStore(LocalAdapter(str(root)))
+        store.set_entry(str(src_dir / "same.txt"), FileEntry(
+            original_path="same.txt", summary="s", category="c"))
+        store.set_entry(str(src_dir / "new.txt"), FileEntry(
+            original_path="new.txt", summary="n", category="c"))
+        rz = Reorganizer(llm_client=None)
+        plan = {"root": str(root),
+                "moves": [{"from": str(src_dir), "to": str(dst_dir),
+                           "reason": "合并"}]}
+        result = rz.apply(store, plan)
+        assert len(result["moved"]) == 1             # new.txt 移入
+        assert len(result["noops"]) == 1             # same.txt 同内容不动
+        assert (dst_dir / "new.txt").exists()
+        assert (src_dir / "same.txt").exists()       # noop：源保留
+        assert (dst_dir / "same.txt").exists()
+
+
+class _StubConfig:
+    """服务方法测试用最小 config 替身。"""
+
+    def __init__(self, work_path):
+        self.work_path = str(work_path)
+        self.exclusions = {"folder": []}
+        self.desc_repo_name = ".naskb"
+        self.pg_enabled = False
+        self.webdav_user = ""
+        self.nas_list = []
+
+
+class _FakeEmb:
+    """向量索引测试用伪嵌入（与 test_vector_index 同款）。"""
+
+    def encode(self, texts):
+        import numpy as np
+        v = np.ones((len(texts), 4))
+        return v / np.linalg.norm(v, axis=1, keepdims=True)
+
+    def encode_one(self, text):
+        import numpy as np
+        v = np.ones(4)
+        return v / np.linalg.norm(v)
+
+    def close(self):
+        pass
+
+
+class TestApplyWithHousekeeping:
+    """P1-2 服务方法：互斥锁 + 级联 + 整理后同步。"""
+
+    def _mk(self, tmp_path):
+        root = tmp_path / "t"
+        root.mkdir(parents=True)
+        f = root / "a.txt"
+        f.write_text("A", encoding="utf-8")
+        store = NaskbStore(LocalAdapter(str(root)))
+        store.set_entry(str(f), FileEntry(original_path="a.txt",
+                                          summary="s", category="c"))
+        return root, f, store
+
+    def test_moves_and_sync_skipped(self, tmp_path):
+        """基本执行：移动成功，sync 标记 skipped（无索引/无 PG）。"""
+        root, f, store = self._mk(tmp_path)
+        cfg = _StubConfig(tmp_path / "work")
+        rz = Reorganizer(llm_client=None)
+        plan = {"root": str(root),
+                "moves": [{"from": str(f), "to": str(root / "子" / "a.txt"),
+                           "reason": ""}]}
+        result = rz.apply_with_housekeeping(store, plan, None, config=cfg)
+        assert len(result["moved"]) == 1
+        assert result["sync"]["vector_index"] == "skipped（无本地向量索引）"
+        assert result["sync"]["pg"] == "skipped"
+        # 锁已释放（无残留 .lock）
+        plans = os.path.join(str(tmp_path / "work"), "plans")
+        assert os.path.isdir(plans)
+        assert not [n for n in os.listdir(plans) if n.endswith(".lock")]
+
+    def test_lock_blocks_concurrent_apply(self, tmp_path):
+        """root 已被锁定 → 拒绝执行；释放后可正常执行。"""
+        from naskb.common.plan_store import RootLock
+        root, f, store = self._mk(tmp_path)
+        cfg = _StubConfig(tmp_path / "work")
+        rz = Reorganizer(llm_client=None)
+        plan = {"root": str(root),
+                "moves": [{"from": str(f), "to": str(root / "子" / "a.txt"),
+                           "reason": ""}]}
+        lock = RootLock(str(tmp_path / "work"), str(root))
+        assert lock.acquire()
+        try:
+            with pytest.raises(RuntimeError):
+                rz.apply_with_housekeeping(store, plan, None, config=cfg)
+        finally:
+            lock.release()
+        # 锁释放后成功执行，文件确实移动
+        result = rz.apply_with_housekeeping(store, plan, None, config=cfg)
+        assert len(result["moved"]) == 1
+        assert (root / "子" / "a.txt").exists()
+
+    def test_remaps_vector_index_after_move(self, tmp_path):
+        """整理后本地向量索引 remap：paths 更新、无需重嵌入（P1-3 联动）。"""
+        from naskb.common.retrieval import Doc
+        from naskb.common.vector_index import VectorIndex
+        root, f, store = self._mk(tmp_path)
+        work = tmp_path / "work"
+        idx = VectorIndex(_FakeEmb(), str(work))
+        idx.build([Doc(path=str(f), kind="file", text="s",
+                       summary="s", category="c")])
+        cfg = _StubConfig(work)
+        rz = Reorganizer(llm_client=None)
+        plan = {"root": str(root),
+                "moves": [{"from": str(f), "to": str(root / "子" / "a.txt"),
+                           "reason": ""}]}
+        result = rz.apply_with_housekeeping(store, plan, None, config=cfg,
+                                            sync=True)
+        assert len(result["moved"]) == 1
+        assert result["sync"]["vector_index"].startswith("ok")
+        # 索引路径已更新为新位置
+        idx2 = VectorIndex(None, str(work))
+        assert idx2.load()
+        assert str(root / "子" / "a.txt") in idx2.paths()
+        assert str(f) not in idx2.paths()

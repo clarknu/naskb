@@ -86,3 +86,28 @@ class TestVectorIndex:
         idx = VectorIndex(_FakeEmbedder(), str(tmp_path))
         assert not idx.exists()
         assert idx.search("x") == []
+
+    def test_remap_paths(self, tmp_path):
+        """P1-3：移动后仅重写 paths，向量矩阵不变、检索仍命中。"""
+        emb = _FakeEmbedder()
+        idx = VectorIndex(emb, str(tmp_path))
+        idx.build(_docs())
+        n = idx.remap_paths({
+            "/a/身份证.pdf": "/归档/证件/身份证.pdf",
+            "/b/护照.pdf": "/归档/证件/护照.pdf",
+        })
+        assert n == 2
+        assert "/归档/证件/身份证.pdf" in idx.paths()
+        assert "/归档/证件/护照.pdf" in idx.paths()
+        assert idx.count() == 4                     # 条数不变
+        # 检索仍命中（向量矩阵未变）
+        hits = idx.search("身份证", top_k=4)
+        assert hits[0]["path"] == "/归档/证件/身份证.pdf"
+        # 重新加载后持久化生效
+        idx2 = VectorIndex(_FakeEmbedder(), str(tmp_path))
+        assert idx2.load()
+        assert idx2.paths()[0] == "/归档/证件/身份证.pdf"
+
+    def test_remap_noop_when_unloaded(self, tmp_path):
+        idx = VectorIndex(_FakeEmbedder(), str(tmp_path))
+        assert idx.remap_paths({"/x": "/y"}) == 0   # 未加载 → 0
