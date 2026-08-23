@@ -28,6 +28,8 @@ class Doc:
     category: str = ""
     tags: list[str] = field(default_factory=list)
     context: str = ""    # RAG 生成上下文（含全文，供 ask 回答细节问题）
+    content_description: str = ""   # 内容描述（v3：入库 PG 独立列）
+    file_type: str = ""             # 类型标记（扩展名/类别名，v3）
     # 指纹（REQ-R4-05 / ADR-20260816-4）：sync-vectors 与去重使用
     file_hash: str = ""
     hash_algorithm: str = ""

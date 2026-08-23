@@ -27,6 +27,8 @@ from .retrieval import Doc
 REGISTRY_TABLE = "nas_registry"
 EMBEDDING_MODEL = "bge-small-zh-v1.5"
 EMBEDDING_DIM = 512
+# 旧数据（无来源注册表时代）的来源占位 id：保证 (source_id, rel_path) 唯一索引可用
+LEGACY_SOURCE = uuid.UUID(int=0)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -122,6 +124,34 @@ CREATE INDEX IF NOT EXISTS idx_vectors_embedding ON {schema}.vectors
   USING hnsw (embedding vector_cosine_ops);
 """
 
+# v3 来源化迁移（幂等）：resources 增 source_id 列 + (source_id, rel_path) 唯一；
+# folders 独立目录描述表（ADR-20260818-1 决策 6）
+_MIGRATE_SOURCES = """
+ALTER TABLE {schema}.resources ADD COLUMN IF NOT EXISTS source_id uuid;
+UPDATE {schema}.resources SET source_id = {legacy}::uuid WHERE source_id IS NULL;
+ALTER TABLE {schema}.resources DROP CONSTRAINT IF EXISTS resources_rel_path_key;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_resources_source_path
+  ON {schema}.resources (source_id, rel_path);
+"""
+
+_DDL_FOLDERS = """
+CREATE TABLE IF NOT EXISTS {schema}.folders (
+  folder_id   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_id   uuid NOT NULL DEFAULT {legacy}::uuid,
+  rel_path    text NOT NULL,
+  parent_dir  text NOT NULL DEFAULT '',
+  name        text NOT NULL,
+  summary     text NOT NULL DEFAULT '',
+  description text NOT NULL DEFAULT '',
+  tags        text[] NOT NULL DEFAULT '{{}}',
+  file_count  int NOT NULL DEFAULT 0,
+  updated_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_folders_source_path
+  ON {schema}.folders (source_id, rel_path);
+CREATE INDEX IF NOT EXISTS idx_folders_parent ON {schema}.folders (parent_dir);
+"""
+
 _DDL_REGISTRY = """
 CREATE TABLE IF NOT EXISTS public.nas_registry (
   nas_id      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -202,7 +232,7 @@ class PgStore:
         return dict(zip(cols, row))
 
     def ensure_nas_schema(self, schema_name: str) -> None:
-        """确保 NAS schema 与 resources/vectors 表存在（幂等）。"""
+        """确保 NAS schema 与 resources/vectors/folders 表存在（幂等）。"""
         ident = sql.Identifier(schema_name)
         with self.connect() as conn:
             with conn.cursor() as cur:
@@ -210,23 +240,32 @@ class PgStore:
                             .format(ident))
                 cur.execute(sql.SQL(_DDL_RESOURCES).format(schema=ident))
                 cur.execute(sql.SQL(_DDL_VECTORS).format(schema=ident))
+                cur.execute(sql.SQL(_MIGRATE_SOURCES).format(
+                    schema=ident, legacy=str(LEGACY_SOURCE)))
+                cur.execute(sql.SQL(_DDL_FOLDERS).format(
+                    schema=ident, legacy=str(LEGACY_SOURCE)))
 
     # ── sync（四操作）──
 
     def sync_vectors(self, schema_name: str, docs: list[Doc],
-                     embedder=None, batch: int = 200) -> dict:
+                     embedder=None, batch: int = 200,
+                     source_id: uuid.UUID | str | None = None) -> dict:
         """增量同步：增/改/删/移 四操作（ADR-20260816-3 §5.4）。
 
         embedder: Embedder 实例（encode_batch）；None 时调用方必须保证
                   docs 无新增/更新条目（纯校验模式）。
-        返回 {added, updated, moved, deleted, unchanged, embedded}。
+        source_id: 来源作用域（v3 来源注册表）；None → LEGACY_SOURCE。
+                  差异比对/移动识别/删除检测都只在该来源的行集合内进行，
+                  INSERT 的行打上该 source_id 标记。
+        返回 {added, updated, moved, deleted, unchanged, embedded, enriched}。
         """
         if embedder is None:
             from .embeddings import Embedder
             embedder = Embedder(self._cfg.work_path)
+        sid = uuid.UUID(str(source_id)) if source_id else LEGACY_SOURCE
         self.ensure_nas_schema(schema_name)
         stats = {"added": 0, "updated": 0, "moved": 0, "deleted": 0,
-                 "unchanged": 0, "embedded": 0, "errors": []}
+                 "unchanged": 0, "embedded": 0, "enriched": 0, "errors": []}
 
         new_docs = [d for d in docs if d.kind == "file"]
         by_path: dict[str, Doc] = {}
@@ -235,16 +274,21 @@ class PgStore:
             by_path.setdefault(rel, d)
 
         with self.connect() as conn:
-            # 现库状态
+            # 现库状态（本来源作用域；带向量存在性——富化回填判定用）
             existing: dict[str, dict] = {}
+            ident = sql.Identifier(schema_name)
             with conn.cursor() as cur:
                 cur.execute(sql.SQL(
-                    "SELECT resource_id, rel_path, file_hash, hash_algorithm "
-                    "FROM {}.resources").format(sql.Identifier(schema_name)))
+                    "SELECT r.resource_id, r.rel_path, r.file_hash, "
+                    "r.hash_algorithm, (v.resource_id IS NOT NULL) AS has_vec "
+                    "FROM {r}.resources r LEFT JOIN {v}.vectors v "
+                    "ON v.resource_id = r.resource_id AND v.model = %s "
+                    "WHERE r.source_id = %s").format(r=ident, v=ident),
+                    (EMBEDDING_MODEL, sid))
                 for row in cur.fetchall():
                     existing[row[1]] = {
                         "resource_id": row[0], "file_hash": row[2],
-                        "hash_algorithm": row[3]}
+                        "hash_algorithm": row[3], "has_vector": row[4]}
 
             # 待嵌入条目（新增/更新）
             to_embed: list[Doc] = []
@@ -257,8 +301,15 @@ class PgStore:
                     to_insert.append(doc)
                     to_embed.append(doc)
                 elif cur_row["hash_algorithm"] == doc.hash_algorithm \
-                        and cur_row["file_hash"] == doc.file_hash:
+                        and cur_row["file_hash"] == doc.file_hash \
+                        and cur_row["has_vector"]:
                     stats["unchanged"] += 1
+                elif cur_row["hash_algorithm"] == doc.hash_algorithm \
+                        and cur_row["file_hash"] == doc.file_hash:
+                    # 内容未变但向量缺失：富化回填（更新描述列 + 补向量）
+                    self._enrich_existing(conn, schema_name,
+                                          cur_row["resource_id"], doc,
+                                          embedder, stats)
                 else:
                     to_update.append((doc, cur_row))
                     to_embed.append(doc)
@@ -318,16 +369,17 @@ class PgStore:
                         "name, kind, category, tags, summary, "
                         "content_description, file_type, file_hash, "
                         "hash_algorithm, mtime, ctime, size_bytes, "
-                        "analyzer_version, analyzed_at, status) "
+                        "analyzer_version, analyzed_at, status, source_id) "
                         "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"
-                        "%s,%s,%s,'ok') RETURNING resource_id")
+                        "%s,%s,%s,'ok',%s) RETURNING resource_id")
                         .format(sql.Identifier(schema_name)),
                         (rel, self._parent_of(rel),
                          rel.split("/")[-1], doc.kind, doc.category,
                          doc.tags, doc.summary,
-                         "", "", doc.file_hash, doc.hash_algorithm,
+                         doc.content_description or "", doc.file_type or "",
+                         doc.file_hash, doc.hash_algorithm,
                          doc.mtime, doc.ctime or None, doc.size_bytes,
-                         "", self._ts(doc.analyzed_at)))
+                         "", self._ts(doc.analyzed_at), sid))
                     rid = cur.fetchone()[0]
                     cur.execute(sql.SQL(
                         "INSERT INTO {}.vectors (resource_id, model, dim, "
@@ -348,6 +400,7 @@ class PgStore:
                         "UPDATE {}.resources SET file_hash=%s, "
                         "hash_algorithm=%s, mtime=%s, ctime=%s, "
                         "size_bytes=%s, summary=%s, category=%s, tags=%s, "
+                        "content_description=%s, file_type=%s, "
                         "prev_hashes = prev_hashes || %s::jsonb, "
                         "status='ok', synced_at=now() "
                         "WHERE resource_id=%s")
@@ -355,6 +408,7 @@ class PgStore:
                         (doc.file_hash, doc.hash_algorithm, doc.mtime,
                          doc.ctime or None, doc.size_bytes, doc.summary,
                          doc.category, doc.tags,
+                         doc.content_description or "", doc.file_type or "",
                          Jsonb([{"hash": row["file_hash"],
                                  "algorithm": row["hash_algorithm"],
                                  "replaced_at": now.isoformat()}]),
@@ -369,12 +423,54 @@ class PgStore:
                     stats["updated"] += 1
         return stats
 
+    def _enrich_existing(self, conn, schema_name: str, resource_id, doc: Doc,
+                         embedder, stats: dict) -> None:
+        """内容未变但向量缺失：回填描述列 + 补建向量（富化路径，v3）。"""
+        vec = embedder.encode_one(doc.text) if hasattr(embedder, "encode_one") \
+            else embedder.encode([doc.text])[0]
+        ident = sql.Identifier(schema_name)
+        with conn.cursor() as cur:
+            cur.execute(sql.SQL(
+                "UPDATE {}.resources SET summary=%s, category=%s, tags=%s, "
+                "content_description=%s, file_type=%s, status='ok', "
+                "synced_at=now() WHERE resource_id=%s")
+                .format(ident),
+                (doc.summary, doc.category, doc.tags,
+                 doc.content_description or "", doc.file_type or "",
+                 resource_id))
+            cur.execute(sql.SQL(
+                "INSERT INTO {}.vectors (resource_id, model, dim, embedding, "
+                "summary_text, full_text, source_hash) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (resource_id, model) "
+                "DO UPDATE SET embedding=EXCLUDED.embedding, "
+                "summary_text=EXCLUDED.summary_text, "
+                "full_text=EXCLUDED.full_text, "
+                "source_hash=EXCLUDED.source_hash, updated_at=now()")
+                .format(ident),
+                (resource_id, EMBEDDING_MODEL, EMBEDDING_DIM, vec,
+                 doc.text, doc.context, doc.file_hash))
+        stats["embedded"] += 1
+        stats["enriched"] += 1
+
     # ── 检索 ──
 
     def search(self, schema_name: str, query_vector,
-               top_k: int = 10, model: str = EMBEDDING_MODEL) -> list[dict]:
-        """余弦 top-k。query_vector: np.ndarray/list（已归一化）。"""
+               top_k: int = 10, model: str = EMBEDDING_MODEL,
+               source_ids: list | None = None) -> list[dict]:
+        """余弦 top-k。query_vector: np.ndarray/list（已归一化）。
+
+        source_ids: 来源过滤（v3）；None/空 = 全部来源。
+        输出含 resource_id/source_id（str），供内容访问层凭 id 寻址。
+        """
         ident = sql.Identifier(schema_name)
+        sids = None
+        if source_ids:
+            sids = [uuid.UUID(str(s)) for s in source_ids]
+        where_extra = " AND r.source_id = ANY(%s)" if sids else ""
+        params: list = [query_vector, model]
+        if sids:
+            params.append(sids)
+        params.extend([query_vector, top_k])
         with self.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(sql.SQL(
@@ -382,22 +478,27 @@ class PgStore:
                     "r.category, r.tags, r.summary, r.status, "
                     "r.file_hash, r.hash_algorithm, r.size_bytes, "
                     "r.mtime, r.ctime, v.summary_text, v.full_text, "
-                    "v.source_hash, 1 - (v.embedding <=> %s::vector) AS score "
-                    "FROM {}.vectors v "
-                    "JOIN {}.resources r ON r.resource_id = v.resource_id "
-                    "WHERE v.model = %s "
-                    "ORDER BY v.embedding <=> %s::vector LIMIT %s")
-                    .format(ident, ident),
-                    (query_vector, model, query_vector, top_k))
+                    "v.source_hash, r.resource_id, r.source_id, "
+                    "1 - (v.embedding <=> %s::vector) AS score "
+                    "FROM {v}.vectors v "
+                    "JOIN {r}.resources r ON r.resource_id = v.resource_id "
+                    "WHERE v.model = %s" + where_extra + " "
+                    "ORDER BY v.embedding <=> %s::vector LIMIT %s"
+                    ).format(v=ident, r=ident),
+                    tuple(params))
                 rows = cur.fetchall()
         cols = ("path", "parent_dir", "name", "kind", "category", "tags",
                 "summary", "status", "file_hash", "hash_algorithm",
                 "size_bytes", "mtime", "ctime", "text", "context",
-                "source_hash", "score")
+                "source_hash", "resource_id", "source_id", "score")
         out = []
         for row in rows:
             item = dict(zip(cols, row))
             item["stale"] = item["status"] != "ok"
+            if item.get("resource_id") is not None:
+                item["resource_id"] = str(item["resource_id"])
+            if item.get("source_id") is not None:
+                item["source_id"] = str(item["source_id"])
             out.append(item)
         return out
 
@@ -430,6 +531,261 @@ class PgStore:
                 vec = cur.fetchone()[0]
         return {"resources": res[0], "ok": res[1], "stale_vector": res[2],
                 "stale_source": res[3], "vectors": vec}
+
+    # ── v3 来源化：库存对账 / 目录浏览 / 资源访问（REQ-R7-03/05/06）──
+
+    def reconcile_resources(self, schema_name: str, source_id,
+                            items: list[dict]) -> dict:
+        """只读源扫描对账（REQ-R7-06）：把源端现状对齐到 resources 行。
+
+        items: [{rel_path, name, parent_dir, size_bytes, mtime, ctime,
+                 file_hash, hash_algorithm, file_type}]（file_hash 可为 ""，
+                 表示本轮未算指纹——仅登记，不算变化）。
+        状态机：新文件→ok；stat 变且无相同指纹→stale_source；
+        源端消失→missing_source；恢复一致→回 ok。
+        目录清单同步 upsert 到 folders（file_count 统计）。
+        """
+        sid = uuid.UUID(str(source_id)) if source_id else LEGACY_SOURCE
+        self.ensure_nas_schema(schema_name)
+        ident = sql.Identifier(schema_name)
+        stats = {"added": 0, "updated": 0, "unchanged": 0,
+                 "stale_source": 0, "restored": 0, "missing": 0}
+        now = datetime.now(timezone.utc)
+
+        def _close(a: float, b) -> bool:
+            if not a and not b:
+                return True
+            try:
+                return abs(float(a) - float(b or 0)) < 1e-6
+            except (TypeError, ValueError):
+                return False
+
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql.SQL(
+                    "SELECT rel_path, file_hash, hash_algorithm, mtime, "
+                    "size_bytes, ctime, status FROM {}.resources "
+                    "WHERE source_id = %s").format(ident), (sid,))
+                existing = {r[0]: {"file_hash": r[1], "hash_algorithm": r[2],
+                                   "mtime": r[3], "size_bytes": r[4],
+                                   "ctime": r[5], "status": r[6]}
+                            for r in cur.fetchall()}
+
+            with conn.cursor() as cur:
+                for it in items:
+                    row = existing.get(it["rel_path"])
+                    if row is None:
+                        cur.execute(sql.SQL(
+                            "INSERT INTO {}.resources (rel_path, parent_dir, "
+                            "name, kind, category, file_type, file_hash, "
+                            "hash_algorithm, mtime, ctime, size_bytes, "
+                            "status, source_id) "
+                            "VALUES (%s,%s,%s,'file',%s,%s,%s,%s,%s,%s,%s,"
+                            "'ok',%s) ON CONFLICT (source_id, rel_path) "
+                            "DO NOTHING")
+                            .format(ident),
+                            (it["rel_path"], it["rel_path"].rsplit("/", 1)[0]
+                             if "/" in it["rel_path"] else "",
+                             it["name"], it.get("category") or "",
+                             it.get("file_type") or "",
+                             it.get("file_hash") or "",
+                             it.get("hash_algorithm") or "",
+                             it.get("mtime") or 0,
+                             it.get("ctime") or None,
+                             it.get("size_bytes") or 0, sid))
+                        if cur.rowcount:
+                            stats["added"] += 1
+                        continue
+                    same_stat = (
+                        _close(row["mtime"], it.get("mtime"))
+                        and _close(row["ctime"], it.get("ctime"))
+                        and int(row["size_bytes"] or 0) ==
+                        int(it.get("size_bytes") or 0))
+                    same_hash = (
+                        bool(it.get("file_hash")) and bool(row["file_hash"])
+                        and row["file_hash"] == it["file_hash"]
+                        and row["hash_algorithm"] == it["hash_algorithm"])
+                    if same_stat and row["status"] != "missing_source":
+                        # 免检命中；顺手回填缺失指纹
+                        if it.get("file_hash") and not row["file_hash"]:
+                            cur.execute(sql.SQL(
+                                "UPDATE {}.resources SET file_hash=%s, "
+                                "hash_algorithm=%s WHERE resource_id="
+                                "(SELECT resource_id FROM {}.resources "
+                                "WHERE source_id=%s AND rel_path=%s)")
+                                .format(ident, ident),
+                                (it["file_hash"], it["hash_algorithm"],
+                                 sid, it["rel_path"]))
+                        stats["unchanged"] += 1
+                    elif same_hash and row["status"] != "missing_source":
+                        stats["unchanged"] += 1
+                    elif same_stat and row["status"] == "missing_source":
+                        cur.execute(sql.SQL(
+                            "UPDATE {}.resources SET status='ok', "
+                            "synced_at=now() WHERE source_id=%s "
+                            "AND rel_path=%s").format(ident),
+                            (sid, it["rel_path"]))
+                        stats["restored"] += 1
+                    else:
+                        # 源已变：更新 stat、保留旧指纹、标 stale_source
+                        cur.execute(sql.SQL(
+                            "UPDATE {}.resources SET mtime=%s, ctime=%s, "
+                            "size_bytes=%s, status='stale_source', "
+                            "synced_at=now() WHERE source_id=%s "
+                            "AND rel_path=%s").format(ident),
+                            (it.get("mtime") or 0, it.get("ctime") or None,
+                             it.get("size_bytes") or 0, sid, it["rel_path"]))
+                        stats["stale_source"] += 1
+
+                # 源端消失 → missing_source（知识保留可搜）
+                walked = {it["rel_path"] for it in items}
+                for rel in existing.keys() - walked:
+                    cur.execute(sql.SQL(
+                        "UPDATE {}.resources SET status='missing_source', "
+                        "synced_at=now() WHERE source_id=%s AND rel_path=%s")
+                        .format(ident), (sid, rel))
+                    stats["missing"] += 1
+
+                # 目录清单登记（含中间目录）
+                dirs: set[str] = set()
+                for it in items:
+                    parts = it["rel_path"].split("/")
+                    for i in range(len(parts) - 1):
+                        dirs.add("/".join(parts[:i + 1]))
+                for d in sorted(dirs):
+                    parent = d.rsplit("/", 1)[0] if "/" in d else ""
+                    name = d.rsplit("/", 1)[-1]
+                    cur.execute(sql.SQL(
+                        "INSERT INTO {f}.folders (source_id, rel_path, "
+                        "parent_dir, name) VALUES (%s,%s,%s,%s) "
+                        "ON CONFLICT (source_id, rel_path) DO UPDATE SET "
+                        "parent_dir=EXCLUDED.parent_dir, "
+                        "name=EXCLUDED.name, updated_at=now()")
+                        .format(f=ident), (sid, d, parent, name))
+                # file_count 重算：先清零，再按 resources 聚合回填
+                cur.execute(sql.SQL(
+                    "UPDATE {f}.folders SET file_count=0 WHERE source_id=%s")
+                    .format(f=ident), (sid,))
+                cur.execute(sql.SQL(
+                    "UPDATE {f}.folders f SET file_count = c.n, "
+                    "updated_at=now() FROM "
+                    "(SELECT parent_dir, count(*) AS n FROM {r}.resources "
+                    "WHERE source_id=%s GROUP BY parent_dir) c "
+                    "WHERE f.source_id=%s AND f.rel_path = c.parent_dir")
+                    .format(f=ident, r=ident), (sid, sid))
+        return stats
+
+    def list_dir(self, schema_name: str, source_id, parent_dir: str = "") -> tuple[list[dict], list[dict]]:
+        """列目录（罗列检索）：返回 (子目录, 文件) 两张清单。"""
+        sid = uuid.UUID(str(source_id)) if source_id else LEGACY_SOURCE
+        ident = sql.Identifier(schema_name)
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql.SQL(
+                    "SELECT rel_path, name, summary, description, tags, "
+                    "file_count FROM {}.folders WHERE source_id=%s "
+                    "AND parent_dir=%s ORDER BY name").format(ident),
+                    (sid, parent_dir))
+                dirs = [{"rel_path": r[0], "name": r[1], "summary": r[2],
+                         "description": r[3], "tags": list(r[4] or []),
+                         "file_count": r[5]} for r in cur.fetchall()]
+                cur.execute(sql.SQL(
+                    "SELECT resource_id, rel_path, name, size_bytes, mtime, "
+                    "status, summary, file_type, category, tags "
+                    "FROM {}.resources WHERE source_id=%s AND parent_dir=%s "
+                    "AND kind='file' ORDER BY name").format(ident),
+                    (sid, parent_dir))
+                files = []
+                for r in cur.fetchall():
+                    files.append({
+                        "resource_id": str(r[0]), "rel_path": r[1],
+                        "name": r[2], "size_bytes": r[3], "mtime": r[4],
+                        "status": r[5], "summary": r[6], "file_type": r[7],
+                        "category": r[8], "tags": list(r[9] or []),
+                        "ext": ("." + r[1].rsplit(".", 1)[-1].lower())
+                        if "." in r[1] else ""})
+        return dirs, files
+
+    def get_resource(self, schema_name: str, resource_id) -> Optional[dict]:
+        """按 resource_id 取资源行（内容访问层凭 id 寻址，REQ-R7-03）。"""
+        ident = sql.Identifier(schema_name)
+        rid = uuid.UUID(str(resource_id))
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql.SQL(
+                    "SELECT resource_id, source_id, rel_path, parent_dir, "
+                    "name, kind, category, tags, summary, "
+                    "content_description, file_type, file_hash, "
+                    "hash_algorithm, mtime, ctime, size_bytes, status, "
+                    "analyzed_at FROM {}.resources "
+                    "WHERE resource_id = %s").format(ident), (rid,))
+                row = cur.fetchone()
+        if row is None:
+            return None
+        cols = ("resource_id", "source_id", "rel_path", "parent_dir",
+                "name", "kind", "category", "tags", "summary",
+                "content_description", "file_type", "file_hash",
+                "hash_algorithm", "mtime", "ctime", "size_bytes", "status",
+                "analyzed_at")
+        d = dict(zip(cols, row))
+        d["tags"] = list(d["tags"] or [])
+        d["resource_id"] = str(d["resource_id"])
+        d["source_id"] = str(d["source_id"]) if d["source_id"] else ""
+        return d
+
+    def delete_source_rows(self, schema_name: str, source_id) -> int:
+        """删除来源的全部行（vectors 级联；注销来源时用）。"""
+        sid = uuid.UUID(str(source_id)) if source_id else LEGACY_SOURCE
+        ident = sql.Identifier(schema_name)
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql.SQL(
+                    "DELETE FROM {}.resources WHERE source_id=%s")
+                    .format(ident), (sid,))
+                n = cur.rowcount
+                cur.execute(sql.SQL(
+                    "DELETE FROM {}.folders WHERE source_id=%s")
+                    .format(ident), (sid,))
+        return n
+
+    def source_stats(self, schema_name: str, source_id) -> dict:
+        """单来源状态分布（一致性报告用）。"""
+        sid = uuid.UUID(str(source_id)) if source_id else LEGACY_SOURCE
+        ident = sql.Identifier(schema_name)
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql.SQL(
+                    "SELECT count(*), "
+                    "count(*) FILTER (WHERE status='ok'), "
+                    "count(*) FILTER (WHERE status='stale_source'), "
+                    "count(*) FILTER (WHERE status='missing_source'), "
+                    "count(*) FILTER (WHERE summary <> '') "
+                    "FROM {}.resources WHERE source_id=%s").format(ident),
+                    (sid,))
+                r = cur.fetchone()
+        return {"files": r[0], "ok": r[1], "stale_source": r[2],
+                "missing_source": r[3], "analyzed": r[4]}
+
+    def upsert_folder_meta(self, schema_name: str, source_id, rel_path: str,
+                           summary: str = "", description: str = "",
+                           tags: list | None = None) -> None:
+        """写入目录级智能描述（folder.json 富化回填用）。"""
+        sid = uuid.UUID(str(source_id)) if source_id else LEGACY_SOURCE
+        parent = rel_path.rsplit("/", 1)[0] if "/" in rel_path else ""
+        name = rel_path.rsplit("/", 1)[-1]
+        ident = sql.Identifier(schema_name)
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql.SQL(
+                    "INSERT INTO {}.folders (source_id, rel_path, "
+                    "parent_dir, name, summary, description, tags) "
+                    "VALUES (%s,%s,%s,%s,%s,%s,%s) "
+                    "ON CONFLICT (source_id, rel_path) DO UPDATE SET "
+                    "summary=EXCLUDED.summary, description=EXCLUDED.description, "
+                    "tags=EXCLUDED.tags, updated_at=now()")
+                    .format(ident),
+                    (sid, rel_path, parent, name, summary, description,
+                     tags or []))
 
     def list_nas(self) -> list[dict]:
         """注册表全量（含统计）。"""
