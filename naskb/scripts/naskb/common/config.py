@@ -144,6 +144,13 @@ class Config:
         )
         self.analyzer_max_file_mb: int = int(analyzer_cfg.get("max_file_mb", 100))
 
+        # ── [server]（平台服务，REQ-R7-11）──
+        server_cfg = data.get("server", {})
+        self.server_tokens: list[str] = [
+            str(t) for t in (server_cfg.get("tokens") or []) if str(t).strip()]
+        self.anonymous_read: bool = bool(
+            server_cfg.get("anonymous_read", True))
+
     @property
     def pg_enabled(self) -> bool:
         """[pg] 是否已配置（host 非空即视为启用）。

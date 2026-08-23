@@ -124,6 +124,29 @@ class LocalAdapter(FileSystemAdapter):
                 out.extend(data)
         return bytes(out)
 
+    def open_stream(self, path: str, start: int | None = None,
+                    end: int | None = None, chunk_size: int = 1 << 20):
+        """seek + 分块流式读取（下载代理 Range 用，REQ-R7-07）。"""
+        f = open(self._resolve(path), "rb")
+        try:
+            size = os.fstat(f.fileno()).st_size
+            if start is None:
+                start = 0
+            if end is None or end >= size:
+                end = size - 1
+            if start > end or start >= size:
+                raise OSError("range not satisfiable")
+            f.seek(start)
+            remaining = end - start + 1
+            while remaining > 0:
+                chunk = f.read(min(chunk_size, remaining))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+                yield chunk
+        finally:
+            f.close()
+
     def write_bytes(self, path: str, data: bytes) -> None:
         """Write raw bytes, creating parent dirs if needed."""
         p = self._resolve(path)

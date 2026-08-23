@@ -166,6 +166,59 @@ class WebDAVAdapter(FileSystemAdapter):
                 raise OSError(f"Range request failed: HTTP {resp.status_code}")
         return bytes(out)
 
+    def open_stream(self, path: str, start: int | None = None,
+                    end: int | None = None, chunk_size: int = 1 << 20):
+        """HTTP Range 流式转发（下载代理用，REQ-R7-07）：不落盘、逐块产出。
+
+        复用 webdav4 底层 httpx 实例（认证/verify 已配置）；Range 透传，
+        服务器返回 200（不支持 Range）时按请求偏移截取，语义仍正确。
+        返回生成器；调用方负责完全消费或关闭。
+        """
+        remote_path = self._to_remote_path(path)
+        headers: dict[str, str] = {}
+        ranged = start is not None or end is not None
+        if ranged:
+            headers["Range"] = (
+                f"bytes={start or 0}-" + ("" if end is None else str(end)))
+        inner = getattr(self._client, "http", None)
+        if inner is None:
+            raise OSError("webdav4 client 未暴露底层 http 实例")
+        req = inner.build_request("GET", remote_path, headers=headers)
+        resp = inner.send(req, stream=True)
+
+        def _gen():
+            try:
+                if resp.status_code == 206 or not ranged:
+                    for chunk in resp.iter_raw(chunk_size):
+                        yield chunk
+                elif resp.status_code == 200:
+                    # 服务器不支持 Range：跳过前 start 字节、截至 end（含）
+                    s = start or 0
+                    remaining = None if end is None else end - s + 1
+                    skipped = 0
+                    for chunk in resp.iter_raw(chunk_size):
+                        if skipped < s:
+                            drop = min(s - skipped, len(chunk))
+                            chunk = chunk[drop:]
+                            skipped += drop
+                        if remaining is not None and chunk:
+                            keep = min(len(chunk), max(remaining, 0))
+                            chunk = chunk[:keep]
+                            remaining -= keep
+                        elif remaining is not None and remaining <= 0:
+                            break
+                        if chunk:
+                            yield chunk
+                        if remaining is not None and remaining <= 0:
+                            break
+                else:
+                    raise OSError(
+                        f"WebDAV stream failed: HTTP {resp.status_code}")
+            finally:
+                resp.close()
+
+        return _gen()
+
     def write_bytes(self, path: str, data: bytes) -> None:
         """Write raw bytes to the WebDAV server."""
         import io
