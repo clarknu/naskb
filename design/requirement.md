@@ -116,8 +116,8 @@
 | REQ-R4-07 | 新鲜度状态机：`ok` / `stale_vector`（快照重析、PG 未跟上）/ `stale_source`（NAS 已变、快照落后）；检索/问答带状态徽章，过期内容在问答上下文中显式标注 | 已实现 |
 | REQ-R4-08 | 同步四操作：增/改/删/移，以 rel_path 为键 + hash 匹配区分"移动"与"删除+新增"（移动保留 resource_id）；增量幂等；批量提交；失败记日志不中断 | 已实现 |
 | REQ-R4-09 | 版本自证：vectors.source_hash = 生成向量时的文件 hash；resources.prev_hashes 审计链（最近 N 版）——可回答"这条向量描述的是哪个文件版本、是否已过期" | 已实现 |
-| REQ-R4-10 | sync 预检：WebDAV PROPFIND 取 mtime/size 与 .naskb 对比（零下载）；疑似变化只标记不重析（重析是 analyze-tree 职责）；`--verify-hash` 可选深度校验 | 规划中（v3 V1 实施，由 REQ-R7-06 承接） |
-| REQ-R4-11 | 采集身份固化：.naskb/meta.json 记录 access_identity，sync 校验身份不一致拒绝同步（防串库） | 规划中（v3 由 REQ-R7-03 来源绑定校验承接） |
+| REQ-R4-10 | sync 预检：WebDAV PROPFIND 取 mtime/size 与 .naskb 对比（零下载）；疑似变化只标记不重析（重析是 analyze-tree 职责）；`--verify-hash` 可选深度校验 | 已实现（v3 形态：来源扫描 hash=true / 调度预检，REQ-R7-06） |
+| REQ-R4-11 | 采集身份固化：.naskb/meta.json 记录 access_identity，sync 校验身份不一致拒绝同步（防串库） | 已实现（v3 来源绑定校验，REQ-R7-03） |
 | REQ-R4-12 | 检索接入：search/ask/serve 的 PG 后端 + 多 NAS 选择（--nas；serve 下拉）；`--nas all` 每库 top-k 合并（分数不跨库比较） | 已实现（--nas all 跨库合并留待 v3 V2） |
 | REQ-R4-13 | **回退链**：PG 不可用自动回退 numpy 向量 → BM25；现状功能完全保留（PG 是增强不是替换） | 已实现 |
 | REQ-R4-14 | 身份迁移：NAS 主机变更（换 IP）可 `pg-rebind` 重绑五要素，不丢库 | 规划中（v3 V2，来源管理页操作） |
@@ -146,24 +146,24 @@
 
 ### R7 平台系统化（v3 重定位，2026-08-18 立项）
 
-> 依据：ADR-20260818-1；详细设计 `design/platform-v3-design.md`（v0.2，八项决策已拍板）。
+> 依据：ADR-20260818-1；详细设计 `design/platform-v3-design.md`（v0.3，含 V1 实施记录）。
 > 产品形态升级为「NASKB 知识库系统」，**版本自 v0.1 重新起版**。
 
 | 编号 | 需求 | 状态 |
 |---|---|---|
-| REQ-R7-01 | 系统形态：常驻服务进程，Web UI + REST API + MCP 三出口；CLI/Skill 保留为高级/无人值守通道 | 规划中 |
-| REQ-R7-02 | 知识自持：PG 为知识权威库（元数据+全文+向量）；分析中间产物**不持久保留**（临时暂存区 `store/tmp/` 用完即清）；可写源端 `.naskb` 为提取数据的原始仲裁端，系统内维护副本+衍生产物 | 规划中 |
-| REQ-R7-03 | 来源注册表：PG sources 表 + 管理 API/UI；注册表即安全边界，资源一律凭 resource_id 寻址、不接受裸路径；含来源绑定校验（连接 ↔ 五要素 ↔ 注册信息三方核对，承接 REQ-R4-11） | 规划中 |
-| REQ-R7-04 | 挂载式多协议接入：local/WebDAV（V1）、SMB 直连（V2）、NFS/iSCSI 以 OS 挂载注册为 local 源（V2）；挂载型协议不在应用层重复造客户端 | 规划中 |
-| REQ-R7-05 | 只读知识库：access_mode=ro 绝不写源端；中间产物不留存；删除仅标记 missing_source 不清内部知识 | 规划中 |
-| REQ-R7-06 | 更新校验体系：周期零下载预检（PROPFIND/readdir，承接 REQ-R4-10）+ 访问时 stat 轻校验 + 手动 verify-hash；状态机 ok/stale_vector/stale_source/**missing_source** | 规划中 |
-| REQ-R7-07 | 下载代理：流式分块转发、Range 断点续传、ETag=file_hash、filename* 编码；源离线返回 503+指引 | 规划中 |
-| REQ-R7-08 | 在线预览：图片/PDF/音视频原生格式/文本/解析视图（rw 源 MinerU HTML）先行；Office 及不支持类型提示"无法查看"+提供下载；复杂编辑后置 | 规划中 |
-| REQ-R7-09 | Web UI：搜索问答、目录树浏览（罗列检索）、文件详情（预览+元数据）、来源管理、任务中心 | 规划中 |
-| REQ-R7-10 | 开放 API：/api/sources /tree /files 族；旧 /api/search /api/ask 契约冻结不变（ADR-20260816-2）；OpenAPI 自动导出 function schema | 规划中 |
-| REQ-R7-11 | 认证：单管理员 Bearer token + 局域网匿名只读开关；多用户/角色后置 | 规划中 |
-| REQ-R7-12 | 调度：进程内定时扫描/同步预检/stale 复查（清偿原 R4"阶段 3 定时同步"） | 规划中 |
-| REQ-R7-13 | adopt 收编：存量 `.naskb` 仓库一键导入系统库；export-repo 反向重建 | 规划中 |
+| REQ-R7-01 | 系统形态：常驻服务进程，Web UI + REST API + MCP 三出口；CLI/Skill 保留为高级/无人值守通道 | 部分实现（FastAPI+Web UI+REST ✅；MCP 出口接新服务对象在 V2） |
+| REQ-R7-02 | 知识自持：PG 为知识权威库（元数据+全文+向量）；分析中间产物**不持久保留**（临时暂存区 `store/tmp/` 用完即清）；可写源端 `.naskb` 为提取数据的原始仲裁端，系统内维护副本+衍生产物 | 已实现 |
+| REQ-R7-03 | 来源注册表：PG sources 表 + 管理 API/UI；注册表即安全边界，资源一律凭 resource_id 寻址、不接受裸路径；含来源绑定校验（连接 ↔ 五要素 ↔ 注册信息三方核对，承接 REQ-R4-11） | 已实现（PG/JSON 双后端） |
+| REQ-R7-04 | 挂载式多协议接入：local/WebDAV（V1）、SMB 直连（V2）、NFS/iSCSI 以 OS 挂载注册为 local 源（V2）；挂载型协议不在应用层重复造客户端 | 部分实现（local/WebDAV ✅） |
+| REQ-R7-05 | 只读知识库：access_mode=ro 绝不写源端；中间产物不留存；删除仅标记 missing_source 不清内部知识 | 已实现 |
+| REQ-R7-06 | 更新校验体系：周期零下载预检（PROPFIND/readdir，承接 REQ-R4-10）+ 访问时 stat 轻校验 + 手动 verify-hash；状态机 ok/stale_vector/stale_source/**missing_source** | 已实现（scan?hash=true 即深度校验） |
+| REQ-R7-07 | 下载代理：流式分块转发、Range 断点续传、ETag=file_hash、filename* 编码；源离线返回 503+指引 | 已实现 |
+| REQ-R7-08 | 在线预览：图片/PDF/音视频原生格式/文本/解析视图（rw 源 MinerU HTML）先行；Office 及不支持类型提示"无法查看"+提供下载；复杂编辑后置 | 部分实现（解析视图/Office 在 V2） |
+| REQ-R7-09 | Web UI：搜索问答、目录树浏览（罗列检索）、文件详情（预览+元数据）、来源管理、任务中心 | 已实现 |
+| REQ-R7-10 | 开放 API：/api/sources /tree /files 族；旧 /api/search /api/ask 契约冻结不变（ADR-20260816-2）；OpenAPI 自动导出 function schema | 已实现 |
+| REQ-R7-11 | 认证：单管理员 Bearer token + 局域网匿名只读开关；多用户/角色后置 | 已实现 |
+| REQ-R7-12 | 调度：进程内定时扫描/同步预检/stale 复查（清偿原 R4"阶段 3 定时同步"） | 已实现 |
+| REQ-R7-13 | adopt 收编：存量 `.naskb` 仓库一键导入系统库；export-repo 反向重建 | 规划中（V2） |
 | REQ-R7-14 | 部署纪律：PG 用统一独立实例（192.168.5.2:25432），业务进程不自建数据库/Redis/队列；凭据集中管理不入镜像 | 现行（全局部署规则引用） |
 | REQ-R7-15 | 二级知识库体系：文档拆出物（图表/段落/实体等）的标准解析、存储与再组织——另行专项设计 | 规划中（本次不做） |
 
@@ -294,3 +294,4 @@
 | 2026-08-16 | 阶段 2 实施完成：pgsearch.py（PgSearchEngine 同构接口）；search/ask 增 --pg/--nas；serve 增 --pg（NAS 下拉/状态徽章）；PG 失败自动回退本地引擎链（REQ-R4-12/13）；端到端实测 PG 检索/问答/serve 全链路通过 |
 | 2026-08-18 | 补录 REQ-R1-14/R1-15（整理安全/整理闭环——reorganize-refactor-plan P0+P1 已实现部分的追认）；刷新 R1/R4 各条状态与 §7 待办清单 |
 | 2026-08-18 | **v3 平台化重定位立项**（ADR-20260818-1）：新增需求组 R7（REQ-R7-01~15）；产品以「NASKB 知识库系统 v0.1」重新起版；技术栈拍板 FastAPI + Vue3 |
+| 2026-08-23 | **V1 系统底座实施完成**：FastAPI 服务化（旧契约平移）、来源注册表（PG/JSON 双后端）、只读源扫描对账与 AI 富化（暂存 sink）、下载代理（Range/ETag/stale）、预览 V1 档、Web UI 五页面、认证、调度器；R7 各条状态刷新；全量测试 305 passed + 1 skipped，真实服务冒烟通过 |

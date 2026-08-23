@@ -1,12 +1,38 @@
 # NASKB v3 平台化重定位总体设计（功能设计·整合方案）
 
-> 版本: v0.2（决策已确认）
-> 创建: 2026-08-18（v0.2 同日拍板修订）
+> 版本: v0.3（V1 系统底座已实施）
+> 创建: 2026-08-18（v0.2 同日拍板修订；v0.3 2026-08-23 补实施记录）
 > 定位变更依据: 用户 2026-08-18 重定位指示（对话记录）
 > 依赖: [requirement.md](./requirement.md), [analysis-engine-v2.md](./analysis-engine-v2.md),
 >       [pg-vector-multi-nas.md](./pg-vector-multi-nas.md), [agent-interface-design.md](./agent-interface-design.md),
 >       [reorganize-refactor-plan.md](./reorganize-refactor-plan.md)
 > 状态: **已获用户批准并逐项拍板 8 项决策（2026-08-18，见 §9）**；附录 A 已落入 requirement.md（R7 需求组 + ADR-20260818-1）
+
+---
+
+## 实施记录（2026-08-23，V1 系统底座）
+
+| 项 | 状态 | 说明 |
+|----|------|------|
+| FastAPI 服务化 | ✅ | `server/app.py` create_app/run；旧契约四端点形状逐字节对齐 stdlib serve（错误体含 `{"error":…}`）；OpenAPI `/api/openapi.json` |
+| 来源注册表 | ✅ | `common/source_registry.py`：SourceRecord + PG(`public.sources`)/JSON(`sources.json`) 双后端同接口；密码 API 脱敏 |
+| 只读源扫描入库 | ✅ | `common/inventory.py` walk/fingerprint/reconcile → `pgstore.reconcile_resources`（ok/stale_source/missing_source 状态机 + folders 登记 + file_count 重算） |
+| AI 富化（内部 sink） | ✅ | `common/enrich.py`：暂存仓库 sink 复用 analyze_tree 全管线 → collect_staging_docs（相对路径语义）→ sync_vectors(source_id=…) 富化回填 → artifacts 即清 |
+| pgstore 来源化迁移 | ✅ | resources.source_id 列 + (source_id,rel_path) 唯一 + folders 表（幂等迁移）；search 支持 source_ids 过滤并返回 resource_id；LEGACY_SOURCE 兼容旧数据 |
+| 下载代理 | ✅ | `server/routes_content.py`：Range 206/416、ETag=file_hash、304、filename*、X-NASKB-Stale 新鲜度头、503 source_unreachable |
+| 预览 V1 档 | ✅ | image/video/audio/pdf 直连 inline 流；text 类读回（512KB 截断）；其余 viewable:false + 下载兜底；**解析视图（MinerU HTML）延至 V2**（需产物路径入知识行） |
+| Web UI | ✅ | `naskb/web/dist/`：检索问答/浏览/来源管理/任务中心 + 文件详情模态（Vue3 全局构建，无打包步骤） |
+| 认证 | ✅ | `server/auth.py` 单管理员 Bearer + anonymous_read 只读通道（config `[server]`） |
+| 调度器 | ✅ | `server/scheduler.py` 进程内 tick，scan_auto 来源按 interval 提交扫描 job |
+| CLI | ✅ | `desc serve-platform [--host --port]`；pyproject `[server]` extra |
+
+**实现偏差（相对本设计 v0.2）**：
+① InternalSink 落地为"暂存仓库 sink"（复用 analyze_tree 全管线，暂存 index.json/files 保留作增量幂等状态，仅 artifacts 重产物即清）——对外行为与设计一致；
+② Web UI 采用 Vue3 全局构建直挂（决策 2 的轻量落地变体，运行时零 Node；升级 Vite 仅影响构建侧）；
+③ 解析视图与 Office 预览按矩阵顺延 V2；
+④ 旧契约兼容面 KnowledgeCore 的描述装载源 = 全部启用来源聚合（替代原 --root 参数语义），`desc serve`（stdlib 版）保留不动。
+
+**验证**：全量 pytest **305 passed + 1 skipped**（新增 ranges/source_registry/inventory/server_api/content_access 共 53 用例，PG 门控集成含 reconcile 生命周期/富化回填/Range·ETag·stale 全链路）；真实 uvicorn 冒烟 `scripts/smoke_platform.py` 8 步全通过（注册→扫描→浏览→预览→206→304→清理）。
 
 ---
 

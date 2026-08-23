@@ -66,3 +66,10 @@ bin = ""                # MinerU 可执行文件路径；留空则从 PATH 找�
 [analyzer]
 max_chars = 100000      # 单文件提取文本上限（字符）
 max_file_mb = 100       # 超过此大小的文件跳过下载分析
+
+# ── [server] 平台服务（v3：naskb desc serve-platform）──
+# tokens 配置任一值即启用认证（单管理员 Bearer）；留空 = 局域网开放
+# anonymous_read：认证开启时，检索/浏览/预览/下载等只读操作是否免 token
+[server]
+tokens = []
+anonymous_read = true

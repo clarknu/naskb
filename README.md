@@ -1,26 +1,30 @@
-# NASKB — 智能 NAS 知识库（v2 工具形态 → v3 平台化演进中）
+# NASKB 知识库系统（v0.1 平台版 · 由 v2 工具形态重定位而来）
 
 > 需求基线：`design/requirement.md`（功能/架构设计的来源与出发点，持续更新）
-> 重定位方案：`design/platform-v3-design.md`（2026-08-18 拍板：工具 → 自持知识的知识库系统，
-> Web UI + 开放 API + 下载代理 + 在线预览；产品以 v0.1 重新起版）
+> 重定位方案：`design/platform-v3-design.md`（2026-08-18 拍板：工具 → 自持知识的知识库系统；
+> 2026-08-23 V1 系统底座实施完成）
 
-对本地目录或 NAS（WebDAV）建立 `.naskb/` 描述仓库：AI 分类/摘要/标签、图片音频识别、
-PDF/DOCX 扫描件 OCR、目录整理规划与检索。以 **Reasonix Skill** 形态交付：
-AI 通过 `naskb/SKILL.md` 了解能力，调用 `naskb desc` 命令完成"扫描-分析-检索-整理-更新"闭环。
+**v0.1 平台版**：知识真正存放在系统内部（PG 主库），本地目录 / WebDAV / SMB·NFS·iSCSI 挂载
+均作为**知识源**接入（支持只读知识库，源一个字节不写）。提供 Web 操作界面、开放 REST API、
+下载代理（Range 流式）、在线预览（图片/PDF/音视频/文本）、RAG 问答与知识整理。
+工具形态命令（`naskb desc …`）全部保留。
 
 ## 结构
 
 ```
-naskb/                      ← Skill 根
+naskb/                      ← Skill/系统根
 ├── SKILL.md                ← AI 入口（playbook）
 ├── DEPLOY.md               ← 部署指南
+├── web/dist/               ← Web UI 静态包（Vue3，运行时零 Node）
 └── scripts/naskb/          ← 代码
-    ├── common/             ← 确定性层：.naskb 仓库、fs(local/webdav)、llm 客户端、检索、PG 向量库
+    ├── common/             ← 确定性层：.naskb 仓库、fs(local/webdav)、检索、PG 向量库、
+    │                          来源注册表、扫描对账(inventory)、AI 富化(enrich)
+    ├── server/             ← 平台服务（FastAPI）：REST API + 认证 + 调度 + 下载代理/预览
     ├── analyzer/           ← AI 编排层：文档/图片/音频/视频/MinerU/目录/重组
     ├── mcp/                ← MCP Server（14 个 kb_* 工具，stdio）
-    └── skill/cli.py        ← desc 命令组（18 命令）
-NASKB_data/                 ← 工作区：config.toml（DeepSeek/MiMo key、WebDAV、MinerU）
-tests/                      ← 测试（253 用例）
+    └── skill/cli.py        ← desc 命令组（19 命令）
+NASKB_data/                 ← 工作区：config.toml、sources.json（无 PG 时来源表）
+tests/                      ← 测试（305 用例）
 ```
 
 ## 核心能力（`naskb desc ...`）
@@ -40,7 +44,17 @@ tests/                      ← 测试（253 用例）
 | `migrate` | v1 `.sidecar.json` → v2 `.naskb` 迁移 |
 | `serve-mcp [--root X] [--pg]` | **MCP Server（stdio）**：14 个 `kb_*` 工具（检索/问答/入库/整理）供外部 Agent 调用，长任务返回 job_id；`mcp.json` 模板见仓库根 |
 
+| `serve-mcp [--root X] [--pg]` | **MCP Server（stdio）**：14 个 `kb_*` 工具（检索/问答/入库/整理）供外部 Agent 调用，长任务返回 job_id；`mcp.json` 模板见仓库根 |
+| `serve-platform [--host --port]` | **平台服务（v0.1 主入口）**：Web UI + 开放 API——来源注册（local/WebDAV，rw\|ro 只读知识库）、扫描对账/AI 富化入库、目录浏览罗列、`/api/kb/search` 检索、下载代理（Range 断点/ETag/stale 提示）、在线预览（图片/PDF/音视频/文本）、任务中心、Bearer 认证（`[server] tokens`）；API 文档 `/api/docs` |
+
 NAS 场景：`naskb desc --webdav-url <url> analyze-tree /path`（config.toml 配好 [webdav] 后可省略）。
+
+### 快速开始（平台版）
+
+1. `pip install '.[server,pg]'` → 配置 `NASKB_data/config.toml` 的 `[pg]` 与 `[llm.text]`
+2. `naskb desc serve-platform --host 0.0.0.0` → 浏览器打开 `http://<主机>:8765/`
+3. 「来源」页注册一个本地目录或 WebDAV（选 ro 只读或 rw 双写）→ 扫描 → AI 分析
+4. 「检索问答」搜索/提问；点结果直接预览或流式下载
 
 ## 模型分工与部署
 
