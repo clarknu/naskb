@@ -1,7 +1,11 @@
 # NASKB 高并发 MCP 架构 — 技术选型重评估
 
+> **⚠️ 已取代（2026-08-11）**：本文基于 v1 架构选型（LanceDB/ONNX session pool 等）。
+> v2 接口设计见 [agent-interface-design.md](./agent-interface-design.md)（能力注册表 + MCP/REST/function schema 多出口）。
+> 本文仅作历史参考（common 层与部署形态解耦原则已沿用）。
+
 > 版本: v0.3  
-> 日期: 2026-06-05  
+> 日期: 2026-06-05（历史）  
 > 依赖: [requirement.md](./requirement.md), [mcp-kb-design.md](./mcp-kb-design.md)
 
 ---

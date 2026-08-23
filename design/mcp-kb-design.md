@@ -1,7 +1,11 @@
 # NASKB MCP 知识库服务 — 设计规格
 
+> **⚠️ 已取代（2026-08-11）**：本文基于 v1 架构（LanceDB + `.kbdes` sidecar + watchdog）。
+> v2 架构（`.naskb/` 目录仓库 + PG 多 NAS 向量库 + 增量幂等 analyze）的接口设计见
+> [agent-interface-design.md](./agent-interface-design.md)。本文仅作历史参考（JobQueue 思想已沿用）。
+
 > 版本: v0.1  
-> 状态: 草稿  
+> 状态: 草稿（历史）  
 > 最后更新: 2026-06-05  
 > 依赖: [requirement.md](./requirement.md), [implementation-plan.md](./implementation-plan.md)
 
