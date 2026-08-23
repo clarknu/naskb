@@ -34,6 +34,20 @@
 
 **验证**：全量 pytest **305 passed + 1 skipped**（新增 ranges/source_registry/inventory/server_api/content_access 共 53 用例，PG 门控集成含 reconcile 生命周期/富化回填/Range·ETag·stale 全链路）；真实 uvicorn 冒烟 `scripts/smoke_platform.py` 8 步全通过（注册→扫描→浏览→预览→206→304→清理）。
 
+### V2 实施记录（2026-08-23）
+
+| 项 | 状态 | 说明 |
+|----|------|------|
+| adopt / export-repo | ✅ | `common/adopt.py`：来源端 .naskb → PG 主库（含目录登记）；PG → .naskb 反向重建（REQ-R7-13，CLI 与 API 双入口） |
+| 解析视图 | ✅ | resources.artifacts jsonb（Doc.artifacts 贯穿 sync）；`/api/files/{rid}/parsed` 从源端流式出 MinerU HTML/md（仅 rw 源保留产物时可用） |
+| Office 简版预览 | ✅ | `server/office.py`：docx（_docx_flow_items 流式还原 + 内嵌图）/ xlsx（openpyxl 表格）→ HTML；pptx 提示下载（用户拍板"零依赖简版"） |
+| 缩略图缓存 | ✅ | `server/thumb.py`：图片 Pillow / 视频 ffmpeg 海报；工作区 store/thumbs（用户拍板"小缓存"） |
+| pg-rebind | ✅ | `pgstore.rebind_nas`：改 schema 名 + registry + 来源记录同步（R4-14） |
+| CLI --nas all | ✅ | search/ask 跨库每库 top-k 分组输出（分数不跨库比较） |
+| MCP 扩展 | ✅ | kb_list_sources / kb_list_tree / kb_get_file_url；Resources（kb://stats·sources·status/{alias}）；Prompts（kb-find·kb-ingest·kb-reorganize）；写操作审计（store/audit/JSONL） |
+
+**验证**：全量 pytest **312 passed + 1 skipped**（新增 test_v2_features 七用例）。
+
 ---
 
 ## 0. 一句话重定位

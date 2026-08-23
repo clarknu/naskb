@@ -91,3 +91,21 @@ naskb -w NASKB_data desc scan webdav://主机:5006/HomeBuilding  # 本地模式�
 - **`naskb init` 卡住**：init 是 v1 向量库模式（下载 embedding 模型）。v2 的 desc 体系不需要 init——直接 `naskb desc analyze` 即可，仓库自动创建。
 - **扫描件 PDF 识别**：需安装 MinerU（Python<3.14 独立环境），并在 config.toml 的 `[analyzer.mineru] bin` 填可执行文件路径。
 - **中文文件名乱码**：Windows 下临时文件已用 ASCII 安全命名，无影响。
+
+## V1 平台服务部署（serve-platform / run.py）
+
+- 启动：`python run.py --host 0.0.0.0 --open`（零安装；自动借用仓库 .venv）
+- 前置：工作区 `NASKB_data/config.toml` 配好 `[pg]`（知识主库）与 `[llm.text]`（问答）
+- 认证：`[server] tokens = ["..."]` 启用单管理员 Bearer；`anonymous_read` 控制匿名只读
+- 依赖：`pip install '.[server]'`（仅换新机器时需要）
+
+## 备份与恢复（V2）
+
+系统内持久数据 = PG 主库（知识权威）+ 工作区（config.toml / sources.json：
+无 PG 时来源表 / store/thumbs 缩略图缓存 / store/audit 审计）。
+源端 `.naskb`（可写源）为提取数据仲裁端，属备份重点之一。
+
+- **推荐备份**：`pg_dump`（naskb 库）+ 工作区 `NASKB_data` + 可写源源端 `.naskb`。
+- **灾难恢复**：恢复 `.naskb`（或重建源）→ 重新注册来源 → `desc export-repo`/`adopt`
+  可选 → 若 PG 为空则 `sync-vectors --rebuild` 全量重建向量库。
+- PG 是派生库（可重建）：重点仍是源端 `.naskb` + config；PG 用 `pg_dump` 定期导出为可选。
