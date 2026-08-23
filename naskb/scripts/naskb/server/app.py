@@ -307,7 +307,9 @@ def create_app(config) -> FastAPI:
     register_content_routes(app)
 
     # ── Web UI 静态包（最后挂载，兜底 /）──
-    web_dist = Path(__file__).resolve().parent.parent / "web" / "public"
+    # server/app.py 位于 <skill>/naskb/scripts/naskb/server/，
+    # Web UI 在 <skill>/naskb/web/public（Skill 根下）
+    web_dist = Path(__file__).resolve().parents[3] / "web" / "public"
     if web_dist.is_dir():
         app.mount("/", StaticFiles(directory=str(web_dist), html=True),
                   name="web")
