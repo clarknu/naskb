@@ -12,7 +12,9 @@ reorganizer / plan_store / vector_index），不 shell 到 CLI。
 from __future__ import annotations
 
 import base64
+import json
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
@@ -44,6 +46,8 @@ class NasKbService:
         self._main_store = None
         self._core = None
         self._llm = None
+        from ..common.source_registry import SourceRegistry
+        self.registry = SourceRegistry(self.config)
         self._build_core()
 
     # ── 初始化 / 资源 ──
@@ -521,6 +525,72 @@ class NasKbService:
             stats = {}
         return {**stats, "roots": self.roots, "work_path": self.work_path}
 
+    # ── v3 来源化工具（V2 扩展）──
+
+    def kb_list_sources(self) -> dict:
+        """已注册的知识来源清单（平台 v0.1 来源注册表）。"""
+        return {"sources": [r.to_api() for r in self.registry.list()]}
+
+    def kb_list_tree(self, source: str, dir: str = "") -> dict:
+        """罗列指定来源的目录树（来源/目录浏览，REQ-R7-09）。"""
+        rec = self.registry.get(source)
+        if rec is None:
+            raise ValueError(f"来源不存在: {source}")
+        pg = self._pg()
+        dirs, files = pg.list_dir(rec.schema_name, rec.source_id,
+                                  (dir or "").strip().strip("/"))
+        return {"source": rec.alias, "dir": (dir or "").strip("/"),
+                "dirs": dirs,
+                "files": [{"resource_id": f["resource_id"],
+                           "name": f["name"], "size_bytes": f["size_bytes"],
+                           "status": f["status"], "category": f["category"],
+                           "rel_path": f["rel_path"]} for f in files]}
+
+    def kb_get_file_url(self, resource_id: str, source: str) -> dict:
+        """取原始资源直链（下载代理路径或协议级 canonical uri）。"""
+        rec = self.registry.get(source)
+        if rec is None:
+            raise ValueError(f"来源不存在: {source}")
+        base = getattr(self.config, "server_base_url", "") or ""
+        url = f"/api/files/{resource_id}/download?src={rec.alias}"
+        if base:
+            url = base.rstrip("/") + url
+        return {"url": url,
+                "note": "需 serve-platform 提供下载代理；否则用 canonical 直连",
+                "canonical": self._canonical_uri(rec, resource_id)}
+
+    def _canonical_uri(self, rec, resource_id: str) -> str:
+        """生成协议级直链（无认证；仅供展示/告知，实际下载走代理）。"""
+        row = None
+        try:
+            row = self._pg().get_resource(rec.schema_name, resource_id)
+        except Exception:
+            pass
+        if row is None:
+            return ""
+        if rec.protocol == "webdav" and rec.url:
+            return f"{rec.url.rstrip('/')}/{row['rel_path'].lstrip('/')}"
+        return f"{rec.root_path or ''}/{row['rel_path']}"
+
+    def _pg(self):
+        from ..common.pgstore import PgStore
+        return PgStore(self.config)
+
+    def _audit(self, op: str, **fields) -> None:
+        """写操作审计日志（追加式 JSONL，工作区 store/audit/）。"""
+        try:
+            day = datetime.now().strftime("%Y%m%d")
+            d = os.path.join(self.work_path, "store", "audit")
+            os.makedirs(d, exist_ok=True)
+            line = json.dumps({
+                "t": datetime.now().astimezone().isoformat(timespec="seconds"),
+                "op": op, **fields}, ensure_ascii=False)
+            with open(os.path.join(d, day + ".log"), "a",
+                      encoding="utf-8") as f:
+                f.write(line + "\n")
+        except Exception:
+            pass
+
 
 # ═══════════════════════════════════════════════════════════
 # FastMCP 组装与入口
@@ -540,9 +610,59 @@ def build_mcp(svc: NasKbService):
             "分钟级操作为长任务：工具立即返回 job_id，用 kb_job_status 查询。"
         ),
     )
+    def _mk_wrap(capname, base):
+        def _wrap(*a, **k):
+            try:
+                r = base(*a, **k)
+                svc._audit(capname, ok=True)
+                return r
+            except Exception as e:
+                svc._audit(capname, ok=False, error=str(e))
+                raise
+        return _wrap
+
     for cap in CAPABILITIES:
         fn = getattr(svc, cap.name)
+        if cap.kind in ("write", "apply"):
+            fn = _mk_wrap(cap.name, fn)
         mcp.tool(name=cap.name, description=cap.description)(fn)
+
+    # ── Resources（只读视图，agent 直接"读"不用"调"）──
+    @mcp.resource("kb://stats")
+    def r_stats() -> str:
+        return json.dumps(svc.kb_stats(), ensure_ascii=False)
+
+    @mcp.resource("kb://sources")
+    def r_sources() -> str:
+        return json.dumps(svc.kb_list_sources(), ensure_ascii=False)
+
+    @mcp.resource("kb://status/{alias}")
+    def r_status(alias: str) -> str:
+        rec = svc.registry.get(alias)
+        if rec is None:
+            return json.dumps({"error": f"来源不存在: {alias}"},
+                              ensure_ascii=False)
+        pg = svc._pg()
+        return json.dumps(
+            {"source": rec.to_api(),
+             "knowledge": pg.source_stats(rec.schema_name, rec.source_id)},
+            ensure_ascii=False)
+
+    # ── Prompts（工作流模板，固化"正确使用 KB"的守则）──
+    @mcp.prompt(name="kb-find")
+    def p_find() -> str:
+        return ("先 kb_search 定位相关文件 → 必要时 kb_get_doc 看知识细节 → "
+                "再用 kb_ask 总结并带出引用来源。")
+
+    @mcp.prompt(name="kb-ingest")
+    def p_ingest() -> str:
+        return ("新增文档先 kb_ingest（增量幂等）→ kb_status 核对覆盖 → "
+                "kb_sync_vectors 把描述同步进 PG 向量库。")
+
+    @mcp.prompt(name="kb-reorganize")
+    def p_reorganize() -> str:
+        return ("整理必须两段式：先 kb_plan_reorganize 生成方案（只输出），"
+                "向用户展示并取得确认后，才 kb_apply_reorganize 执行。")
     return mcp
 
 
