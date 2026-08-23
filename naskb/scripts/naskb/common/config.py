@@ -136,7 +136,6 @@ class Config:
                 "verify_ssl": bool(entry.get("verify_ssl", False)),
             })
 
-
         # ── [analyzer] ──
         analyzer_cfg = data.get("analyzer", {})
         self.analyzer_max_chars: int = int(analyzer_cfg.get("max_chars", 100_000))
@@ -144,6 +143,16 @@ class Config:
             analyzer_cfg.get("tmp_dir", "tmp/analyzer/")
         )
         self.analyzer_max_file_mb: int = int(analyzer_cfg.get("max_file_mb", 100))
+
+    @property
+    def pg_enabled(self) -> bool:
+        """[pg] 是否已配置（host 非空即视为启用）。
+
+        cli/mcp/test 直接访问本属性判定 PG 可用性；未配置时各调用方
+        走本地引擎回退链（REQ-R4-13）。此前属性缺失会导致 AttributeError，
+        pgstore/reorganizer 一直用 getattr 防御——统一收敛到这里。
+        """
+        return bool(self.pg_host)
 
     def _resolve_path(self, rel: str) -> str:
         """Resolve a relative path against work_path; absolute paths kept as-is."""
