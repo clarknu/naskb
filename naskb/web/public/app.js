@@ -200,9 +200,12 @@ const BrowseView = {
         detail: { rid: f.resource_id, src: cur.value },
       }));
     }
+    function thumbable(name) {
+      return /\.(jpe?g|png|gif|webp|bmp|mp4|mkv|mov|webm|avi)$/i.test(name);
+    }
     onMounted(loadSources);
     return { sources, cur, dir, dirs, files, loading, err, loadTree,
-             enter, up, crumbs, open, fmtSize, statusBadge };
+             enter, up, crumbs, open, thumbable, fmtSize, statusBadge };
   },
   template: `
   <div class="card">
@@ -229,8 +232,17 @@ const BrowseView = {
           <td class="sub">目录</td><td></td><td></td>
         </tr>
         <tr v-for="f in files" :key="'f'+f.resource_id" class="clickable" @click="open(f)">
-          <td><div class="path">📄 {{ f.name }}</div>
-              <div class="summary" v-if="f.summary">{{ f.summary.slice(0,140) }}</div></td>
+          <td>
+            <div style="display:flex;gap:10px;align-items:center">
+              <img v-if="thumbable(f.name)" :src="'/api/files/'+f.resource_id+'/thumbnail?src='+cur+'&w=80'"
+                   style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex:none"
+                   loading="lazy" @click.stop>
+              <div>
+                <div class="path">📄 {{ f.name }}</div>
+                <div class="summary" v-if="f.summary">{{ f.summary.slice(0,140) }}</div>
+              </div>
+            </div>
+          </td>
           <td class="sub">{{ fmtSize(f.size_bytes) }}</td>
           <td><span class="badge" :class="statusBadge(f.status)[0]">{{ statusBadge(f.status)[1] }}</span></td>
           <td class="sub">{{ f.category }}</td>
@@ -288,6 +300,13 @@ const SourcesView = {
         toast("AI 分析已提交（任务 " + job_id + "），可在「任务」页查看进度");
       } catch (e) { toast(e.message); }
     }
+    async function adopt(sid) {
+      try {
+        const { job_id } = await api("/api/sources/" + sid + "/adopt", { method: "POST" });
+        toast("收编已提交（任务 " + job_id + "）");
+        pollJob(job_id);
+      } catch (e) { toast(e.message); }
+    }
     async function pollJob(id) {
       const t = setInterval(async () => {
         try {
@@ -318,7 +337,7 @@ const SourcesView = {
       } catch (e) { toast(e.message); }
     }
     onMounted(load);
-    return { list, showForm, form, add, test, scan, analyze, del, toggle,
+    return { list, showForm, form, add, test, scan, analyze, adopt, del, toggle,
              testing, probeResult, fmtSize, fmtTime };
   },
   template: `
@@ -385,6 +404,7 @@ const SourcesView = {
                 <button class="small ghost" @click="test(s.source_id)">测试</button>
                 <button class="small ghost" @click="scan(s.source_id)">扫描</button>
                 <button class="small" @click="analyze(s.source_id)">AI 分析</button>
+                <button class="small ghost" @click="adopt(s.source_id)" title="导入来源端已有的 .naskb 描述">收编</button>
                 <button class="small ghost" @click="toggle(s)">{{ s.enabled ? '停用' : '启用' }}</button>
                 <button class="small danger" @click="del(s)">删除</button>
               </div>
@@ -489,6 +509,13 @@ const FileModal = {
           </div>
           <div class="viewer" v-else-if="preview.viewable==='text'">
             <pre class="text">{{ preview.content }}</pre>
+          </div>
+          <div class="viewer" v-else-if="preview.viewable==='parsed'">
+            <iframe :src="preview.parsed_url" style="width:100%;height:72vh;border:1px solid var(--line);border-radius:8px"></iframe>
+          </div>
+          <div class="viewer" v-else-if="preview.viewable==='html'">
+            <iframe sandbox style="width:100%;height:72vh;border:1px solid var(--line);border-radius:8px"
+                    :srcdoc="preview.content"></iframe>
           </div>
           <div v-else>
             <div class="hint">⚠️ 该类型暂不支持在线查看（{{ preview.reason }}），可下载后本地打开。</div>
