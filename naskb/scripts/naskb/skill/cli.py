@@ -786,6 +786,32 @@ def desc_search(ctx, query, root, top_k, vector, pg_flag, nas_alias):
     store, fs, config = _make_desc_store(ctx, path_hint=root)
     emb = None
     try:
+        if pg_flag and nas_alias == "all":
+            from ..common.pgsearch import PgSearchEngine
+            from ..common.pgstore import PgStore
+            pg = PgStore(config)
+            nas_list = pg.list_nas()
+            if not nas_list:
+                print("[naskb] PG 中还没有注册任何 NAS（先运行 desc sync-vectors）")
+                return
+            total = 0
+            for nas in nas_list:
+                e = PgSearchEngine(pg, config.work_path,
+                                   default_schema=nas["schema_name"])
+                try:
+                    hits = e.search(query, top_k=top_k,
+                                    schema=nas["schema_name"])
+                except Exception as ex:
+                    print(f"  [跳过] {nas['label'] or nas['schema_name']}: {ex}")
+                    continue
+                finally:
+                    e.close()
+                label = nas["label"] or f"{nas['protocol']}://{nas['host']}:{nas['port']}"
+                print(f"[naskb] NAS「{label}」 {len(hits)} 条（分数不跨库比较）")
+                _print_hits(hits)
+                total += len(hits)
+            print(f"[naskb] 合计 {total} 条（--nas all 跨库：每库 top-k，不统一排序）")
+            return
         if pg_flag:
             engine, schema = _pg_engine_or_none(ctx, config, fs, nas_alias)
             if engine is not None:
@@ -1298,6 +1324,106 @@ def desc_pg_status(ctx):
         else:
             print(f"  {label} (u={nas['username'] or '-'}) "
                   f"[{nas['schema_name']}] 未初始化")
+
+
+@desc.command("adopt")
+@click.argument("root", required=False, default=".")
+@click.option("--nas", "nas_alias", default=None, help="[[nas]] 别名")
+@click.pass_context
+def desc_adopt(ctx, root, nas_alias):
+    """收编存量 .naskb：把来源端已有的描述仓库导入系统 PG 主库（REQ-R7-13）。"""
+    from ..common.config import Config
+    from ..common.source_registry import SourceRecord, SourceRegistry
+
+    config = Config.from_work_path(_get_work_path(ctx.obj.get("work_path")))
+    if not config.pg_enabled:
+        print("[naskb] 收编需要 config.toml 配置 [pg] 知识主库（否则无入库目标）")
+        return
+    from ..common.adopt import adopt_repo
+    from ..common.pgstore import PgStore
+    store, fs, config2 = _make_desc_store(ctx, path_hint=root)
+    protocol, host, port, username = _resolve_nas_identity(
+        ctx, config2, nas_alias, fs)
+    rec = SourceRecord(
+        alias="adopt-" + (nas_alias or (host or "local"))[:24],
+        protocol=protocol, host=host, port=port, username=username,
+        root_path=root, access_mode="rw", scan_auto=False)
+    reg = SourceRegistry(config2)
+    existing = reg.get(rec.alias)
+    rec = existing if existing else reg.create(rec)
+    result = adopt_repo(PgStore(config2), config2, rec)
+    print(f"[naskb] 收编完成: {result}")
+    fs.close()
+
+
+@desc.command("export-repo")
+@click.argument("out_dir")
+@click.option("--nas", "nas_alias", default=None, help="[[nas]] 别名")
+@click.option("--root", "root", default=".", help="来源根（用于推断 NAS 身份）")
+@click.pass_context
+def desc_export_repo(ctx, out_dir, nas_alias, root):
+    """反向重建：把系统 PG 知识重建为 out_dir 下的 .naskb 结构（REQ-R7-13）。"""
+    from ..common.config import Config
+    from ..common.source_registry import SourceRegistry
+
+    config = Config.from_work_path(_get_work_path(ctx.obj.get("work_path")))
+    if not config.pg_enabled:
+        print("[naskb] 导出需要 config.toml 配置 [pg]")
+        return
+    reg = SourceRegistry(config)
+    rec = reg.get(nas_alias) if nas_alias else None
+    if rec is None:
+        print("[naskb] 请用 --nas <别名> 指定平台注册过的来源（来源列表见 run.py 来源页）")
+        return
+    from ..common.adopt import export_repo
+    from ..common.pgstore import PgStore
+    result = export_repo(PgStore(config), config, rec, out_dir)
+    print(f"[naskb] 导出完成: {result}")
+
+
+@desc.command("pg-rebind")
+@click.option("--nas", "nas_alias", default=None, help="[[nas]] 别名（重绑对象）")
+@click.option("--to-host", required=True, help="新主机/IP")
+@click.option("--to-port", default=0, help="新端口")
+@click.option("--to-user", default="", help="新账号")
+@click.pass_context
+def desc_pg_rebind(ctx, nas_alias, to_host, to_port, to_user):
+    """NAS 主机迁移重绑（REQ-R4-14）：改五要素不丢库。"""
+    from ..common.config import Config
+    from ..common.pgstore import PgStore
+
+    config = Config.from_work_path(_get_work_path(ctx.obj.get("work_path")))
+    if not config.pg_enabled:
+        print("[naskb] 重绑需要 config.toml 配置 [pg]")
+        return
+    store, fs, config2 = _make_desc_store(ctx, path_hint=".")
+    if nas_alias:
+        entry = config2.get_nas(nas_alias)
+        if not entry:
+            print(f"[naskb] 未找到 [[nas]] 别名: {nas_alias}")
+            return
+        old_host, old_port = entry.get("host", ""), int(
+            entry.get("webdav_port", 5006))
+        old_user = entry.get("user", "")
+    else:
+        old_host = config2.get_nas().get("host", "") if config2.get_nas() else ""
+        old_port = 5006
+        old_user = ""
+    if not old_host:
+        print("[naskb] 无法确定旧五要素（提示用 --nas 指定）")
+        return
+    pg = PgStore(config2)
+    try:
+        res = pg.rebind_nas(
+            {"protocol": "webdav", "host": old_host, "port": old_port,
+             "username": old_user},
+            {"protocol": "webdav", "host": to_host,
+             "port": int(to_port or old_port), "username": to_user})
+        print(f"[naskb] 重绑完成: {res}")
+    except RuntimeError as e:
+        print(f"[naskb] 重绑失败: {e}")
+    finally:
+        fs.close()
 
 
 @desc.command("plan-reorganize")
