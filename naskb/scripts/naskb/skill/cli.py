@@ -1035,6 +1035,32 @@ def desc_serve(ctx, host, port, roots, open_browser, pg_flag):
         fs.close()
 
 
+@desc.command("serve-platform")
+@click.option("--host", default="127.0.0.1", show_default=True,
+              help="监听地址（局域网访问用 0.0.0.0）")
+@click.option("--port", default=8765, show_default=True)
+@click.pass_context
+def desc_serve_platform(ctx, host, port):
+    """启动知识库系统平台服务（v3）：Web UI + 开放 API + 下载代理/预览。
+
+    - 来源注册表：/api/sources（local/WebDAV，rw/ro 只读知识库）
+    - 浏览/检索/问答：/api/tree、/api/kb/search、/api/ask
+    - 内容访问：/api/files/{rid}/download（Range 流式）、/preview
+    - 认证：config.toml [server] tokens（单管理员 Bearer；未配置=局域网开放）
+    - API 文档：/api/docs（OpenAPI）
+    """
+    from ..common.config import Config
+
+    work_path = _get_work_path(ctx.obj.get("work_path"))
+    config = Config.from_work_path(work_path)
+    try:
+        from ..server.app import run
+    except ImportError as e:
+        raise click.ClickException(
+            f"平台服务依赖缺失（pip install 'naskb[server]'）: {e}")
+    run(config, host=host, port=port)
+
+
 @desc.command("serve-mcp")
 @click.option("--root", "roots", multiple=True, default=None,
               help="知识库根目录（含 .naskb/ 描述数据），可多次传入；默认 .")
@@ -1056,7 +1082,8 @@ def desc_serve_mcp(ctx, roots, pg_flag):
 
 
 def _pg_engine_or_none(ctx, config, fs, nas_alias: Optional[str]):
-    """构造 PgSearchEngine + 目标 schema；未配置/失败返回 (None, None)。"""    if not config.pg_enabled:
+    """构造 PgSearchEngine + 目标 schema；未配置/失败返回 (None, None)。"""
+    if not config.pg_enabled:
         return None, None
     try:
         from ..common.pgstore import PgStore
