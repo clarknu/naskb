@@ -25,6 +25,16 @@ class SourceIn(BaseModel):
     verify_ssl: bool = True
 
 
+class RebindIn(BaseModel):
+    protocol: str = "webdav"
+    old_host: str
+    old_port: int = 0
+    old_user: str = ""
+    new_host: str
+    new_port: int = 0
+    new_user: str = ""
+
+
 def register_sources_routes(app) -> None:
 
     def st(request: Request):
@@ -157,9 +167,29 @@ def register_sources_routes(app) -> None:
         job_id = s.jobs.submit("analyze", run)
         return {"job_id": job_id, "hint": "长任务：GET /api/jobs/{job_id} 查询"}
 
-    # ── 一致性报告 ──
+    # ── adopt 收编存量 .naskb（REQ-R7-13）──
 
-    @app.get("/api/sources/{sid}/report")
+    @app.post("/api/sources/{sid}/adopt")
+    async def adopt_source(request: Request, sid: str):
+        s = st(request)
+        if s.pg is None:
+            raise HTTPException(400, detail="收编需要配置 [pg] 知识主库")
+        rec = s.registry.get(sid)
+        if rec is None:
+            raise HTTPException(404, detail=f"来源不存在: {sid}")
+
+        def run(job):
+            from ..common.adopt import adopt_repo
+            return adopt_repo(s.pg, s.config, rec,
+                              on_progress=lambda p, m: (
+                                  job.__setitem__("progress",
+                                                  min(float(p), 1.0)),
+                                  job.__setitem__("message", m)))
+        job_id = s.jobs.submit("adopt", run)
+        return {"job_id": job_id,
+                "hint": "收编来源端已有的 .naskb 描述仓库；GET /api/jobs/{job_id}"}
+
+    # ── 一致性报告 ──    @app.get("/api/sources/{sid}/report")
     async def source_report(request: Request, sid: str):
         s = st(request)
         rec = s.registry.get(sid)
@@ -173,6 +203,33 @@ def register_sources_routes(app) -> None:
             except Exception as e:
                 out["knowledge"] = {"error": str(e)}
         return out
+
+    # ── PG 重绑（REQ-R4-14：NAS 主机/账号迁移）──
+
+    @app.post("/api/pg/rebind")
+    async def pg_rebind(request: Request, body: RebindIn):
+        s = st(request)
+        if s.pg is None:
+            raise HTTPException(400, detail="重绑需要配置 [pg]")
+        try:
+            res = s.pg.rebind_nas(
+                {"protocol": body.protocol, "host": body.old_host,
+                 "port": body.old_port, "username": body.old_user},
+                {"protocol": body.protocol, "host": body.new_host,
+                 "port": body.new_port, "username": body.new_user or ""})
+        except RuntimeError as e:
+            raise HTTPException(404, detail=str(e))
+        # 同步更新引用该 schema 的来源记录（schema_name 由五要素重算）
+        updated = 0
+        if res["changed"]:
+            for rec in s.registry.list():
+                if rec.schema_name == res["old_schema"]:
+                    s.registry.update(
+                        rec.source_id, host=body.new_host,
+                        port=body.new_port,
+                        username=body.new_user or "", protocol=body.protocol)
+                    updated += 1
+        return {**res, "sources_updated": updated}
 
     # ── 任务中心 ──
 

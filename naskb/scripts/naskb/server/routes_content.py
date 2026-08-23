@@ -24,7 +24,16 @@ _TEXT_EXTS = {"txt", "md", "markdown", "json", "xml", "yml", "yaml", "toml",
               "ini", "csv", "log", "py", "js", "ts", "css", "html", "htm",
               "c", "h", "cpp", "java", "go", "rs", "sh", "bat", "ps1",
               "sql", "conf"}
+_OFFICE_EXTS = {"docx", "xlsx", "pptx"}
 _TEXT_CAP = 512 * 1024
+
+
+def _artifact_stream_url(row: dict, record) -> str:
+    artifacts = row.get("artifacts") or {}
+    if artifacts.get("html_path") or artifacts.get("md_path"):
+        return (f"/api/files/{row['resource_id']}/parsed?src="
+                f"{urllib.parse.quote(record.alias)}")
+    return ""
 
 
 def register_content_routes(app) -> None:
@@ -145,7 +154,7 @@ def register_content_routes(app) -> None:
             fs.open_stream(rel, start=start, end=end), status_code=206,
             media_type=media, headers=headers)
 
-    # ── 预览（V1 档矩阵，REQ-R7-08）──
+    # ── 预览（V1 档矩阵 + V2 增强：Office 简版 / 解析视图），REQ-R7-08 ──
 
     @app.get("/api/files/{rid}/preview")
     async def preview(request: Request, rid: str, src: str = Query("")):
@@ -171,14 +180,74 @@ def register_content_routes(app) -> None:
                 except Exception as e:
                     base["viewable"] = False
                     base["reason"] = f"text_read_failed: {e}"
+            elif kind == "html":
+                # 解析视图可用时优先展示（rw 源 MinerU HTML）
+                parsed = _artifact_stream_url(row, record)
+                if parsed:
+                    base["viewable"] = "parsed"
+                    base["parsed_url"] = (
+                        f"/api/files/{rid}/parsed?src="
+                        f"{urllib.parse.quote(record.alias)}")
+                    base.pop("url", None)
+                elif row["status"] == "missing_source":
+                    base["viewable"] = False
+                    base["reason"] = "missing_source"
             return base
-        # 不支持的类型：明确告知 + 提供下载（用户拍板的简单版策略）
+        # 不支持类型：先尝试 Office 零依赖简版，再兜底提示+下载
+        if kind == "office" and ext in ("docx", "xlsx") and \
+                (row.get("size_bytes") or 0) <= 30 * 1024 * 1024:
+            from ..common.batch import _download_to_tmp, _rm_tmp
+            from .office import render
+            config = st(request).config
+            tmp = _download_to_tmp(fs, row["rel_path"],
+                                   config.analyzer_tmp_dir)
+            if tmp:
+                try:
+                    html = render(config, tmp, ext)
+                    if html:
+                        return {**base, "viewable": "html",
+                                "content": html}
+                finally:
+                    _rm_tmp(tmp)
         return {**base, "viewable": False,
                 "reason": "unsupported_type",
                 "hint": "该类型暂不支持在线查看，可下载后本地打开",
                 "download_url": (
                     f"/api/files/{rid}/download?src="
                     f"{urllib.parse.quote(record.alias)}")}
+
+    # ── 解析视图（rw 源 MinerU HTML/md，复用源端产物）──
+
+    @app.get("/api/files/{rid}/parsed")
+    async def parsed(request: Request, rid: str, src: str = Query("")):
+        record, row, fs = resolve(request, src, rid)
+        artifacts = row.get("artifacts") or {}
+        rel_artifact = artifacts.get("html_path") or artifacts.get("md_path")
+        if not rel_artifact:
+            raise HTTPException(404, detail="该文件未登记解析产物")
+        parent = row.get("parent_dir") or ""
+        repo_dir = f"{parent}/.naskb" if parent else ".naskb"
+        full_rel = f"{repo_dir}/{str(rel_artifact).lstrip('/')}"
+        if not fs.exists(full_rel):
+            raise HTTPException(404, detail="解析产物已不存在（源端未保留）")
+        is_html = bool(str(rel_artifact).endswith((".html", ".htm")))
+        media = "text/html; charset=utf-8" if is_html else "text/plain; charset=utf-8"
+        return StreamingResponse(fs.open_stream(full_rel),
+                                 media_type=media)
+
+    # ── 缩略图（图片/视频海报，store/thumbs 小缓存）──
+
+    @app.get("/api/files/{rid}/thumbnail")
+    async def thumbnail(request: Request, rid: str, src: str = Query(""),
+                        w: int = Query(320)):
+        record, row, fs = resolve(request, src, rid)
+        from .thumb import thumbnail as _thumb
+        w = max(64, min(int(w or 320), 1024))
+        data = _thumb(st(request).pg, st(request).config, row, fs, w=w)
+        if not data:
+            raise HTTPException(404, detail="无法生成缩略图")
+        return StreamingResponse(iter([data]),
+                                 media_type="image/jpeg")
 
 
 def _view_kind(ext: str):
@@ -193,4 +262,6 @@ def _view_kind(ext: str):
         return "pdf"
     if e in _TEXT_EXTS:
         return "text"
+    if e in _OFFICE_EXTS:
+        return "office"
     return False
