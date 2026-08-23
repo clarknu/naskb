@@ -49,12 +49,19 @@ tests/                      ← 测试（305 用例）
 
 NAS 场景：`naskb desc --webdav-url <url> analyze-tree /path`（config.toml 配好 [webdav] 后可省略）。
 
-### 快速开始（平台版）
+### 快速开始（零安装）
 
-1. `pip install '.[server,pg]'` → 配置 `NASKB_data/config.toml` 的 `[pg]` 与 `[llm.text]`
-2. `naskb desc serve-platform --host 0.0.0.0` → 浏览器打开 `http://<主机>:8765/`
-3. 「来源」页注册一个本地目录或 WebDAV（选 ro 只读或 rw 双写）→ 扫描 → AI 分析
-4. 「检索问答」搜索/提问；点结果直接预览或流式下载
+```bat
+python run.py                # 就这么跑；自动借用 .venv 解释器、自动定位工作区
+python run.py --host 0.0.0.0 --open   # 局域网可访问 + 自动打开浏览器
+```
+
+首次使用：
+1. 浏览器打开「来源」页 → 注册一个本地目录或 WebDAV（选 ro 只读或 rw 双写）→ 扫描 → AI 分析
+2. 「检索问答」搜索/提问；点结果直接预览或流式下载
+3. 认证（可选）：config.toml `[server] tokens = ["你的令牌"]` 后重启
+
+> `pip install '.[server,pg]'` 仅用于**换新机器部署**时安装依赖；日常在本仓库运行不需要。
 
 ## 模型分工与部署
 
