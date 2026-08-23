@@ -51,6 +51,7 @@ def _doc_from_entry(rel: str, entry: FileEntry, data_full: Optional[FileEntry]) 
         summary=entry.summary, category=entry.category, tags=entry.tags,
         content_description=entry.content_description,
         file_type=entry.file_type or "",
+        artifacts=entry.exif.get("mineru_artifacts") or {},
         context=context, file_hash=entry.file_hash,
         hash_algorithm=entry.hash_algorithm, size_bytes=entry.size_bytes,
         mtime=entry.mtime, ctime=entry.ctime,
