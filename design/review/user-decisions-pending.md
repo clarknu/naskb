@@ -48,5 +48,5 @@
 - ~~架构债务 K-001/K-002~~ → **已于 2026-08-24 清零**（用户指令；AC-005 违规 0、债务 0/0）。
 - R5-06 剩余阶段（真实文档验证、分级检索等）。
 - 方法论问题报告：**已移交**（2026-08-24 用户完成搬运；仓库 bundle 已含配套修复：verify-fixed.mjs/raw-input-to-*/wechatide 改名/arch-contract 模板等）。
-- **P-002 延期实现项**（复查确认）：page-mock 执行层（Vitest+MSW）——后续独立迭代。
+- **P-002 延期实现项**（复查确认）：page-mock 执行层（Vitest+MSW）——后续独立迭代。**✅ 已实现（2026-08-24）：已接入 vitest + @vue/test-utils + jsdom + fetch mock（等价 MSW），用例 tests/page-mock/web-console/*.spec.js 全绿；未实现明细（TC-M003/M006/M007/M010）见 design/07-tdd/page-mock/web-console-tdd-design.md**。
 - **P-004 对齐**（复查确认）：ER 派生 VO 已补（source_stats / folder_entry_view）。

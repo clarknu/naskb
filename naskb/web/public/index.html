@@ -8,7 +8,15 @@
 </head>
 <body>
 <div id="app"></div>
-<script src="/vendor/vue.global.prod.js"></script>
-<script src="/app.js"></script>
+<!-- 运行时零构建：以 import map 让裸导入 'vue' 解析到 vendor 的 ESM full build（含 runtime+compiler）。
+     app-core.js / app-main.js 均为原生 ESM <script type="module">，无需打包步骤。 -->
+<script type="importmap">
+{
+  "imports": {
+    "vue": "./vendor/vue.esm-browser.prod.js"
+  }
+}
+</script>
+<script type="module" src="/app-main.js"></script>
 </body>
 </html>

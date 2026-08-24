@@ -28,7 +28,7 @@
 
 | 编号 | 差距 | 优先级 | 建议处置 |
 |------|------|--------|---------|
-| G-01 | 前端 Page Mock 执行层缺失（无 vitest/MSW 工具链） | 中 | ✅ 已确认延期登记（用户拍板 2026-08-24，复查 P-002）：后续独立迭代实现，规格/路线保留于 design/07-tdd/page-mock/ + tests/page-mock/README.md |
+| G-01 | 前端 Page Mock 执行层缺失（无 vitest/MSW 工具链） | 中 | ✅ 已解决（2026-08-24 P-002：已接入 vitest+@vue/test-utils+jsdom+fetch mock（等价 MSW），用例在 tests/page-mock/web-console/*.spec.js 全绿；未实现用例（TC-M003/M006/M007/M010）明细见 design/07-tdd/page-mock/web-console-tdd-design.md ⏳ 标注） |
 | G-02 | 平台 API 匿名口径不一致（7 项差异，见 design-code-gap.md） | 高 | Review D7/仲裁后修代码或修 _conventions 声明 |
 | G-03 | 服务端频控未实现（模板 G1-G5 为演进项） | 低 | 登记为演进项（resilience-policy/rate-limit） |
 | G-04 | 健康检查端点未实现（observability-policy 已登记） | 低 | 演进项 |

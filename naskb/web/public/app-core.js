@@ -1,8 +1,21 @@
-/* NASKB 知识库系统 v0.1 —— Web UI（Vue3 全局构建，无打包步骤） */
-/* global Vue */
-const { createApp, reactive, ref, computed, onMounted, watch } = Vue;
+/* NASKB 知识库系统 v0.1 —— Web UI（Vue3，全局构建版组件内核）
+ *
+ * 由 app.js 拆分而来（Page Mock TDD 执行层接入）：
+ *  - 抽出全部组件与业务逻辑为 ESM 模块，供两类场景复用：
+ *      1) 浏览器运行时：app-main.js import 本文件的 createNaskbApp('#app')，零构建；
+ *      2) 测试运行时：vitest import 本文件组件做 Page Mock 断言（mock fetch 拦截网络）。
+ *  - 运行时 Vue 依赖：此处的裸导入 'vue' 在**浏览器**由 index.html 的 <script type="importmap">
+ *    解析到 vendor/vue.esm-browser.prod.js（含 runtime+compiler，运行时零 Node）；
+ *    在 **vitest** 由 resolve.alias 解析到 vue/dist/vue.esm-bundler.js（测试专用）。
+ *    二者都是「runtime + compiler」full build，且各自环境内为**同一份** Vue 实例（单份响应式）。
+ *  - 组件 options/setup 体逐行保持；仅将原本对全局 Vue 的解构（const {…}=Vue）改为 import。
+ *  - 说明（Page Mock 接入核实）：若直接在测试里让 app-core 走 vendor 的
+ *    vue.esm-browser.prod.js、@vue/test-utils 走另一份 Vue，会出现「setup 的 ref 来自 A、渲染器来自 B」
+ *    导致响应式断链（值更新但 DOM 不刷新）；故测试侧统一用 esm-bundler。浏览器侧不受影响。
+ */
+import { createApp, ref, reactive, computed, onMounted, watch } from 'vue';
 
-/* ────────────────────────── API 客户端 ────────────────────────── */
+/* ────────────────────────── 共享状态 ────────────────────────── */
 const state = reactive({
   route: location.hash.replace(/^#\/?/, "") || "search",
   token: localStorage.getItem("naskb_token") || "",
@@ -18,6 +31,7 @@ function toast(msg) {
   toastTimer = setTimeout(() => { state.toast = ""; }, 2600);
 }
 
+/* ────────────────────────── API 客户端 ────────────────────────── */
 async function api(path, opts = {}) {
   const headers = Object.assign({}, opts.headers || {});
   if (state.token) headers["Authorization"] = "Bearer " + state.token;
@@ -549,7 +563,11 @@ const FileModal = {
       ctx.rid = ev.detail.rid; ctx.src = ev.detail.src || "";
       load();
     });
-    return { visible, ctx, meta, preview, err, fmtSize, statusBadge };
+    // 注：原 app.js 的 FileModal.setup 遗漏了 fmtTime，而其模板在「知识元数据」区用到
+    //      {{ fmtTime(meta.resource.mtime) }} / {{ fmtTime(meta.resource.analyzed_at) }}，
+    //      会导致打开文件后渲染元数据时抛 "fmtTime is not a function"。
+    //      按 Page Mock 接入需要（TC-M009 断言元数据渲染），此处补齐该导出；属缺陷修复。
+    return { visible, ctx, meta, preview, err, fmtSize, fmtTime, statusBadge };
   },
   template: `
   <div class="modal-mask" v-if="visible" @click.self="visible=false">
@@ -667,4 +685,12 @@ const App = {
   <div class="toast" v-if="state.toast">{{ state.toast }}</div>`,
 };
 
-createApp(App).mount("#app");
+/* ────────────────────────── 挂载入口 ────────────────────────── */
+export function createNaskbApp(mountEl) {
+  const app = createApp(App);
+  app.mount(mountEl);
+  return app;
+}
+
+export { api, state, toast, SearchView, BrowseView, SourcesView, JobsView,
+         FileModal, App };

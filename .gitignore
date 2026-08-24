@@ -34,3 +34,7 @@ NASKB_data/
 
 # 方法论补全期间的临时研究稿
 .scratch/
+
+# Node（naskb/web 前端测试链）
+naskb/web/node_modules/
+

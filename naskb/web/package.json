@@ -1,0 +1,17 @@
+{
+  "name": "naskb-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NASKB Web 控制台 —— Vue3 全局构建静态包（运行时零构建，无打包步骤）。此 package.json 仅为 Page Mock TDD 执行层提供 vitest 工具链。",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "vue": "^3.5.41"
+  },
+  "devDependencies": {
+    "@vue/test-utils": "^2.4.6",
+    "jsdom": "^25.0.1",
+    "vitest": "^2.1.9"
+  }
+}
