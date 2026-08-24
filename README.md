@@ -69,6 +69,21 @@ python run.py --host 0.0.0.0 --open   # 局域网可访问 + 自动打开浏览�
 
 > `pip install '.[server,pg]'` 仅用于**换新机器部署**时安装依赖；日常在本仓库运行不需要。
 
+## 知识源接入（挂载式协议：SMB / NFS / iSCSI）
+
+除平台原生源（local / WebDAV）外，SMB / NFS / iSCSI 走 **OS 挂载 → 注册 local 源**（R7-04 收口：
+挂载型协议不在应用层重复造客户端）：
+
+| 协议 | OS 侧接入 | 之后 |
+|------|----------|------|
+| **SMB**（群晖/Windows 共享） | Windows：`net use Z: \\server\share /user:u p`（或资源管理器映射盘符）；Linux：`mount -t cifs //server/share /mnt/nas -o username=u,password=p` | 「来源」页注册 **local**（root_path = 挂载点：`Z:\` / `/mnt/nas`）→ 扫描 → AI 分析，与本地目录完全同权 |
+| **NFS** | Windows 开启 NFS 客户端后 `mount \\server\export Z:`；Linux：`mount -t nfs host:/export /mnt/nas` | 同上 |
+| **iSCSI** | Windows iSCSI 发起程序 / `iscsiadm` 挂载成普通磁盘 | 同上（挂载后即本地磁盘路径） |
+
+- **应用层 SMB 直连（可选·未启用）**：代码桩已存在（`common/fs/base.py` 的 fsspec[smb] 分支、`source_registry.PROTOCOLS` 含 `"smb"`），但**未暴露到平台 API/UI、未测试、字段语义未定义**；仅在需求出现时启用（免映射部署 / 凭据进 config.toml 统一管理 / 服务长驻抗盘符掉线），启用前需补测试与文档。
+- 平台「来源」页协议选项保持 `local / webdav`；挂载来源与 local 同权（ro/rw、扫描/分析/检索/预览全流程一致）。
+- ⚠️ 隐私提醒：`01_证件与身份` 类（证件/户口/出生证等）敏感材料不建议纳入知识库。
+
 ## 模型分工与部署
 
 - DeepSeek（文本分类/摘要/方案）可并发 4-6；MiMo（图片/音频）严格串行；MinerU（扫描件 OCR）严格串行（本机 CPU，`.venv-mineru` 独立环境，模型首次运行自动下载）。

@@ -33,7 +33,7 @@
 | G-03 | 服务端频控未实现（模板 G1-G5 为演进项） | 低 | 登记为演进项（resilience-policy/rate-limit） |
 | G-04 | 健康检查端点未实现（observability-policy 已登记） | 低 | 演进项 |
 | G-05 | 真实标准文档（20-30 条）深析人工验证未做（当前合成基准 9 题） | 中 | R5-06 Roadmap 后续阶段 |
-| G-06 | SMB/NFS/iSCSI 直连未实现（R7-04） | 中 | V2 规划 |
+| G-06 | SMB/NFS/iSCSI 直连未实现（R7-04） | 中 | ✅ 已收口（2026-08-24）：挂载型协议一律走「OS 挂载 → 注册 local 源」（指南见 README「知识源接入」节）；应用层 SMB 直连=可选未启用（代码桩在，启用前需补测试/语义/文档） |
 | G-07 | Min 数据库多存储协议适配测试无 | 低 | 设计上交由外部环境 |
 | G-08 | CLI 28 命令无独立测试（仅主链路间接覆盖） | 中 | 后续 tdd 补充 |
 | G-09 | ~~viewer 渲染核实（file:// 打开 5 个 viewer）~~ | — | ✅ 已解决：scripts/viewer-smoke.mjs（0 error + 内容命中；基线见 tests/test-reports/baseline-2026-08-24.md） |

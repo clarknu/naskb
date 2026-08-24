@@ -38,6 +38,11 @@ applyTo: "*"
 
 NAS 场景：`naskb desc --webdav-url <url> [--webdav-user <u> --webdav-pass <p>] analyze-tree /path`（config.toml 配好 [webdav] 后可省略）。
 
+### 挂载式接入（SMB/NFS/iSCSI，R7-04 收口）
+
+- **一律走「OS 挂载 → 注册 local 源」**：Windows `net use Z: \\server\share /user:u p` / Linux `mount -t cifs //srv/share /mnt/nas`（NFS/iSCSI 同理），随后平台「来源」页注册 local 源（root=挂载点）→ 扫描 → AI 分析，与本地目录同权。详见 README「知识源接入」节。
+- **应用层 SMB 直连**为可选未启用：代码桩在 `common/fs/base.py`（fsspec[smb]）与 `source_registry.PROTOCOLS`，不暴露到 API/UI、未测试；需要「免映射部署/凭据入 config/抗盘符掉线」时再启用。
+
 ## 工作原理
 
 1. **存储**：每个目录一个 `.naskb/` 隐藏仓库 = `index.json`（文件级条目）+ `files/`（详情）+ `folder.json`（目录级描述）+ `artifacts/`（MinerU 产物）。

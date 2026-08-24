@@ -36,7 +36,7 @@
 
 ## 三、仍待决策
 
-- ⚠️ 待定：SMB/NFS/iSCSI 直连（R7-04，V2 规划；现阶段以挂载盘 + local 接入）。
+- ✅ 已收口（2026-08-24）：SMB/NFS/iSCSI 接入（R7-04）——**挂载型协议一律走「OS 挂载 → 注册 local 源」**（挂载指南见 README「知识源接入」节），应用层 SMB 直连保留为**可选未启用**（代码桩在 `fs/base.py`/`source_registry.PROTOCOLS`，启用前需补字段语义/测试/文档）。
 - ⚠️ 待定：`sources` 表密码字段加密存储策略（现为明文 config/DB，见 design/review/design-code-gap.md）。
 
 ## 四、来源索引

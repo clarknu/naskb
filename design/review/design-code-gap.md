@@ -26,7 +26,7 @@
 
 - [x] 2026-08-24: 服务端频控 G1-G5 → **裁剪**（DD-009：结构性限流承担；resilience-policy 已声明）
 - [x] 2026-08-24: 专用健康检查端点 → **裁剪**（DD-009：门禁 7 以 config+stats 代替；observability-policy 已声明）
-- [ ] 2026-08-24: SMB/NFS/iSCSI 直连（R7-04）— 未实现（V2 规划）
+- [x] 2026-08-24: SMB/NFS/iSCSI 直连（R7-04）— 已收口：挂载型协议走「OS 挂载 → local」，应用层 SMB 直连保留为可选未启用（见 remaining-issues G-06）
 - [ ] 2026-08-24: Idempotency-Key 头部（模板方法论）— 未实现（指纹链幂等替代，设计已声明差异）
 
 ## 本次补全引入、尚未落地的迁移
