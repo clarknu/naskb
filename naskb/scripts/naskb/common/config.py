@@ -122,14 +122,22 @@ class Config:
         #（pgstore 硬编码 EMBEDDING_DIM=512、表名 schema.vectors），不再读取/保存。
 
         # ── [nas]（NAS 列表：多台各自命名，主配置来源）──
+        # 字段口径（2026-08-24 对齐 _resolve_nas_identity）：alias/protocol/host/
+        # port/username 为 v3 五要素身份；name/user/webdav_port 等为 v2 WebDAV
+        # 遗留键——两者兼容提取（alias 与 name 互认）。
         self.nas_list: list[dict[str, Any]] = []
         for entry in data.get("nas", []):
             if not isinstance(entry, dict):
                 continue
+            username = str(entry.get("username", entry.get("user", "")))
             self.nas_list.append({
                 "name": str(entry.get("name", "")),
+                "alias": str(entry.get("alias") or entry.get("name", "")),
+                "protocol": str(entry.get("protocol", "webdav")),
                 "host": str(entry.get("host", "")),
-                "user": str(entry.get("user", "")),
+                "port": int(entry.get("port") or 0),
+                "username": username,
+                "user": username,
                 "password": str(entry.get("password", "")),
                 "webdav_port": int(entry.get("webdav_port", 5006)),
                 "webdav_https": bool(entry.get("webdav_https", True)),

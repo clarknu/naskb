@@ -26,8 +26,14 @@
 
 - [x] 2026-08-24: 服务端频控 G1-G5 → **裁剪**（DD-009：结构性限流承担；resilience-policy 已声明）
 - [x] 2026-08-24: 专用健康检查端点 → **裁剪**（DD-009：门禁 7 以 config+stats 代替；observability-policy 已声明）
-- [x] 2026-08-24: SMB/NFS/iSCSI 直连（R7-04）— 已收口：挂载型协议走「OS 挂载 → local」，应用层 SMB 直连保留为可选未启用（见 remaining-issues G-06）
+- [ ] 2026-08-24: SMB/NFS/iSCSI 直连（R7-04）— 已收口：挂载型协议走「OS 挂载 → local」，应用层 SMB 直连保留为可选未启用（见 remaining-issues G-06）
 - [ ] 2026-08-24: Idempotency-Key 头部（模板方法论）— 未实现（指纹链幂等替代，设计已声明差异）
+
+## 2026-08-24 A1 验证发现（F4 批次登记）
+
+- [x] 2026-08-24: Config `[nas]` 提取字段（v2 name/user）与 `_resolve_nas_identity` 期望（alias/protocol/username）不一致 → --nas 无法匹配 — **已修**（config.py 兼容提取：alias/name 互认 + username/user 互认；test_config_nas）
+- [ ] 2026-08-24: F4-01 CLI sync-chunks `[deep].roots` 量纲与 doc.path 不一致（roots 相对 fs 根、doc.path 相对仓库目录）→ 目录级深析 CLI 路径失效（平台来源级 match_all 正常）— 低，后续修（cli sync-chunks 内把 doc.path 拼仓库前缀再判定，或 roots 语义对齐）
+- [ ] 2026-08-24: F4-02 deep-eval 检索无来源过滤（应支持 --sources 限定；平台 kb_ask 有 sources 参数）— 低，后续修
 
 ## 本次补全引入、尚未落地的迁移
 

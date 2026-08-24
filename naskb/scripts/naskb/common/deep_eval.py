@@ -17,6 +17,8 @@ def aggregate(results: list[dict]) -> dict:
 
     result 字段：question / deep_answer / deep_sources / base_answer /
                  base_sources / expect（可选，子串匹配来源路径或答案）。
+    expect 判定：expect 为子串（任一 expect 分段以 | 分隔命中即算 hit——
+    「长句答案」场景用 | 分隔多个关键词片段，避免整句逐字匹配失效）。
     """
     total = len(results)
     if total == 0:
@@ -33,9 +35,12 @@ def aggregate(results: list[dict]) -> dict:
         if not exp:
             continue
         scored += 1
-        if _contains(r.get("deep_sources"), exp) or exp in (r.get("deep_answer") or ""):
+        terms = [t.strip() for t in exp.split("|") if t.strip()]
+        if _contains(r.get("deep_sources"), terms) or any(
+                t in (r.get("deep_answer") or "") for t in terms):
             deep_hit += 1
-        if _contains(r.get("base_sources"), exp) or exp in (r.get("base_answer") or ""):
+        if _contains(r.get("base_sources"), terms) or any(
+                t in (r.get("base_answer") or "") for t in terms):
             base_hit += 1
     return {
         "total": total,
@@ -51,8 +56,9 @@ def aggregate(results: list[dict]) -> dict:
     }
 
 
-def _contains(paths, needle: str) -> bool:
-    return any(needle in (p or "") for p in (paths or []))
+def _contains(paths, terms: list[str]) -> bool:
+    """任一关键词片段出现在任一来源路径中即命中。"""
+    return any(t in (p or "") for p in (paths or []) for t in (terms or []))
 
 
 def load_questions(path: str) -> list[dict]:
@@ -127,9 +133,9 @@ def write_report(results: list[dict], out_dir: str) -> dict:
     print(f"  有来源率  条款级 {agg['deep_source_rate']:.2%} / "
           f"摘要级 {agg['base_source_rate']:.2%}")
     if agg["scored"]:
-        print(f"  期望命中  条款级 {agg['deep_hit']}/{agg['scored']} "
+        print(f"  期望命中  条款级 {agg['deep_expect_hit']}/{agg['scored']} "
               f"({agg['deep_expect_rate']:.2%}) / "
-              f"摘要级 {agg['base_hit']}/{agg['scored']} "
+              f"摘要级 {agg['base_expect_hit']}/{agg['scored']} "
               f"({agg['base_expect_rate']:.2%})")
     print(f"[naskb] 报告已写入 {path}")
     return agg
