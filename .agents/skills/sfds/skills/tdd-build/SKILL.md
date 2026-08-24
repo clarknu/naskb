@@ -537,8 +537,9 @@ Stage 2b 的所有原子操作通过 `wechatide` CLI 的 automator 工具完成�
 
 | 操作 | 工具 | 关键参数 |
 |------|------|---------|
+| 自动拉起 | `node tests/miniprogram-harness/bin/harness.js up <projectId>` | 登录态持久化、免扫码（唯一约定；见 `wechatide-automation`） |
 | 环境检查 | `check_wechatide_status` | `--skill-version` |
-| 打开项目 | `open_project_window` | `--project <path>` |
+| 打开项目（未走 harness 时 fallback） | `open_project_window` | `--project <path>` |
 | 页面导航 | `automation_navigate` | `--action navigateTo` / `redirectTo` / `switchTab` / `navigateBack`，`--url <pagePath>` |
 | 元素点击 | `automation_element_action` | `--selector <css>` `--action tap` |
 | 文本输入 | `automation_element_action` | `--selector <css>` `--action input` `--value <text>` |
@@ -547,7 +548,7 @@ Stage 2b 的所有原子操作通过 `wechatide` CLI 的 automator 工具完成�
 | 读取数据 | `automation_page_action` | `--action getData` `--path <dataPath>` |
 | 查询元素 | `automation_page_action` | `--action querySelectorAll` `--selector <css>` |
 | 等待条件 | `automation_page_action` | `--action waitFor` `--condition <expr>` |
-| 截图 | `automation_viewport_action` | `--action screenshot` `--wait-for-selector <css>` `--path <localPath>` |
+| 截图 | `simulator_screenshot` | `--path <localPath>` |
 | Call wx API | `automation_wx_api` | `--action call` `--method <apiName>` |
 | Mock wx API | `automation_wx_api` | `--action mock` `--method <apiName>` `--result-file <jsonPath>` |
 | 执行 JS | `automation_evaluate` | `--fn-source <function>` |
@@ -555,6 +556,7 @@ Stage 2b 的所有原子操作通过 `wechatide` CLI 的 automator 工具完成�
 
 > **完整工具列表与参数说明**：参见 `wechatide-skill/wechatide-tools/references/tools.yaml`。
 > **调用示例与最佳实践**：参见 `wechatide-skill/skills/automator/SKILL.md`。
+> **harness 自动拉起与使用/判定方法论**：参见 `wechatide-automation`（工具名用**位置参数**、禁用 `-t`；截图用 `simulator_screenshot`）。
 
 ### 4b.5 设计输出
 
@@ -623,6 +625,9 @@ tests/miniprogram/
 > 实时执行：设计文档定义用例规格 → 执行时将规格翻译为 `wechatide` 命令序列 →
 > 截图和状态读取作为证据留存。`automation_generate_script` 工具可将已执行的调用
 > 序列生成为可重放的 `.js` 脚本，放入 `scripts/` 目录供回归使用。
+>
+> **拉起方式**：小程序端不再由用户手动打开 DevTools；先 `node tests/miniprogram-harness/bin/harness.js up <projectId>`
+> 按项目自动拉起并开启专属自动化端口（登录态持久化，免扫码），随后再调 `wechatide` 命令（详见 `wechatide-automation`）。
 
 ### 4b.7 执行命令
 
@@ -631,16 +636,22 @@ Stage 2b 的执行命令（由 `tdd-execute(miniprogram)` 执行）——详见 
 核心执行模式（示意）：
 
 ```bash
-# 1. 环境检查
-wechatide -c <clientName> -t check_wechatide_status --skill-version <version>
+# 0. 自动拉起目标项目（登录态持久化，免扫码）——harness 为唯一约定；无 harness 时人工开窗
+node tests/miniprogram-harness/bin/harness.js up <projectId>
 
-# 2. 打开项目窗口
-wechatide -c <clientName> -t open_project_window --project <projectPath>
+# 1. 环境检查（工具名用位置参数，禁用 -t）
+wechatide -c <clientName> check_wechatide_status --skill-version <version>
+
+# 2. 确认项目窗口已开：harness 已拉起即为目标窗口，无需再 open_project_window
+#    若未用 harness（或窗口未开），再 fallback：wechatide -c <clientName> open_project_window --project <projectPath>
 
 # 3. 按 test-plan.md 逐条执行用例
-wechatide -c <clientName> -t automation_navigate --project <p> --action navigateTo --url pages/x/x
-wechatide -c <clientName> -t automation_page_action --project <p> --action waitFor --condition ".loaded"
-wechatide -c <clientName> -t automation_viewport_action --project <p> --action screenshot --wait-for-selector .content --path evidence/tc-xxx.png
+wechatide -c <clientName> automation_navigate --project <p> --action navigateTo --url pages/x/x
+wechatide -c <clientName> automation_page_action --project <p> --action waitFor --condition ".loaded"
+wechatide -c <clientName> simulator_screenshot --project <p> --path evidence/tc-xxx.png
+
+# 4. 测完关闭
+node tests/miniprogram-harness/bin/harness.js down <projectId>
 ```
 
 ---

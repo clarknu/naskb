@@ -7,3 +7,7 @@
 - 回灌 1 处（boxing → 草稿，原文复制）：§5.2 集成测试步骤中「小程序端分支」说明（wechatide automator 全集成模式，见 wechatide-skill）。
 - 待议 3 项（未并入）：API/PageMock/Integration 的「TDD 设计文档存在」前置行、服务启动命令治理原则（禁止硬编码 vs 固化命令）、Stage 1 领域级用例先行策略。详见 MERGE-NOTES.md。
 - wechatide 命令族差异判定为工具版本实例差异，以 consult 为准；harness 扩展不回灌。
+
+## 2026-08-24 · arb-hub 修复回填
+
+- boxing 回填 §4b（Stage 2b 小程序执行）：执行步骤重构——新增第 0 步 `harness up` 自动拉起（登录态持久化、免扫码），环境检查改位置参数，第 2 步确认窗口已开（未开才 fallback `open_project_window`），截图改 `simulator_screenshot`，第 8 步清理加 `harness down`；§4b.1 前置条件以 `harness up` 拉起作为「登录态有效/项目可打开」判定。

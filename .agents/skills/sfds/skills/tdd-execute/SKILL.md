@@ -331,7 +331,7 @@ Stage 1 (API)     Stage 2 (Page Mock)     Stage 2b (Mini Program)     Stage 3 (I
 > **Arguments 匹配：** 含 `miniprogram` 时执行本阶段。
 > **触发词：** `跑小程序测试`、`小程序测试执行`、`Mini Program 测试`
 >
-> **本阶段仅在项目中存在小程序端时适用。** 依赖 `wechatide-skill` 提供的 `wechatide` CLI 工具链。
+> **本阶段仅在项目中存在小程序端时适用。** 依赖 `wechatide-skill` 提供的 `wechatide` CLI 工具链；自动拉起/使用判定方法论见 `wechatide-automation`（工具名用**位置参数**、禁用 `-t`）。
 
 ### 4b.1 前置条件
 
@@ -340,22 +340,29 @@ Stage 1 (API)     Stage 2 (Page Mock)     Stage 2b (Mini Program)     Stage 3 (I
 | Mini Program TDD 设计文档存在 | `design/07-tdd/miniprogram/{client-slug}-tdd-design.md` 存在 |
 | 测试计划文件存在 | `tests/miniprogram/{client-slug}/test-plan.md` 存在 |
 | 微信开发者工具已安装 | `wechatide` 命令可用 |
-| 登录态有效 | `wechatide -c <clientName> -t check_wechatide_status --skill-version <version>` 返回含 `openid` |
-| 小程序项目可打开 | `project.config.json` 存在且 `appid` 有效 |
+| 登录态有效 | `wechatide -c <clientName> check_wechatide_status --skill-version <version>` 返回 `loginExpired: false` 且 `versionRelation: equal`（**或**先 `node tests/miniprogram-harness/bin/harness.js up <projectId>` 自动拉起——登录态持久化，免扫码） |
+| 小程序项目可打开 | `project.config.json` 存在且 `appid` 有效；以 `node tests/miniprogram-harness/bin/harness.js up <projectId>` 能拉起为准（免扫码自动开窗） |
 
 > **不需要**：后端服务（Mock 模式）、前端构建产物——Stage 2b 在微信开发者工具模拟器中直接运行源码。
 
 ### 4b.2 执行步骤
 
-1. **环境检查**：
+0. **自动拉起目标项目**（登录态持久化，免扫码）：harness 为唯一约定，无 harness 时人工开窗。
    ```bash
-   wechatide -c <clientName> -t check_wechatide_status --skill-version <version>
+   node tests/miniprogram-harness/bin/harness.js up <projectId>
    ```
-   确认返回含 `openid`。如未登录，执行 `scan_login` 等待用户扫码。
+   随即 `wechatide` CLI 可正常使用。若未用 harness 拉起，再走环境检查。
 
-2. **打开项目窗口**：
+1. **环境检查**（工具名位置参数，禁用 `-t`）：
    ```bash
-   wechatide -c <clientName> -t open_project_window --project <projectPath>
+   wechatide -c <clientName> check_wechatide_status --skill-version <version>
+   ```
+   确认 `loginExpired: false` 且 `versionRelation: equal`。如未登录，执行 `scan_login` 等待用户扫码。
+
+2. **确认项目窗口已开**：harness 已拉起的窗口即目标窗口，无需再 `open_project_window`。
+   若确实未开（未走 harness），再 fallback：
+   ```bash
+   wechatide -c <clientName> open_project_window --project <projectPath>
    ```
    前置：已读取 `project.config.json` 确认 `appid` 有效。
 
@@ -370,7 +377,7 @@ Stage 1 (API)     Stage 2 (Page Mock)     Stage 2b (Mini Program)     Stage 3 (I
    - 等待元素 → `automation_page_action --action waitFor`
    - 交互操作 → `automation_element_action`
    - 断言验证 → `automation_element_action --action text` / `automation_page_action --action getData`
-   - 截图证据 → `automation_viewport_action --action screenshot`
+   - 截图证据 → `simulator_screenshot --path <localPath>`
 
 5. **记录每条用例结果**（pass/fail + 证据引用）
 
@@ -382,7 +389,7 @@ Stage 1 (API)     Stage 2 (Page Mock)     Stage 2b (Mini Program)     Stage 3 (I
 
 7. **全部通过 → 输出 §4b.3 报告**
 
-8. **清理**：恢复 Mock（`automation_wx_api --action restore`）
+8. **清理**：恢复 Mock（`automation_wx_api --action restore`）；关闭窗口（`node tests/miniprogram-harness/bin/harness.js down <projectId>`）
 
 ### 4b.3 Stage 2b 报告
 
