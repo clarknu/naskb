@@ -15,7 +15,7 @@ window.ARCH_DATA["system-topology"] = (function () {
   return {
     _trace: _trace,
     complexityLevel: "L2",
-    complexityRationale: "TODO: 填写复杂度判定依据",
+    complexityRationale: "示例：事件驱动模块化单体，关键流程跨 3 个子域",
     complexityQuestionnaire: {
       Q1_peakQps:        { answer: "no", value: "", note: "" },
       Q2_dataVolume:     { answer: "no", value: "", note: "" },
@@ -34,12 +34,12 @@ window.ARCH_DATA["system-topology"] = (function () {
     },
     architectureStyle: {
       primary: "monolithic",
-      rationale: ["TODO: 填写架构模式选择理由"]
+      rationale: ["示例：单体起步、模块边界清晰、事件异步解耦"]
     },
     techStack: {
-      runtime:   "TODO",
-      framework: "TODO",
-      orm:       "TODO"
+      runtime:   "Node.js 20 (示例)",
+      framework: "FastAPI + 模块化单体 (示例)",
+      orm:       "SQLAlchemy (示例)"
     },
     domainCount: 0,
     totalEntities: 0,
