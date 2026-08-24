@@ -56,3 +56,22 @@
 
 ### TC-P09: 公开配置
 - **类型**: 正常流程 ｜ **断言清单**: ✅ auth_required/anonymous_read 与配置一致
+
+---
+
+## CLI 命令面（G-08 补充，2026-08-24）
+
+> 工具入口（跨域）命令组的命令面完整性测试；此前 28 命令仅被主链路间接覆盖（G-08）。
+> 规格：`design/01-raw-input/00-global-design-decisions.md`（CLI 28 命令为事实基线）。
+
+| 用例 | 断言清单 | 位置 |
+|------|---------|------|
+| TC-C01 命令注册完整 | ✅ desc 组 --help 含全部 28 命令 | unit/test_cli_commands.py |
+| TC-C02 逐命令 --help 渲染 | ✅ 28 命令 --help exit 0 + Usage 渲染（不触发命令体） | 同上（参数化） |
+| TC-C03 未知命令拒绝 | ✅ exit 2 + No such command | 同上 |
+| TC-C04 缺必需参数拒绝 | ✅ analyze 无 path → Usage exit 2（非崩栈） | 同上 |
+| TC-C05 关键参数门面 | ✅ ask(--top-k/--vector/--pg/--nas)、plan-reorganize(--apply/--output/--max-items)、sync-vectors(--rebuild/--nas)、orphans(--delete)、deep-eval(--questions/--out)、export-clean(--zip)、serve/serve-platform(--host/--port/--root/--pg) | 同上（参数化抽查） |
+| TC-C06 廉价冒烟 | ✅ 空工作区无 [pg]：pg-status/termbase-list 明确提示且 exit 0；空目录 scan exit 0 | 同上 |
+
+> 隔离约定：`NASKB_WORK` 指向 pytest tmp 工作区（空 config → Config 默认值，不读真实 LLM key/不碰真实库）。
+> 重业务（analyze/serve/sync 全链路）由 api/unit/integration 既有套件按域覆盖，不在本组重复。

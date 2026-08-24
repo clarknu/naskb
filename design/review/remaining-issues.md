@@ -35,7 +35,7 @@
 | G-05 | 真实标准文档（20-30 条）深析人工验证未做（当前合成基准 9 题） | 中 | R5-06 Roadmap 后续阶段 |
 | G-06 | SMB/NFS/iSCSI 直连未实现（R7-04） | 中 | ✅ 已收口（2026-08-24）：挂载型协议一律走「OS 挂载 → 注册 local 源」（指南见 README「知识源接入」节）；应用层 SMB 直连=可选未启用（代码桩在，启用前需补测试/语义/文档） |
 | G-07 | Min 数据库多存储协议适配测试无 | 低 | 设计上交由外部环境 |
-| G-08 | CLI 28 命令无独立测试（仅主链路间接覆盖） | 中 | 后续 tdd 补充 |
+| G-08 | CLI 28 命令无独立测试（仅主链路间接覆盖） | 中 | ✅ 已补（2026-08-24）：命令面完整性测试 unit/test_cli_commands.py（44 例：注册完整/--help/参数门面/错误路径/廉价冒烟，见 07-tdd/api/06-platform-console-tdd-design.md TC-C01~C06） |
 | G-09 | ~~viewer 渲染核实（file:// 打开 5 个 viewer）~~ | — | ✅ 已解决：scripts/viewer-smoke.mjs（0 error + 内容命中；基线见 tests/test-reports/baseline-2026-08-24.md） |
 | G-10 | pipeline-controller `.pipeline/` 未激活（opt-in 手势） | 低 | 需要时按 bootstrap 流程 |
 
