@@ -9,7 +9,18 @@
   var ARCH_DATA = window.ARCH_DATA = window.ARCH_DATA || {};
 
   var files = [
-    "system-topology"   // 模板自带示例（项目按需追加 module-boundaries 等其余模块）
+    "system-topology",
+    "module-boundaries",
+    "layering-strategy",
+    "event-contracts",
+    "caching-strategy",
+    "resilience-policy",
+    "data-consistency",
+    "observability-policy",
+    "security-policy",
+    "arch-contract",
+    "design-decisions",
+    "audit-dossier"   // 模板全量示例（项目替换为真实数据）
   ];
 
   files.forEach(function (name) {
