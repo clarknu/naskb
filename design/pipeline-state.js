@@ -72,7 +72,8 @@ window.PIPELINE_DATA["pipeline-state"] = (function () {
       { date: "2026-08-24", event: "iterate-dd009", detail: "DD-009 拍板批次（iterate 路径 C，10 问题）：匿名全移除/report+folder 接回/MCP 17 工具/deep 关闭清理 chunk/直链网关边界/裁剪落账（权限保留·健康频控裁剪·行为承诺补齐·E2E 全局 Playwright MCP）；验证 378+ passed、契约 0、smoke 5/5、E2E 6/6" },
       { date: "2026-08-24", event: "phase-verify", detail: "tdd-execute 全量 381 passed / 1 skipped；架构契约退出码 0（0 违规 0 债务）；viewer smoke 5/5、E2E 6/6（全局引擎）、D6/D7 25/25；正式执行报告落 tests/test-reports/" },
       { date: "2026-08-24", event: "review-v1", detail: "全量复查 naskb-review-v1 收敛（4 条判据满足）：P-001/P-003 A'/P-004 修复、P-002 延期闭环（page-mock 执行层接入 vitest + TC-M003/M006/M007/M010 补全 = TC-M001~M010 10/10）、P-005 观察、P-006 外部；报告归档 _archived/" },
-      { date: "2026-08-24", event: "p002-followup", detail: "🟢 四项跟进一次做完：Page Mock 10 用例全覆盖（app-shell + init 双项目，21+2 绿）；release/policy 门禁 1 补前端契约命令；官方 viewer 门禁 verify-fixed.mjs 实测 5/5（bundle 模板）并记录与项目 viewer-smoke 分工；.scratch/ 清理（E2E 配置样例入 tests/integration/e2e-work.config.example.toml，脚本改全局 MCP 引擎）" }
+      { date: "2026-08-24", event: "p002-followup", detail: "🟢 四项跟进一次做完：Page Mock 10 用例全覆盖（app-shell + init 双项目，21+2 绿）；release/policy 门禁 1 补前端契约命令；官方 viewer 门禁 verify-fixed.mjs 实测 5/5（bundle 模板）并记录与项目 viewer-smoke 分工；.scratch/ 清理（E2E 配置样例入 tests/integration/e2e-work.config.example.toml，脚本改全局 MCP 引擎）" },
+      { date: "2026-08-24", event: "evolve-batch", detail: "推荐次序演进批次一次做完：B2 R7-04 收口（挂载式接入指南：SMB/NFS/iSCSI→OS 挂载→local；应用层 SMB 直连=可选未启用）/ D1 G-08 补全（CLI 28 命令面 44 例）/ A2 R5-05 混合检索 opt-in（CJK N-gram 关键词通道 + RRF 融合，DD-010）/ A1 G-05 真实文档验证闭环（2 份样本 6 题条款级全中 + 修复 [nas] 字段/expect 判定/报告 KeyError + F4-01/02 登记）；全量 443 passed / 1 skipped；C1/C2（二级知识库/多用户）按计划单独立项后置" }
     ]
   };
 })();
