@@ -124,11 +124,12 @@
   // ── 等待数据就绪 ──
   function waitForData(retries) {
     retries = retries || 0;
+    // 2026-08-23 审计修复：仅要求 system-topology 即可渲染（模块边界可选，缺失时对应视图显示"暂无数据"）
     var topo = ARCH['system-topology'];
     var mb = ARCH['module-boundaries'];
-    if (topo && mb) {
+    if (topo) {
       loading.style.display = 'none';
-      toolbarStats.textContent = 'L' + topo.complexityLevel + ' | ' + topo.domainCount + ' 域 | ' + topo.totalEntities + ' 实体';
+      toolbarStats.textContent = 'L' + String(topo.complexityLevel || '').replace(/^L/i, '') + ' | ' + topo.domainCount + ' 域 | ' + topo.totalEntities + ' 实体';
       var proj = topo.projectName || '';
       if (proj) {
         document.title = 'Backend Architecture — ' + proj;

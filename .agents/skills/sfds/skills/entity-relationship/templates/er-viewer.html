@@ -1119,11 +1119,10 @@ document.addEventListener('mouseup', function(e) {
   document.body.style.cursor = '';
   document.body.style.userSelect = '';
 });
+// 2026-08-23 审计修复：JSON 富化映射表由项目维护（模板不再内置任何项目专属文件名）。
+// 项目按需填写 domain-id → JSON 文件名；留空 {} 时仅使用 loader 加载的 JS 数据（零网络请求）。
 const ER_DOMAIN_FILES = {
-  "01":"01-user-identity-permission.json","02":"02-competition-schedule.json",
-  "03":"03-fighter-coach-club.json","04":"04-ticketing-finance.json",
-  "05":"05-venue-onsite-service.json","06":"06-notification.json",
-  "07":"07-file-storage.json","08":"08-customer-service.json"
+  // "01":"01-my-domain.json",
 };
 
 async function tryRefreshFromJSON() {
@@ -1135,8 +1134,11 @@ async function tryRefreshFromJSON() {
     } catch(e) {}
   }
   try {
-    const cr = await fetch('data/core-er.json');
-    if (cr.ok) ALL_DATA.core = await cr.json();
+    // 2026-08-23 审计修复：core-er.json 富化改为可选开关（项目提供时置 true）
+    if (window.FETCH_CORE_ER_JSON === true) {
+      const cr = await fetch('data/core-er.json');
+      if (cr.ok) ALL_DATA.core = await cr.json();
+    }
   } catch(e) {}
   if (r > 0) {
     ENTITY_DOMAIN = {};

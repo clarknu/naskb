@@ -4,7 +4,8 @@
   var files = [
     // 按领域编号列出所有 .js 数据文件（不含 .js 后缀），例如：
     // "01-user-auth",
-    // "02-schedule"
+    // "02-schedule",
+    "example-domain"   // 模板自带示例（项目替换为领域文件）
   ];
   files.forEach(function(f) {
     document.write('<script src="data/' + f + '.js"><\/script>');

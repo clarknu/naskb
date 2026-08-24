@@ -5,7 +5,9 @@
     // 按领域编号列出所有 .js 数据文件（不含 .js 后缀），最后加上 core-er，例如：
     // "01-user-auth",
     // "02-schedule",
-    // "core-er"
+    // "core-er",
+    "example-entity-domain",
+    "core-er"   // 模板示例（core-er 必须最后：跨域汇总）
   ];
   files.forEach(function(f) {
     document.write('<script src="data/' + f + '.js"><\/script>');

@@ -9,15 +9,7 @@
   var ARCH_DATA = window.ARCH_DATA = window.ARCH_DATA || {};
 
   var files = [
-    "system-topology",
-    "module-boundaries",
-    "layering-strategy",
-    "event-contracts",
-    "caching-strategy",
-    "resilience-policy",
-    "data-consistency",
-    "observability-policy",
-    "security-policy"
+    "system-topology"   // 模板自带示例（项目按需追加 module-boundaries 等其余模块）
   ];
 
   files.forEach(function (name) {

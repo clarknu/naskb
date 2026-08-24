@@ -28,7 +28,11 @@
     // "tree.js",
     // "processes.js",
     // "style.js",
-    // "i18n.js"
+    // "i18n.js",
+    "example-tree.js",
+    "example-processes.js",
+    "example-style.js",
+    "example-i18n.js"   // 模板自带示例（项目替换为真实数据文件）
   ];
 
   /* ── 动态加载 ── */
