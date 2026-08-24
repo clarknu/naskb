@@ -26,8 +26,8 @@ naskb/                      ← Skill/系统根
     ├── mcp/                ← MCP Server（17 个 kb_* 工具，stdio）
     └── skill/cli.py        ← desc 命令组（28 命令）
 NASKB_data/                 ← 工作区：config.toml、sources.json（无 PG 时来源表）
-tests/                      ← 测试（按 SFDS 方法论重组：api/ unit/ integration/ + 架构契约门禁 test_arch_contract.py；
-                              基线 356 passed / 1 skipped，见 tests/test-reports/）
+tests/                      ← 测试（按 SFDS 方法论重组：api/ unit/ integration/ page-mock/ + 架构契约门禁 test_arch_contract.py；
+                              基线 381 passed / 1 skipped + page-mock 21 + 初始化时序 2，见 tests/test-reports/）
 ```
 
 ## 核心能力（`naskb desc ...`）

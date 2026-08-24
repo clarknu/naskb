@@ -48,12 +48,18 @@ window.PIPELINE_DATA["pipeline-state"] = (function () {
           "tests/test_arch_contract.py 随全量通过（契约退出码 0：11 规则、0 high/0 medium）",
           "待跑：api-code-gen 后置一致性检查（设计→代码比对）作为 Review D 维度输入"
         ], note: "实现先于方法论存在；后续一致性差异以 Review/design-code-gap 追踪" },
-      { id: "verify",     status: "partial", evidence: [
-          "pytest 全量基线：378+ passed / 1 skipped（DD-009 迭代后；含行为承诺 14 用例与端点回归）",
-          "架构契约退出码 0（探针 51 units/56 路由，report/folder 自动对齐）",
-          "viewer smoke 5/5（0 error）；E2E 旅程 6/6（全局 Playwright 引擎，全身份口径）"
-        ], note: "正式 tdd-execute 阶段报告与 Review 全量复查为下一步" },
-      { id: "review",     status: "not-started", evidence: [], note: "D0-D12 全量复查待 tdd-execute 报告就绪后启动（review skill）" },
+      { id: "verify",     status: "done", evidence: [
+          "pytest 全量基线：381 passed / 1 skipped（DD-009 迭代后；含行为承诺 14·端点回归·契约行为 16）",
+          "架构契约退出码 0（0 违规 / 0 债务；探针 51 units/56 路由自动对齐 report/folder）",
+          "viewer smoke 5/5（0 console error / 0 pageerror + 内容命中，scripts/viewer-smoke.mjs）",
+          "E2E 旅程 6/6（全局 Playwright 引擎，全身份口径）",
+          "Page Mock 套件 21 + 初始化时序 2 全绿（TC-M001~M010 全覆盖）；D6/D7 核对 25/25"
+        ], note: "tdd-execute 阶段报告见 tests/test-reports/{api,page-mock}-execute-report-2026-08-24.md" },
+      { id: "review",     status: "done", evidence: [
+          "全量复查 naskb-review-v1（D0-D12）：6 问题全处置（P-001/P-003 A'/P-004 修复，P-002 闭环，P-005 观察，P-006 外部）",
+          "收敛判定 4 条满足（0 实质问题残留 / 381 全绿 / 无新问题类别 / sync-status 无 dirty）",
+          "报告归档 design/review/_archived/naskb-review-v1.md；RL-001~004 人审项已登记（D11 ✅）"
+        ], note: "复查收敛完成；后续迭代回归触发复查（§9 风险等级策略）" },
       { id: "release",    status: "not-started", evidence: [], note: "release/ 资产已建（environments.yaml/policy.md/CHANGELOG.md）；实际发布走 release-management 门禁" }
     ],
 
@@ -63,7 +69,10 @@ window.PIPELINE_DATA["pipeline-state"] = (function () {
       { date: "2026-08-24", event: "decision", detail: "遗留 design/*.md 按 disallowed 平行叙述文档处理：git mv 归档 original-logs/，同时生成整合需求文档（用户拍板）" },
       { date: "2026-08-24", event: "decision", detail: "tests/ 按方法论重组（用户拍板）；TDD 设计文档为反向记录（实现先行、文档后补）" },
       { date: "2026-08-24", event: "phase-verify", detail: "验证基线：pytest 356 passed/1 skipped；架构契约退出码 0（11 规则）；5 viewer file:// 渲染核实 0 error（scripts/viewer-smoke.mjs）" },
-      { date: "2026-08-24", event: "iterate-dd009", detail: "DD-009 拍板批次（iterate 路径 C，10 问题）：匿名全移除/report+folder 接回/MCP 17 工具/deep 关闭清理 chunk/直链网关边界/裁剪落账（权限保留·健康频控裁剪·行为承诺补齐·E2E 全局 Playwright MCP）；验证 378+ passed、契约 0、smoke 5/5、E2E 6/6" }
+      { date: "2026-08-24", event: "iterate-dd009", detail: "DD-009 拍板批次（iterate 路径 C，10 问题）：匿名全移除/report+folder 接回/MCP 17 工具/deep 关闭清理 chunk/直链网关边界/裁剪落账（权限保留·健康频控裁剪·行为承诺补齐·E2E 全局 Playwright MCP）；验证 378+ passed、契约 0、smoke 5/5、E2E 6/6" },
+      { date: "2026-08-24", event: "phase-verify", detail: "tdd-execute 全量 381 passed / 1 skipped；架构契约退出码 0（0 违规 0 债务）；viewer smoke 5/5、E2E 6/6（全局引擎）、D6/D7 25/25；正式执行报告落 tests/test-reports/" },
+      { date: "2026-08-24", event: "review-v1", detail: "全量复查 naskb-review-v1 收敛（4 条判据满足）：P-001/P-003 A'/P-004 修复、P-002 延期闭环（page-mock 执行层接入 vitest + TC-M003/M006/M007/M010 补全 = TC-M001~M010 10/10）、P-005 观察、P-006 外部；报告归档 _archived/" },
+      { date: "2026-08-24", event: "p002-followup", detail: "🟢 四项跟进一次做完：Page Mock 10 用例全覆盖（app-shell + init 双项目，21+2 绿）；release/policy 门禁 1 补前端契约命令；官方 viewer 门禁 verify-fixed.mjs 实测 5/5（bundle 模板）并记录与项目 viewer-smoke 分工；.scratch/ 清理（E2E 配置样例入 tests/integration/e2e-work.config.example.toml，脚本改全局 MCP 引擎）" }
     ]
   };
 })();

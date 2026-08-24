@@ -31,5 +31,5 @@
 
 ## 本次补全引入、尚未落地的迁移
 
-- [ ] 2026-08-24: 内置测试（tests/）重组为 api/unit/integration 分层后，README「336 用例」与测试路径描述待更新 — Phase 10 统一更新
-- [ ] 2026-08-24: 前端 page-mock 执行层（vitest+MSW）接入 — 见 remaining-issues G-01
+- [x] 2026-08-24: 内置测试（tests/）重组为 api/unit/integration 分层后，README「336 用例」与测试路径描述待更新 — Phase 10 统一更新（2026-08-24 已更新：381 passed 基线 + page-mock）
+- [x] 2026-08-24: 前端 page-mock 执行层（vitest+MSW）接入 — 见 remaining-issues G-01（2026-08-24 P-002 闭环：执行层接入 + TC-M001~M010 10/10 全覆盖）
