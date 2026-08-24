@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Design</title>
+<style>
+  /* ── Design Tokens ── */
+  :root {
+    --bg: #f1f5f9; --card: #ffffff; --text: #1e293b; --text2: #64748b;
+    --border: #e2e8f0; --radius: 10px; --shadow: 0 1px 3px rgba(0,0,0,.08);
+    --blue: #2563eb; --purple: #7c3aed; --amber: #d97706; --green: #10b981;
+    --red: #ef4444; --teal: #0d9488;
+    --info-bg: #eff6ff; --info-border: #bfdbfe; --info-text: #1e40af;
+    --warn-bg: #fffbeb; --warn-border: #fde68a; --warn-text: #92400e;
+    --danger-bg: #fef2f2; --danger-border: #fecaca; --danger-text: #991b1b;
+    --success-bg: #f0fdf4; --success-border: #bbf7d0; --success-text: #166534;
+    --code-bg: #f8fafc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); line-height: 1.55; font-size: .9rem; }
+
+  /* ── Toolbar ── */
+  .toolbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 8px 16px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 10; box-shadow: var(--shadow); }
+  .toolbar a { color: var(--blue); text-decoration: none; font-size: .82rem; }
+  .toolbar a:hover { text-decoration: underline; }
+  .toolbar .sep { color: var(--border); font-size: .82rem; }
+  .toolbar label { font-size: .82rem; font-weight: 600; color: var(--text2); }
+  .toolbar select { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: .85rem; background: #fff; cursor: pointer; min-width: 200px; }
+  .toolbar .stats { font-size: .78rem; color: var(--text2); margin-left: auto; }
+
+  /* ── Layout ── */
+  .layout { display: flex; height: calc(100vh - 46px); }
+  #sidebar { width: 260px; background: var(--card); border-right: 1px solid var(--border); overflow-y: auto; padding: 12px 0; flex-shrink: 0; }
+  #sidebar h3 { font-size: .75rem; text-transform: uppercase; color: var(--text2); padding: 0 16px; margin-bottom: 6px; margin-top: 12px; letter-spacing: .05em; }
+  #sidebar h3:first-child { margin-top: 0; }
+  #sidebar nav a { display: block; padding: 5px 16px; font-size: .82rem; color: var(--text); text-decoration: none; border-left: 3px solid transparent; transition: all .15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #sidebar nav a:hover { background: #f8fafc; color: var(--blue); }
+  #sidebar nav a.active { border-left-color: var(--blue); color: var(--blue); background: #eff6ff; font-weight: 600; }
+  #sidebar nav a.indent-1 { padding-left: 28px; font-size: .80rem; }
+  #sidebar nav a.indent-2 { padding-left: 40px; font-size: .78rem; }
+  #sidebar nav a.method-indicator { display: inline; border: none; padding: 0; margin-right: 2px; font-size: .65rem; font-weight: 700; }
+  #sidebar nav a .badge-mini { display: inline-block; font-size: .62rem; font-weight: 700; padding: 0 4px; border-radius: 3px; margin-right: 4px; vertical-align: middle; line-height: 1.4; }
+
+  #content { flex: 1; overflow-y: auto; padding: 20px 28px; }
+
+  /* ── Section Cards ── */
+  .section { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px; box-shadow: var(--shadow); }
+  .section h1 { font-size: 1.3rem; margin-bottom: 12px; color: var(--text); }
+  .section h2 { font-size: 1.1rem; margin: 16px 0 10px; color: var(--text); padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+  .section h3 { font-size: .95rem; margin: 14px 0 6px; color: var(--text); }
+  .section h4 { font-size: .88rem; margin: 10px 0 4px; color: var(--text2); }
+  .section p { margin-bottom: 8px; }
+
+  /* ── Domain Header ── */
+  .domain-header { background: linear-gradient(135deg,#eff6ff,#faf5ff); border-left: 4px solid var(--blue); }
+  .domain-header .meta-row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
+  .domain-header .meta-item { font-size: .82rem; color: var(--text2); }
+  .domain-header .meta-item a { color: var(--blue); }
+
+  /* ── Endpoint Card ── */
+  .endpoint-card { border: 1px solid var(--border); border-radius: 8px; margin: 14px 0; overflow: hidden; }
+  .endpoint-header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: #fafbfc; cursor: pointer; -webkit-user-select: none; user-select: none; transition: background .15s; }
+  .endpoint-header:hover { background: #f1f5f9; }
+  .endpoint-header .expand-icon { font-size: .75rem; color: var(--text2); transition: transform .2s; width: 14px; text-align: center; flex-shrink: 0; }
+  .endpoint-card.expanded .endpoint-header .expand-icon { transform: rotate(90deg); }
+  .endpoint-body { display: none; padding: 0 16px 16px; }
+  .endpoint-card.expanded .endpoint-body { display: block; }
+
+  /* ── Method Badges ── */
+  .method-badge { display: inline-block; font-size: .72rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; color: #fff; min-width: 52px; text-align: center; letter-spacing: .02em; flex-shrink: 0; }
+  .method-GET { background: var(--green); }
+  .method-POST { background: var(--blue); }
+  .method-PUT { background: var(--amber); }
+  .method-PATCH { background: var(--purple); }
+  .method-DELETE { background: var(--red); }
+
+  .endpoint-path { font-family: "SF Mono", "Cascadia Code", "Consolas", monospace; font-size: .88rem; font-weight: 600; color: var(--text); }
+  .endpoint-summary { font-size: .82rem; color: var(--text2); margin-left: auto; text-align: right; flex-shrink: 0; }
+
+  /* ── Permission Badge ── */
+  .perm-badge { display: inline-flex; align-items: center; gap: 4px; font-size: .72rem; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+  .perm-public { background: #f1f5f9; color: #64748b; }
+  .perm-login { background: #f0fdf4; color: #166534; }
+  .perm-specific { background: #eff6ff; color: #1e40af; }
+  .perm-missing { background: #fef2f2; color: #991b1b; }
+
+  /* ── Detail Sections (inside endpoint body) ── */
+  .detail-group { margin: 10px 0; }
+  .detail-group summary { font-weight: 600; font-size: .85rem; cursor: pointer; padding: 6px 10px; background: #f8fafc; border-radius: 6px; border: 1px solid var(--border); -webkit-user-select: none; user-select: none; }
+  .detail-group summary:hover { background: #f1f5f9; }
+  .detail-group .detail-content { padding: 8px 4px; }
+
+  /* ── Lists ── */
+  .section ul, .section ol, .endpoint-body ul, .endpoint-body ol { margin: 6px 0 10px 18px; }
+  .section li, .endpoint-body li { margin-bottom: 3px; }
+
+  /* ── Notes ── */
+  .note { padding: 10px 14px; border-radius: 6px; margin: 10px 0; font-size: .85rem; line-height: 1.5; border-left: 3px solid; }
+  .note.info { background: var(--info-bg); border-color: var(--info-border); color: var(--info-text); }
+  .note.warning { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text); }
+  .note.danger { background: var(--danger-bg); border-color: var(--danger-border); color: var(--danger-text); }
+  .note::before { font-weight: 700; display: block; margin-bottom: 3px; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; }
+  .note.info::before { content: "ℹ 信息"; }
+  .note.warning::before { content: "⚠ 注意"; }
+  .note.danger::before { content: "❗ 警告"; }
+
+  /* ── Tables ── */
+  .section table, .endpoint-body table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: .82rem; }
+  .section th, .endpoint-body th { background: #f8fafc; color: var(--text2); font-size: .72rem; text-transform: uppercase; letter-spacing: .03em; padding: 8px 12px; text-align: left; border-bottom: 2px solid var(--border); }
+  .section td, .endpoint-body td { padding: 7px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .section tr:hover td, .endpoint-body tr:hover td { background: #fafbfc; }
+
+  /* ── Code blocks ── */
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; overflow-x: auto; font-family: "SF Mono", "Cascadia Code", "Consolas", monospace; font-size: .80rem; line-height: 1.5; margin: 8px 0; }
+  code { font-family: "SF Mono", "Cascadia Code", "Consolas", monospace; font-size: .82rem; }
+  .inline-badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: .72rem; font-weight: 600; }
+
+  /* ── HR ── */
+  .section hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  /* ── Empty / Loading ── */
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text2); }
+  .empty-state h2 { font-size: 1.1rem; margin-bottom: 6px; }
+  .empty-state p { font-size: .85rem; }
+
+  /* ── Tags ── */
+  .tag { display: inline-block; font-size: .70rem; padding: 1px 6px; border-radius: 3px; margin: 0 2px; font-weight: 600; }
+  .tag-green { background: #dcfce7; color: #166534; }
+  .tag-red { background: #fee2e2; color: #991b1b; }
+  .tag-amber { background: #fef3c7; color: #92400e; }
+  .tag-blue { background: #dbeafe; color: #1e40af; }
+  .tag-purple { background: #f3e8ff; color: #6b21a8; }
+
+  /* ── Dimension Icon ── */
+  .dim-label { font-weight: 600; font-size: .80rem; color: var(--text2); min-width: 80px; display: inline-block; }
+</style>
+</head>
+<body>
+
+<!-- ── Toolbar ── -->
+<div class="toolbar">
+  <a href="../README.md" title="design/ 工作区说明">← 工作区</a>
+  <span class="sep">|</span>
+  <a href="../../03-entity-relationship/er-viewer.html?domain=06" title="查看 ER 实体关系图（域 06 渠道接入）">← ER 图</a>
+  <span class="sep">|</span>
+  <label>领域：</label>
+  <select id="domain-select" name="domain-select" title="选择业务领域" onchange="switchDomain()"></select>
+  <span class="stats" id="stats"></span>
+</div>
+
+<!-- ── Layout ── -->
+<div class="layout">
+  <aside id="sidebar">
+    <h3>📋 目录</h3>
+    <nav id="toc"></nav>
+    <h3 id="appendix-header" style="display:none;">📎 附录</h3>
+    <nav id="appendix-nav"></nav>
+  </aside>
+  <main id="content"></main>
+</div>
+
+<!-- ═══ 数据加载 ═══ -->
+<script src="data/loader.js"></script>
+
+<script>
+const ALL_DATA = { domains: {} };
+if (window.API_DATA) Object.keys(window.API_DATA).forEach(function(k) { ALL_DATA.domains[k] = window.API_DATA[k]; });
+
+// ── Permission lookup: try WF_DATA first, fall back to API's _permission_lookup ──
+var PERM_LOOKUP = {};
+if (window.WF_DATA) {
+  Object.keys(window.WF_DATA).forEach(function(k) {
+    var perms = window.WF_DATA[k].permissions;
+    if (perms) perms.forEach(function(p) { PERM_LOOKUP[p.id] = { name: p.name, desc: p.desc, category: p.category }; });
+  });
+}
+
+// ═══════════════════════════════════════════════
+// Helpers
+// ═══════════════════════════════════════════════
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function getDomain() {
+  var params = new URLSearchParams(window.location.search);
+  var domain = params.get('domain');
+  if (domain && ALL_DATA.domains[domain]) return domain;
+  var keys = Object.keys(ALL_DATA.domains).sort();
+  return keys[0] || null;
+}
+
+function switchDomain() {
+  var sel = document.getElementById('domain-select');
+  var newDomain = sel.value;
+  if (newDomain) {
+    var url = new URL(window.location);
+    url.searchParams.set('domain', newDomain);
+    window.history.replaceState({}, '', url);
+    render();
+  }
+}
+
+function initDomainSelect() {
+  var sel = document.getElementById('domain-select');
+  sel.innerHTML = '';
+  var keys = Object.keys(ALL_DATA.domains).sort();
+  if (keys.length === 0) { sel.innerHTML = '<option>— 暂无数据 —</option>'; return; }
+  keys.forEach(function(k) {
+    var d = ALL_DATA.domains[k];
+    var opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = (d.domain||'') + ' — ' + d.title;
+    sel.appendChild(opt);
+  });
+  var current = getDomain();
+  if (current) sel.value = current;
+}
+
+// ═══════════════════════════════════════════════
+// Permission display
+// ═══════════════════════════════════════════════
+function renderPermission(permId, data) {
+  // data._permission_lookup is optional override: { "StaffReview": "审核运营人员", ... }
+  var lookup = (data && data._permission_lookup) ? data._permission_lookup : {};
+  var raw = PERM_LOOKUP[permId] || lookup[permId] || null;
+  // Normalize: raw can be a string (from _permission_lookup), an object {name,desc} (from WF_DATA), or null
+  var info = null;
+  if (typeof raw === 'string') info = { name: raw, desc: '' };
+  else if (raw && raw.name) info = raw;
+
+  if (permId === 'public' || permId === '公开') {
+    return '<span class="perm-badge perm-public" title="无需登录即可访问">🌐 公开</span>';
+  }
+  if (permId === 'login_required' || permId === '登录即可') {
+    return '<span class="perm-badge perm-login" title="任何已登录用户均可访问">🔓 登录即可</span>';
+  }
+  if (info) {
+    var title = info.desc ? (info.name + ' — ' + info.desc) : info.name;
+    return '<span class="perm-badge perm-specific" title="' + esc(title) + '">🔒 ' + esc(info.name) + ' <code style="font-size:.68rem;opacity:.7;">' + esc(permId) + '</code></span>';
+  }
+  return '<span class="perm-badge perm-missing" title="权限点未在 business-workflow 中定义">⚠ ' + esc(permId) + '</span>';
+}
+
+// ═══════════════════════════════════════════════
+// Render helpers
+// ═══════════════════════════════════════════════
+function renderMethodBadge(method) {
+  return '<span class="method-badge method-' + esc(method) + '">' + esc(method) + '</span>';
+}
+
+function renderTable(headers, rows) {
+  var html = '<table><thead><tr>';
+  headers.forEach(function(h) { html += '<th>' + esc(h) + '</th>'; });
+  html += '</tr></thead><tbody>';
+  rows.forEach(function(row) {
+    html += '<tr>';
+    row.forEach(function(cell) { html += '<td>' + esc(cell) + '</td>'; });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+function renderKVTable(rows, keyHeader, valHeader) {
+  var html = '<table><thead><tr><th>' + esc(keyHeader||'属性') + '</th><th>' + esc(valHeader||'说明') + '</th></tr></thead><tbody>';
+  rows.forEach(function(row) {
+    html += '<tr><td style="font-weight:600;white-space:nowrap;">' + esc(row[0]) + '</td><td>' + esc(row[1]) + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+function renderJsonBlock(jsonStr) {
+  if (!jsonStr) return '';
+  return '<pre>' + esc(jsonStr) + '</pre>';
+}
+
+function renderFieldTable(fields) {
+  if (!fields || !fields.length) return '';
+  var html = '<table><thead><tr><th>字段</th><th>类型</th><th>含义</th></tr></thead><tbody>';
+  fields.forEach(function(f) {
+    html += '<tr><td><code>' + esc(f[0]) + '</code></td><td>' + esc(f[1]) + '</td><td>' + esc(f[2]) + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+// ═══════════════════════════════════════════════
+// Main Render
+// ═══════════════════════════════════════════════
+function render() {
+  var domain = getDomain();
+  var data = domain ? ALL_DATA.domains[domain] : null;
+
+  initDomainSelect();
+  if (domain) document.getElementById('domain-select').value = domain;
+
+  var content = document.getElementById('content');
+  var toc = document.getElementById('toc');
+  var appendixNav = document.getElementById('appendix-nav');
+  var appendixHeader = document.getElementById('appendix-header');
+  var stats = document.getElementById('stats');
+
+  if (!data) {
+    content.innerHTML = '<div class="empty-state"><h2>暂无数据</h2><p>请先在 design/04-platform-api/data/ 目录下创建领域 API 数据文件。</p></div>';
+    toc.innerHTML = '';
+    appendixNav.innerHTML = '';
+    appendixHeader.style.display = 'none';
+    stats.textContent = '';
+    return;
+  }
+
+  // ── 结构兼容：扁平 endpoints ⇄ sections 分组（2026-08-23 审计修复）──
+  // 数据模板与历史数据为扁平 `{ endpoints: [...] }`；viewer 1.0 期望 `{ sections: [{endpoints}] }`。
+  // 统一归一化为 sections 视图：无 sections 但有扁平 endpoints 时视为单一「全部端点」分组。
+  if ((!data.sections || data.sections.length === 0) && data.endpoints && data.endpoints.length) {
+    data.flatEndpoints = true;
+    data.sections = [{ id: 'all', title: '全部端点', endpoints: data.endpoints }];
+  }
+
+  // ── Stats ──
+  var endpointCount = 0, sectionCount = (data.sections||[]).length;
+  (data.sections||[]).forEach(function(s) { endpointCount += (s.endpoints||[]).length; });
+  stats.textContent = endpointCount + ' 端点 · ' + sectionCount + ' 分组';
+
+  // ═══ Build TOC ═══
+  var tocHTML = '';
+  (data.sections||[]).forEach(function(s) {
+    tocHTML += '<a href="#sec-' + s.id + '" style="font-weight:600;">' + esc(s.title) + '</a>';
+    (s.endpoints||[]).forEach(function(ep, i) {
+      var mid = ep.method || 'GET';
+      var mc = {GET:'#10b981',POST:'#2563eb',PUT:'#d97706',DELETE:'#ef4444',PATCH:'#7c3aed'}[mid] || '#64748b';
+      tocHTML += '<a href="#ep-' + s.id + '-' + i + '" class="indent-1">' +
+        '<span class="badge-mini" style="background:' + mc + ';color:#fff;">' + esc(mid) + '</span> ' +
+        esc(ep.path||'') + '</a>';
+    });
+  });
+  toc.innerHTML = tocHTML;
+
+  // ═══ Build Appendix Nav ═══
+  var appHTML = '';
+  if ((data.permissions||[]).length > 0) {
+    appHTML += '<a href="#appendix-permissions">🔒 权限点清单</a>';
+  }
+  if ((data.roles||[]).length > 0) {
+    appHTML += '<a href="#appendix-roles">👥 角色定义</a>';
+  }
+  if ((data.enums||[]).length > 0) {
+    appHTML += '<a href="#appendix-enums">📋 枚举值表</a>';
+  }
+  if (window.API_CONVENTIONS) {
+    appHTML += '<a href="#appendix-conventions">📐 公共约定</a>';
+  }
+  appendixNav.innerHTML = appHTML;
+  appendixHeader.style.display = appHTML ? '' : 'none';
+
+  // ═══ Build Content ═══
+  var contentHTML = '';
+
+  // ── Domain header ──
+  contentHTML += '<div class="section domain-header">';
+  contentHTML += '<h1 style="margin-bottom:8px;">' + esc(data.title) + '</h1>';
+  contentHTML += '<p style="color:var(--text2);font-size:.9rem;margin:0;">' + esc(data.description||'') + '</p>';
+  contentHTML += '<div class="meta-row">';
+  if (data.domain) contentHTML += '<span class="meta-item">领域 ' + esc(data.domain) + '</span>';
+  if (data.last_updated) contentHTML += '<span class="meta-item">更新：' + esc(data.last_updated) + '</span>';
+  if (data.workflow_ref) contentHTML += '<span class="meta-item"><a href="' + esc(data.workflow_ref) + '">对应工作流</a></span>';
+  if (data.er_ref) contentHTML += '<span class="meta-item"><a href="' + esc(data.er_ref) + '">对应 ER</a></span>';
+  contentHTML += '</div></div>';
+
+  // ── Domain boundary / overview (if present as text blocks) ──
+  if (data.overview_blocks && data.overview_blocks.length > 0) {
+    contentHTML += '<div class="section" id="sec-overview">';
+    contentHTML += '<h2>领域概述</h2>';
+    data.overview_blocks.forEach(function(b) {
+      contentHTML += renderBlock(b);
+    });
+    contentHTML += '</div>';
+  }
+
+  // ═══ Endpoint Sections ═══
+  (data.sections||[]).forEach(function(s) {
+    contentHTML += '<div class="section" id="sec-' + s.id + '">';
+    contentHTML += '<h2>' + esc(s.title) + '</h2>';
+
+    // Section description text blocks
+    if (s.blocks && s.blocks.length > 0) {
+      contentHTML += s.blocks.map(function(b) { return renderBlock(b); }).join('\n');
+    }
+
+    // Endpoints
+    (s.endpoints||[]).forEach(function(ep, i) {
+      var epId = 'ep-' + s.id + '-' + i;
+      contentHTML += '<div class="endpoint-card" id="' + epId + '">';
+
+      // Header (always visible)
+      contentHTML += '<div class="endpoint-header" onclick="toggleEndpoint(this)" title="点击展开/折叠详情">';
+      contentHTML += '<span class="expand-icon">▶</span>';
+      contentHTML += renderMethodBadge(ep.method);
+      contentHTML += '<span class="endpoint-path">' + esc(ep.path) + '</span>';
+      contentHTML += renderPermission(ep.permission, data);
+      if (ep.summary) contentHTML += '<span class="endpoint-summary">' + esc(ep.summary) + '</span>';
+      contentHTML += '</div>';
+
+      // Body (collapsible)
+      contentHTML += '<div class="endpoint-body">';
+
+      // Scenario
+      if (ep.scenario) {
+        contentHTML += '<div class="detail-group"><div class="detail-content"><span class="dim-label">使用场景：</span>' + esc(ep.scenario) + '</div></div>';
+      }
+
+      // ── Business Logic ──
+      if (ep.business_logic) {
+        contentHTML += '<details class="detail-group" open><summary>📋 业务逻辑说明</summary><div class="detail-content">';
+        var bl = ep.business_logic;
+        if (bl.preconditions && bl.preconditions.length) {
+          contentHTML += '<p><span class="dim-label">前置条件：</span></p><ul>';
+          bl.preconditions.forEach(function(c) { contentHTML += '<li>' + esc(c) + '</li>'; });
+          contentHTML += '</ul>';
+        }
+        if (bl.steps && bl.steps.length) {
+          contentHTML += '<p><span class="dim-label">执行步骤：</span></p><ol>';
+          bl.steps.forEach(function(s) { contentHTML += '<li>' + esc(s) + '</li>'; });
+          contentHTML += '</ol>';
+        }
+        if (bl.post_effects && bl.post_effects.length) {
+          contentHTML += '<p><span class="dim-label">后置效果：</span></p><ul>';
+          bl.post_effects.forEach(function(e) { contentHTML += '<li>' + esc(e) + '</li>'; });
+          contentHTML += '</ul>';
+        }
+        if (bl.state_machine) contentHTML += '<p><span class="dim-label">状态机：</span>' + esc(bl.state_machine) + '</p>';
+        if (bl.side_effects && bl.side_effects.length) {
+          contentHTML += '<p><span class="dim-label">副作用：</span></p><ul>';
+          bl.side_effects.forEach(function(e) { contentHTML += '<li>' + esc(e) + '</li>'; });
+          contentHTML += '</ul>';
+        }
+        if (bl.related_apis && bl.related_apis.length) {
+          contentHTML += '<p><span class="dim-label">关联 API：</span></p><ul>';
+          bl.related_apis.forEach(function(a) { contentHTML += '<li>' + esc(a) + '</li>'; });
+          contentHTML += '</ul>';
+        }
+        contentHTML += '</div></details>';
+      }
+
+      // ── Request Params ──
+      var hasReqParams = (ep.path_params && ep.path_params.length) || (ep.query_params && ep.query_params.length) || (ep.body_params && ep.body_params.length);
+      if (hasReqParams) {
+        contentHTML += '<details class="detail-group"><summary>📥 请求参数</summary><div class="detail-content">';
+        if (ep.path_params && ep.path_params.length) {
+          contentHTML += '<h4>Path Parameters</h4>';
+          contentHTML += renderTable(['参数名','类型','必填','业务含义','约束/校验','示例'], ep.path_params);
+        }
+        if (ep.query_params && ep.query_params.length) {
+          contentHTML += '<h4>Query Parameters</h4>';
+          contentHTML += renderTable(['参数名','类型','必填','业务含义','约束/校验','默认值','示例'], ep.query_params);
+        }
+        if (ep.body_params && ep.body_params.length) {
+          contentHTML += '<h4>Request Body</h4>';
+          contentHTML += renderTable(['字段名','类型','必填','业务含义','约束/校验','示例'], ep.body_params);
+        }
+        contentHTML += '</div></details>';
+      }
+
+      // ── Response ──
+      if ((ep.responses && ep.responses.length) || (ep.response_fields && ep.response_fields.length)) {
+        contentHTML += '<details class="detail-group"><summary>📤 响应格式</summary><div class="detail-content">';
+        (ep.responses||[]).forEach(function(r) {
+          if (r.description) contentHTML += '<p style="color:var(--text2);">' + esc(r.description) + '</p>';
+          if (r.json) contentHTML += renderJsonBlock(r.json);
+          if (r.fields && r.fields.length) contentHTML += renderFieldTable(r.fields);
+        });
+        if (ep.response_fields && ep.response_fields.length) {
+          contentHTML += renderFieldTable(ep.response_fields);
+        }
+        contentHTML += '</div></details>';
+      }
+
+      // ── Error Scenarios ──
+      if (ep.errors && ep.errors.length) {
+        contentHTML += '<details class="detail-group"><summary>⚠ 错误场景</summary><div class="detail-content">';
+        contentHTML += renderTable(['HTTP','error_code','触发条件','说明'], ep.errors);
+        contentHTML += '</div></details>';
+      }
+
+      // ── Idempotency ──
+      if (ep.idempotency) {
+        contentHTML += '<details class="detail-group"><summary>🔄 幂等性</summary><div class="detail-content">';
+        var rows = [];
+        if (ep.idempotency.is_idempotent !== undefined) rows.push(['是否幂等', ep.idempotency.is_idempotent ? '<span class="tag tag-green">✅ 是</span>' : '<span class="tag tag-red">❌ 否</span>']);
+        if (ep.idempotency.method) rows.push(['幂等方式', ep.idempotency.method]);
+        if (ep.idempotency.retry) rows.push(['重试行为', ep.idempotency.retry]);
+        contentHTML += renderKVTable(rows);
+        contentHTML += '</div></details>';
+      }
+
+      // ── Caching ──
+      if (ep.caching) {
+        contentHTML += '<details class="detail-group"><summary>💾 缓存策略</summary><div class="detail-content">';
+        var rows = [];
+        if (ep.caching.method) rows.push(['缓存方式', ep.caching.method]);
+        if (ep.caching.ttl) rows.push(['TTL', ep.caching.ttl]);
+        if (ep.caching.key) rows.push(['缓存键', ep.caching.key]);
+        if (ep.caching.invalidation) rows.push(['失效条件', ep.caching.invalidation]);
+        contentHTML += renderKVTable(rows);
+        contentHTML += '</div></details>';
+      }
+
+      // ── Rate Limit ──
+      if (ep.rate_limit) {
+        contentHTML += '<details class="detail-group"><summary>⏱ 频率限制</summary><div class="detail-content">';
+        var rows = [];
+        if (ep.rate_limit.limit) rows.push(['频率限制', ep.rate_limit.limit]);
+        if (ep.rate_limit.dimension) rows.push(['限制维度', ep.rate_limit.dimension]);
+        if (ep.rate_limit.exceeded) rows.push(['超出行为', ep.rate_limit.exceeded]);
+        if (ep.rate_limit.note) rows.push(['特殊说明', ep.rate_limit.note]);
+        contentHTML += renderKVTable(rows);
+        contentHTML += '</div></details>';
+      }
+
+      contentHTML += '</div></div>'; // close endpoint-body, endpoint-card
+    });
+
+    contentHTML += '</div>'; // close section
+  });
+
+  // ═══ Appendix: Permissions ═══
+  if ((data.permissions||[]).length > 0) {
+    contentHTML += '<div class="section" id="appendix-permissions" style="border-left:4px solid #f59e0b;">';
+    contentHTML += '<h2>🔒 权限点清单</h2>';
+    contentHTML += '<p style="color:var(--text2);font-size:.85rem;margin-bottom:12px;">本域共 ' + data.permissions.length + ' 个权限控制点。每个端点标注的权限引用此清单。</p>';
+    contentHTML += '<table><thead><tr><th>权限 ID</th><th>名称</th><th>说明</th><th>分类</th></tr></thead><tbody>';
+    data.permissions.forEach(function(p) {
+      contentHTML += '<tr><td><code style="background:#fef3c7;padding:1px 6px;border-radius:3px;">' + esc(p.id) + '</code></td><td>' + esc(p.name) + '</td><td style="font-size:.82rem;">' + esc(p.desc||'') + '</td><td style="font-size:.78rem;color:#6b7280;">' + esc(p.category||'—') + '</td></tr>';
+    });
+    contentHTML += '</tbody></table></div>';
+  }
+
+  // ═══ Appendix: Roles ═══
+  if ((data.roles||[]).length > 0) {
+    contentHTML += '<div class="section" id="appendix-roles" style="border-left:4px solid #8b5cf6;">';
+    contentHTML += '<h2>👥 角色定义</h2>';
+    contentHTML += '<p style="color:var(--text2);font-size:.85rem;margin-bottom:12px;">本域共 ' + data.roles.length + ' 个角色。</p>';
+    contentHTML += '<table><thead><tr><th>角色</th><th>说明</th><th>端组</th><th>聚合权限</th></tr></thead><tbody>';
+    data.roles.forEach(function(r) {
+      var permBadges = (r.permission_ids||[]).map(function(pid) {
+        return '<code style="background:#fef3c7;padding:1px 5px;border-radius:3px;font-size:.72rem;margin:0 2px;">' + esc(pid) + '</code>';
+      }).join(' ');
+      var cgLabel = {Customer:'🎫 观众端',Fighter:'🥊 拳手端',Coach:'🧑‍🏫 教练端',Staff:'⚙️ 运营后台'}[r.client_group] || r.client_group;
+      contentHTML += '<tr><td><b>' + esc(r.name) + '</b><br><span style="font-size:.72rem;color:#9ca3af;">' + esc(r.id) + '</span></td><td style="font-size:.82rem;">' + esc(r.desc||'') + '</td><td style="font-size:.82rem;">' + (cgLabel||'—') + '</td><td style="font-size:.82rem;">' + (permBadges||'<span style="color:#9ca3af;">—</span>') + '</td></tr>';
+    });
+    contentHTML += '</tbody></table></div>';
+  }
+
+  // ═══ Appendix: Enums ═══
+  if ((data.enums||[]).length > 0) {
+    contentHTML += '<div class="section" id="appendix-enums" style="border-left:4px solid #0d9488;">';
+    contentHTML += '<h2>📋 枚举值表</h2>';
+    data.enums.forEach(function(e) {
+      contentHTML += '<h3>' + esc(e.name) + '</h3>';
+      if (e.description) contentHTML += '<p style="color:var(--text2);font-size:.85rem;">' + esc(e.description) + '</p>';
+      contentHTML += renderTable(['值','名称','说明'], e.values);
+    });
+    contentHTML += '</div>';
+  }
+
+  // ═══ Appendix: Design Decisions ═══
+  if (data.design_decisions && data.design_decisions.length > 0) {
+    contentHTML += '<div class="section" id="appendix-decisions">';
+    contentHTML += '<h2>📝 关键设计决策</h2>';
+    contentHTML += '<ul>';
+    data.design_decisions.forEach(function(d) { contentHTML += '<li><b>' + esc(d.title) + '：</b>' + esc(d.detail) + '</li>'; });
+    contentHTML += '</ul></div>';
+  }
+
+  // ═══ Global Appendix: Public Conventions (from window.API_CONVENTIONS) ═══
+  if (window.API_CONVENTIONS) {
+    var conv = window.API_CONVENTIONS;
+    contentHTML += '<div class="section" id="appendix-conventions" style="border-left:4px solid var(--teal);">';
+    contentHTML += '<h2>📐 ' + esc(conv.title) + '</h2>';
+    contentHTML += '<p style="color:var(--text2);font-size:.85rem;margin-bottom:12px;">' + esc(conv.description) + '</p>';
+    (conv.sections||[]).forEach(function(cs) {
+      contentHTML += '<div id="conv-' + cs.id + '">';
+      contentHTML += '<h3>' + esc(cs.title) + '</h3>';
+      (cs.blocks||[]).forEach(function(b) { contentHTML += renderBlock(b); });
+      contentHTML += '</div>';
+      if (cs !== conv.sections[conv.sections.length - 1]) contentHTML += '<hr>';
+    });
+    contentHTML += '</div>';
+  }
+
+  content.innerHTML = contentHTML;
+
+  // ═══ TOC click → smooth scroll + highlight ═══
+  var allNavLinks = toc.querySelectorAll('a');
+  appendixNav.querySelectorAll('a').forEach(function(a) { allNavLinks = Array.from(allNavLinks).concat([a]); });
+  allNavLinks.forEach(function(a) {
+    a.addEventListener('click', function(e) {
+      e.preventDefault();
+      var target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        toc.querySelectorAll('a').forEach(function(x) { x.classList.remove('active'); });
+        appendixNav.querySelectorAll('a').forEach(function(x) { x.classList.remove('active'); });
+        this.classList.add('active');
+      }
+    });
+  });
+
+  // ═══ Scroll-based TOC highlight ═══
+  var allSections = content.querySelectorAll('.section[id], .endpoint-card[id]');
+  content.addEventListener('scroll', function() {
+    var current = '';
+    allSections.forEach(function(s) {
+      if (content.scrollTop >= s.offsetTop - 80) current = s.getAttribute('id');
+    });
+    toc.querySelectorAll('a').forEach(function(a) {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+    });
+    appendixNav.querySelectorAll('a').forEach(function(a) {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════
+// Block renderer (shared with workflow-viewer)
+// ═══════════════════════════════════════════════
+function renderBlock(block) {
+  switch (block.type) {
+    case 'p': return '<p>' + esc(block.text) + '</p>';
+    case 'h2': return '<h2>' + esc(block.text) + '</h2>';
+    case 'h3': return '<h3>' + esc(block.text) + '</h3>';
+    case 'h4': return '<h4>' + esc(block.text) + '</h4>';
+    case 'ul': return '<ul>' + block.items.map(function(i) { return '<li>' + esc(i) + '</li>'; }).join('') + '</ul>';
+    case 'ol': return '<ol>' + block.items.map(function(i) { return '<li>' + esc(i) + '</li>'; }).join('') + '</ol>';
+    case 'note': return '<div class="note ' + esc(block.level||'info') + '">' + esc(block.text) + '</div>';
+    case 'table': return renderTable(block.headers, block.rows);
+    case 'hr': return '<hr>';
+    default: return '<p style="color:#999">[未知 block 类型: ' + esc(block.type) + ']</p>';
+  }
+}
+
+// ═══════════════════════════════════════════════
+// Toggle endpoint expand/collapse
+// ═══════════════════════════════════════════════
+function toggleEndpoint(header) {
+  var card = header.parentElement;
+  card.classList.toggle('expanded');
+}
+
+// ═══════════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', render);
+</script>
+</body>
+</html>

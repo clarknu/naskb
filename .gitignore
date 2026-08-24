@@ -31,3 +31,6 @@ NASKB_data/
 
 # Playwright MCP
 .playwright-mcp/
+
+# 方法论补全期间的临时研究稿
+.scratch/

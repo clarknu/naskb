@@ -38,7 +38,7 @@
 | 检索层定型 | 2026-08-11 | 索引只用摘要+描述；向量（numpy）+BM25 | ADR-20260811-1 |
 | 内置问答服务 | 2026-08-16 | `desc serve`（Web UI + API 契约） | `naskb/scripts/naskb/common/serve.py` |
 | 多 NAS 向量库 | 2026-08-16 | PG + pgvector、五要素身份、哈希校验体系（设计已确认） | `design/pg-vector-multi-nas.md` |
-| MaxKB 扩展包 | 规划中 | 社区版 RAG 扩展，后端同契约切换 | `design/pg-vector-multi-nas.md` §8 / 本文件 REQ-R5 |
+| MaxKB/深度分析整合 | 2026-08-23 定方向 | 研讨固化：主线=**自研 chunk 级检索增强（D'）**（不引入外部系统即补条款级问答）；MaxKB 社区版/RAGFlow 作为远期可插拔深度引擎（路线 A） | `design/deep-analysis-roadmap.md` / 本文件 REQ-R5 |
 | 平台化重定位 v3 | 2026-08-18 | 工具 → 知识库系统（自持知识 + Web UI + 开放 API + 下载/预览）；八项决策拍板；R7 需求组立项 | `design/platform-v3-design.md` / 本文件 REQ-R7 |
 
 ---
@@ -123,15 +123,30 @@
 | REQ-R4-14 | 身份迁移：NAS 主机变更（换 IP）可 `pg-rebind` 重绑五要素，不丢库 | 已实现（v3 V2：`desc pg-rebind` / `/api/pg/rebind`） |
 | REQ-R4-15 | PG 安全：专用库 naskb + 专用账号最小权限；密码明文存 config（与 llm key 同策略）；代码/日志不打印连接串 | 部分实现（阶段 0 已建 naskb 库+专用账号；其余纪律沿用） |
 
-### R5 演进与扩展（规划中）
+### R5 演进与扩展（2026-08-23 定方向：主线自研 chunk 增强；MaxKB 系列后置为可选深度引擎）
+
+> 2026-08-23 研讨固化（`design/deep-analysis-roadmap.md`）：「API 输入输出需企业版」经源码核实
+> 不准确——社区版对话 API 开放，管理 API 代码就在开源实例里（直调可行、自担版本风险）。
+> 据此把 R5 从「接 MaxKB」重新定位为：**(1) 近期主线 = 自研 chunk 级检索增强（REQ-R5-06）；
+> (2) 远期可选 = 深度引擎独立实例（MaxKB 社区版 / RAGFlow / FastGPT 三选一，届时选型）；
+> (3) 备胎 = fork 补管理 API（REQ-R5-07）；(4) 禁止项 = 拷贝 GPL 代码、绕企业授权。**
 
 | 编号 | 需求 | 状态 |
 |---|---|---|
-| REQ-R5-01 | MaxKB 扩展包（独立目录，可选依赖）：前期用 NASKB 内部问答；后期需要深度 RAG/工作流/多用户时接入 MaxKB **社区版**（免费），不预设专业版费用 | 规划中 |
-| REQ-R5-02 | 内容管道：export-maxkb（.naskb 干净文本导出 Markdown/ZIP）+ sync-maxkb（管理 API 增量同步，hash 对比；API 不稳定则降级手动导入） | 规划中 |
-| REQ-R5-03 | Backend B：实现与 REQ-R3-04 相同的 search/ask 契约，config 开关切换 MaxKB 后端 | 规划中 |
-| REQ-R5-04 | 分级检索（进阶可选）：NASKB 检索封装为 MCP server 接入 MaxKB 工作流（精库优先、全库兜底） | 规划中 |
+| REQ-R5-01 | 深度分析引擎（独立实例，候选：MaxKB 社区版 / RAGFlow / FastGPT）：后期需要深度 RAG 工作流/多用户/现成界面时接入；**选型后置到触发条件成立时**，不预设专业版费用；经 Backend B 同契约接入 | 规划中（方向已定） |
+| REQ-R5-02 | 内容管道（公共资产，解耦引擎语义，改名 `export-clean`）：`.naskb` 干净文本导出 Markdown/ZIP；`sync-*` 管理 API 增量同步（hash 对比；API 不稳定则降级手动导入） | export-clean 已实现（`desc export-clean`）；sync-* 待接入外部引擎时实现 |
+| REQ-R5-03 | Backend B：实现与 REQ-R3-04 相同的 search/ask 契约，config 开关切换外部引擎后端 | 规划中 |
+| REQ-R5-04 | 分级检索（进阶可选）：NASKB 检索封装为 MCP server 接入外部引擎工作流（精库优先、全库兜底） | 规划中 |
 | REQ-R5-05 | 混合检索（可选增强）：PG 全文检索（tsvector，仅摘要文本）+ 向量 RRF 融合排序 | 设计草案（pg-vector-multi-nas.md §8.1） |
+| **REQ-R5-06** | **chunk 级检索增强（D' 主线）**：MinerU 结构化 Markdown 按标题层级分段 → PG vectors 扩列 + 单表多源制（level='chunk'/'title'，摘要行不变）→ 条款级召回 + 两级引用（文件+条款）→ 保真直返 + 无命中诚实兜底。仅对 `[deep].roots` 圈定目录启用，仅 PG 后端，numpy 回退链不含 chunk 行。详见 [chunk-retrieval-design.md](./chunk-retrieval-design.md) | 已实现（阶段 1/2/3/4 完成；阶段 3 用合成基准收口：recall@3/@5=1.0，锁定 target=800/limit=1200/overlap=0.12；真实标准文档验证可选） |
+| **REQ-R5-07** | 深度引擎管理 API 兜底：fork 引擎加一层稳定管理 REST 契约（条件触发） | 规划中 |
+
+### R5.1 与 R2 的边界修订（ADR-20260823-1）
+
+- REQ-R2-03「不做文档级 chunking」修订适用边界为「**摘要索引层不做 chunking**」，新增条款级
+  第二层（REQ-R5-06，仅 `[deep].roots` 圈定、仅 PG 后端、numpy 快照不含 chunk 行）；
+  ADR-20260811-1「全文不进索引」防稀释初衷不受影响——入索引的是条款级语义单元，与摘要行
+  分层并存、检索可分开或合并出榜。
 
 ### R6 非功能与实践要求（现行）
 
@@ -143,6 +158,7 @@
 | REQ-R6-04 | NAS 国内服务器连接显式加 NO_PROXY（防 VPN 分流导致上传断流截断——2026-08-13 教训） | 已实现 |
 | REQ-R6-05 | 部署自包含：拷贝 naskb/ + NASKB_data/ 即可用；向量模型首次运行自动下载（~24MB）；MinerU 需独立 venv（Python<3.14） | 已实现 |
 | REQ-R6-06 | 环境事实：分析在本机 Windows；PG 192.168.5.2:25432（PostgreSQL 18.6 + pgvector 0.8.6，Debian）；MaxKB 部署于用户 Linux 主机 | 现行 |
+| REQ-R6-07 | 开源纪律：GPL/AGPL 项目只读源码学设计，不允许拷贝代码进本仓库（MIT/Apache/BSD 除外，拷贝保留许可证头部）；不用其商标/Logo 做背书；不规避商业授权校验 | 已实现（ADR-20260823-1 决策 4） |
 
 ### R7 平台系统化（v3 重定位，2026-08-18 立项）
 
@@ -256,6 +272,23 @@
   可直接升格为系统内核，改造成本集中在交互层与内容访问层（下载代理/预览/UI）。
 - **详细设计**：`design/platform-v3-design.md`（v0.2）。
 
+### ADR-20260823-1：深度分析走自研 chunk 增强（D'），MaxKB 系列后置可选
+- **决策（用户 2026-08-23 认可）**：
+  1. 深度分析能力主线 = **自研 chunk 级检索增强（REQ-R5-06）**：利用 MinerU 结构化 Markdown
+     按标题层级分段，PG 向量库加条款级第二层，实现条款级精细问答与两级引用；
+  2. 不购买 MaxKB 专业版；MaxKB 社区版 / RAGFlow / FastGPT 作为**远期可选深度引擎**，
+     经 Backend B 同契约接入，选型后置至触发条件成立（深析文档上百份 / 多人共用 / 工作流编排 /
+     现成界面）；
+  3. 修订 REQ-R2-03 边界（见 R5.1）：摘要索引层不做 chunking，条款级第二层仅限圈定范围、
+     仅 PG 后端；
+  4. 开源法律纪律（REQ-R6-07）：GPL/AGPL 项目只读源码学设计，不拷贝代码入库；不用其商标；
+     不绕企业授权。
+- **理由**：经 MaxKB v2 源码三路精读确认，条款级问答的工程答案可全部合法借鉴并落地到
+  现有 PG 内核，成本低、无许可证风险；连 MaxKB 自己都没做 chunk 级打分，我们做出来更细；
+  外部引擎的价值仅在「工作流编排/多用户/现成界面」，留给真实触发条件出现时。
+- **详细设计**：`design/chunk-retrieval-design.md`（D' 方案）；结论与本路线见
+  `design/deep-analysis-roadmap.md`。
+
 ---
 
 ## 6. 设计文档索引
@@ -268,6 +301,9 @@
 | `design/implementation-plan.md` | R1 早期实施计划 | 参考 |
 | `design/pg-vector-multi-nas.md` | R4（PG 多 NAS 向量库详细设计，v2） | 现行 |
 | `design/platform-v3-design.md` | R7（平台化重定位总体设计 v0.2，含决策记录与路线图） | 现行 |
+| `design/deep-analysis-roadmap.md` | R5（深度分析整合结论固化 + 恢复入口） | 现行 |
+| `design/chunk-retrieval-design.md` | R5-06（chunk 级检索增强详细设计，D'） | 设计已确认 |
+| `design/maxkb-integration-analysis.md` | R5-01/05（MaxKB 整合分析与法律边界，论证存档） | 参考 |
 | `design/mcp-kb-design.md` / `mcp-tech-reassessment.md` | 早期 MCP 探索（R5-04 的前身） | 参考 |
 | `README.md` / `naskb/SKILL.md` | 能力速查（AI 操作手册） | 现行 |
 
@@ -278,7 +314,8 @@
 - **R4 尾款四项**：REQ-R4-10 sync 预检、REQ-R4-11 access_identity（→REQ-R7-03 承接）、
   REQ-R4-14 pg-rebind、`--nas all` 跨库合并——全部纳入 v3 路线图（platform-v3-design.md §8，V1/V2）。
 - **v3 实施主线**：V0.1 固化提交 → V1 系统底座 → V2 体验补全 → V3 深度能力（platform-v3-design.md §8）。
-- REQ-R5 系列（MaxKB/RRF 混合检索）：维持规划中，排在 v3 V3 阶段。
+- **R5 主线（chunk 增强）**：方向已定（ADR-20260823-1），按 deep-analysis-roadmap.md §9 阶段 1~4 实施：
+  分段器/入库 → 检索/问答 → 评测调参 → 收尾（export-clean）。先行核查 v3 对齐点（roadmap §11）。
 - 文档小债：README 测试数（164→253）、cli.py 头注释命令清单——随 V0.1 固化一并清理。
 
 ---
@@ -296,3 +333,6 @@
 | 2026-08-18 | **v3 平台化重定位立项**（ADR-20260818-1）：新增需求组 R7（REQ-R7-01~15）；产品以「NASKB 知识库系统 v0.1」重新起版；技术栈拍板 FastAPI + Vue3 |
 | 2026-08-23 | **V1 系统底座实施完成**：FastAPI 服务化（旧契约平移）、来源注册表（PG/JSON 双后端）、只读源扫描对账与 AI 富化（暂存 sink）、下载代理（Range/ETag/stale）、预览 V1 档、Web UI 五页面、认证、调度器；R7 各条状态刷新；全量测试 305 passed + 1 skipped，真实服务冒烟通过 |
 | 2026-08-23 | **V2 体验补全实施完成**：adopt 收编/export-repo（R7-13）、解析视图（MinerU HTML）、Office 零依赖简版预览、缩略图小缓存、pg-rebind（R4-14）、`--nas all`、MCP 三工具 + Resources/Prompts + 写审计；R7-08/R7-13/R4-14 状态刷新；全量测试 312 passed + 1 skipped |
+| 2026-08-23 | **R5 定方向（ADR-20260823-1）**：深度分析主线=自研 chunk 级检索增强（REQ-R5-06）；MaxKB 系列重定位为远期可选深度引擎（REQ-R5-01 候选化）、备胎 REQ-R5-07；REQ-R5-02 改名 export-clean；新增 REQ-R5-06/07、REQ-R6-07；§4 演进脉络 MaxKB 行引用漂移修正；设计索引增补三份新文档 |
+| 2026-08-23 | **REQ-R5-06 阶段 1~4 实施完成 + 阶段 3 合成基准收口**：chunker 分段器 + vectors 扩列/唯一约束迁移 + termbase + sync_chunks（真实 PG 验证）；分级检索（level）+ 两级引用 + 保真直返/无命中兜底 + /api/kb/ask；export-clean + termbase 命令 + SKILL/README；desc deep-eval/deep-bench 评测工具。合成基准 recall@3/@5=1.0，锁定 target=800/limit=1200/overlap=0.12；全量测试 347 passed + 1 skipped |
+| 2026-08-23 | **R5-06 纳入系统级同步流程（deep-ingestion-system-flow）**：来源级 `deep` 开关（CRUD/API/来源页）+ `enrich_source` 自动建 chunk（暂存 md，只读源可，`report.deep`）+ `/api/sources/{id}/changes` dry-run 差异 + `/confirm`（确认后对账+分析）+ `source_stats` 带 chunk 数 + MCP `kb_ask deep`/`kb_search level` + 前端 deep 开关/变更确认面板；全量测试 354 passed + 1 skipped |

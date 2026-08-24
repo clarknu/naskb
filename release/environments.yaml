@@ -1,0 +1,49 @@
+# NASKB 环境清单（release/environments.yaml）
+# 四层级原则（release-management §1.1）：local → dev → beta → prod；晋升 = 同一发布流程在目标环境重跑。
+# 环境隔离：库物理隔离、密钥隔离、域名隔离、数据单向（低层种子不进 prod、prod 数据不下放低层）。
+
+environments:
+  local:
+    tier: local
+    name: 本机开发部署
+    scope: 日常开发 + 本地测试（pytest/E2E 在此层完成）
+    form: |-
+      python run.py --host 127.0.0.1 [--open]
+      工作区 NASKB_data/config.toml；可选本机/内网 PG（宿主化独立实例）
+    database: 本机或内网 PG（可选；无 PG 走本地向量+BM25）
+    secrets: config.toml（[server] tokens、[llm.*] api_key；不入库）
+    verification: pytest 全量（tests/）+ 架构契约（tests/test_arch_contract.py）
+    url: http://127.0.0.1:8765
+  dev:
+    tier: dev
+    name: 线上开发部署
+    scope: 云端/内网开发验收环境（与线上同构，联调/冒烟）——当前按需启用
+    form: 拷贝 naskb/ + NASKB_data/config.toml + Python 环境；python run.py --host 0.0.0.0
+    database: 内网 PG 实例（如 192.168.5.2:25432，独立 schema 多 NAS）
+    secrets: 独立 config.toml（与 prod 不同密钥）
+    verification: 门禁预检 + 冒烟（/api/docs、/api/config/public）
+    url: http://<dev-host>:8765
+  beta:
+    tier: beta
+    name: 线上预发部署
+    scope: 真实链路验收/上线演练/迁移预演
+    form: 预留（按四层级原则暂未落地）
+    database: 独立库 + 独立域名 + 独立密钥
+    verification: 按 release-management 门禁 5/7/8
+    url: —
+  prod:
+    tier: prod
+    name: 线上正式环境
+    scope: 正式对外（知识主系统）
+    form: 生产主机 python run.py（或 systemd/计划任务常驻）；源端 = 用户 NAS/本地目录
+    database: 独立 PG（宿主机原生/统一管理实例——中间件宿主化原则）+ 本地向量索引兜底
+    secrets: 独立 config.toml（密钥不入库、不随仓库分发）
+    verification: 门禁 7（健康）/8（目标环境回归：关键旅程冒烟 + 环境对比）
+    url: http://<prod-host>:8765
+
+release_flow_notes:
+  - 无 alembic 类迁移工具：PG schema 以 common/pgstore.py _DDL_* 常量 + _ensure_pg_table 幂等建表为准；
+    schema 变更 = 改 DDL 常量 → 人工 review → dev 库验证 → 发布（迁移闸门 fail-fast：建表失败则中止发布）。
+  - 发布包 = naskb/ + 工作区 config.toml + Python 环境（自包含部署，REQ-R6）；
+    向量模型首次运行自动下载（~24MB）。
+  - 回滚：代码问题 → 切回上一 tag（git）+ 重走发布；容器/服务故障 → 手动物理回退（单进程形态）。

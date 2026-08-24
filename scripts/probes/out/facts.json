@@ -1,0 +1,7206 @@
+{
+  "probe": {
+    "name": "naskb-python-static",
+    "tech": "python",
+    "version": "1.0.0",
+    "generatedAt": "2026-08-24T10:17:45.885501+00:00",
+    "roots": [
+      "naskb/scripts/naskb"
+    ]
+  },
+  "units": [
+    {
+      "path": "naskb",
+      "kind": "module",
+      "files": [
+        "__init__.py"
+      ]
+    },
+    {
+      "path": "naskb.common",
+      "kind": "module",
+      "files": [
+        "common/__init__.py"
+      ]
+    },
+    {
+      "path": "naskb.common.adopt",
+      "kind": "module",
+      "files": [
+        "common/adopt.py"
+      ]
+    },
+    {
+      "path": "naskb.common.analyzer",
+      "kind": "module",
+      "files": [
+        "common/analyzer/__init__.py"
+      ]
+    },
+    {
+      "path": "naskb.common.analyzer.audio",
+      "kind": "module",
+      "files": [
+        "common/analyzer/audio.py"
+      ]
+    },
+    {
+      "path": "naskb.common.analyzer.document",
+      "kind": "module",
+      "files": [
+        "common/analyzer/document.py"
+      ]
+    },
+    {
+      "path": "naskb.common.analyzer.folder",
+      "kind": "module",
+      "files": [
+        "common/analyzer/folder.py"
+      ]
+    },
+    {
+      "path": "naskb.common.analyzer.image",
+      "kind": "module",
+      "files": [
+        "common/analyzer/image.py"
+      ]
+    },
+    {
+      "path": "naskb.common.analyzer.mineru",
+      "kind": "module",
+      "files": [
+        "common/analyzer/mineru.py"
+      ]
+    },
+    {
+      "path": "naskb.common.analyzer.video",
+      "kind": "module",
+      "files": [
+        "common/analyzer/video.py"
+      ]
+    },
+    {
+      "path": "naskb.common.batch",
+      "kind": "module",
+      "files": [
+        "common/batch.py"
+      ]
+    },
+    {
+      "path": "naskb.common.capabilities",
+      "kind": "module",
+      "files": [
+        "common/capabilities.py"
+      ]
+    },
+    {
+      "path": "naskb.common.chunker",
+      "kind": "module",
+      "files": [
+        "common/chunker.py"
+      ]
+    },
+    {
+      "path": "naskb.common.clean_export",
+      "kind": "module",
+      "files": [
+        "common/clean_export.py"
+      ]
+    },
+    {
+      "path": "naskb.common.config",
+      "kind": "module",
+      "files": [
+        "common/config.py"
+      ]
+    },
+    {
+      "path": "naskb.common.deep_bench",
+      "kind": "module",
+      "files": [
+        "common/deep_bench.py"
+      ]
+    },
+    {
+      "path": "naskb.common.deep_eval",
+      "kind": "module",
+      "files": [
+        "common/deep_eval.py"
+      ]
+    },
+    {
+      "path": "naskb.common.desc_store",
+      "kind": "module",
+      "files": [
+        "common/desc_store.py"
+      ]
+    },
+    {
+      "path": "naskb.common.embeddings",
+      "kind": "module",
+      "files": [
+        "common/embeddings.py"
+      ]
+    },
+    {
+      "path": "naskb.common.enrich",
+      "kind": "module",
+      "files": [
+        "common/enrich.py"
+      ]
+    },
+    {
+      "path": "naskb.common.exts",
+      "kind": "module",
+      "files": [
+        "common/exts.py"
+      ]
+    },
+    {
+      "path": "naskb.common.fs",
+      "kind": "module",
+      "files": [
+        "common/fs/__init__.py"
+      ]
+    },
+    {
+      "path": "naskb.common.fs.base",
+      "kind": "module",
+      "files": [
+        "common/fs/base.py"
+      ]
+    },
+    {
+      "path": "naskb.common.fs.local",
+      "kind": "module",
+      "files": [
+        "common/fs/local.py"
+      ]
+    },
+    {
+      "path": "naskb.common.fs.webdav",
+      "kind": "module",
+      "files": [
+        "common/fs/webdav.py"
+      ]
+    },
+    {
+      "path": "naskb.common.hashing",
+      "kind": "module",
+      "files": [
+        "common/hashing.py"
+      ]
+    },
+    {
+      "path": "naskb.common.inventory",
+      "kind": "module",
+      "files": [
+        "common/inventory.py"
+      ]
+    },
+    {
+      "path": "naskb.common.jobs",
+      "kind": "module",
+      "files": [
+        "common/jobs.py"
+      ]
+    },
+    {
+      "path": "naskb.common.llm",
+      "kind": "module",
+      "files": [
+        "common/llm.py"
+      ]
+    },
+    {
+      "path": "naskb.common.pgsearch",
+      "kind": "module",
+      "files": [
+        "common/pgsearch.py"
+      ]
+    },
+    {
+      "path": "naskb.common.pgstore",
+      "kind": "module",
+      "files": [
+        "common/pgstore.py"
+      ]
+    },
+    {
+      "path": "naskb.common.plan_store",
+      "kind": "module",
+      "files": [
+        "common/plan_store.py"
+      ]
+    },
+    {
+      "path": "naskb.common.reorganizer",
+      "kind": "module",
+      "files": [
+        "common/reorganizer.py"
+      ]
+    },
+    {
+      "path": "naskb.common.retrieval",
+      "kind": "module",
+      "files": [
+        "common/retrieval.py"
+      ]
+    },
+    {
+      "path": "naskb.common.serve",
+      "kind": "module",
+      "files": [
+        "common/serve.py"
+      ]
+    },
+    {
+      "path": "naskb.common.sidecar",
+      "kind": "module",
+      "files": [
+        "common/sidecar.py"
+      ]
+    },
+    {
+      "path": "naskb.common.source_registry",
+      "kind": "module",
+      "files": [
+        "common/source_registry.py"
+      ]
+    },
+    {
+      "path": "naskb.common.vector_index",
+      "kind": "module",
+      "files": [
+        "common/vector_index.py"
+      ]
+    },
+    {
+      "path": "naskb.mcp",
+      "kind": "module",
+      "files": [
+        "mcp/__init__.py"
+      ]
+    },
+    {
+      "path": "naskb.mcp.server",
+      "kind": "module",
+      "files": [
+        "mcp/server.py"
+      ]
+    },
+    {
+      "path": "naskb.server",
+      "kind": "module",
+      "files": [
+        "server/__init__.py"
+      ]
+    },
+    {
+      "path": "naskb.server.app",
+      "kind": "module",
+      "files": [
+        "server/app.py"
+      ]
+    },
+    {
+      "path": "naskb.server.auth",
+      "kind": "module",
+      "files": [
+        "server/auth.py"
+      ]
+    },
+    {
+      "path": "naskb.server.office",
+      "kind": "module",
+      "files": [
+        "server/office.py"
+      ]
+    },
+    {
+      "path": "naskb.server.ranges",
+      "kind": "module",
+      "files": [
+        "server/ranges.py"
+      ]
+    },
+    {
+      "path": "naskb.server.routes_content",
+      "kind": "module",
+      "files": [
+        "server/routes_content.py"
+      ]
+    },
+    {
+      "path": "naskb.server.routes_sources",
+      "kind": "module",
+      "files": [
+        "server/routes_sources.py"
+      ]
+    },
+    {
+      "path": "naskb.server.scheduler",
+      "kind": "module",
+      "files": [
+        "server/scheduler.py"
+      ]
+    },
+    {
+      "path": "naskb.server.thumb",
+      "kind": "module",
+      "files": [
+        "server/thumb.py"
+      ]
+    },
+    {
+      "path": "naskb.skill",
+      "kind": "module",
+      "files": [
+        "skill/__init__.py"
+      ]
+    },
+    {
+      "path": "naskb.skill.cli",
+      "kind": "module",
+      "files": [
+        "skill/cli.py"
+      ]
+    }
+  ],
+  "facts": {
+    "dependency": [
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.fs.local",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 16
+        }
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 17
+        }
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 18
+        }
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 18
+        }
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 19
+        }
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 86
+        }
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 86
+        }
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 86
+        }
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 46
+        }
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 46
+        }
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        }
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        }
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        }
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        }
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        }
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        }
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        }
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        }
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        }
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        }
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.image",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 18
+        }
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.audio",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 19
+        }
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.video",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 20
+        }
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.video",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 20
+        }
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.mineru",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 21
+        }
+      },
+      {
+        "from": "naskb.common.analyzer.audio",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/audio.py",
+          "line": 17
+        }
+      },
+      {
+        "from": "naskb.common.analyzer.audio",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/audio.py",
+          "line": 17
+        }
+      },
+      {
+        "from": "naskb.common.analyzer.document",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/document.py",
+          "line": 19
+        }
+      },
+      {
+        "from": "naskb.common.analyzer.document",
+        "to": "naskb.common.sidecar",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/document.py",
+          "line": 20
+        }
+      },
+      {
+        "from": "naskb.common.analyzer.document",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/document.py",
+          "line": 21
+        }
+      },
+      {
+        "from": "naskb.common.analyzer.folder",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/folder.py",
+          "line": 12
+        }
+      },
+      {
+        "from": "naskb.common.analyzer.image",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/image.py",
+          "line": 14
+        }
+      },
+      {
+        "from": "naskb.common.analyzer.image",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/image.py",
+          "line": 14
+        }
+      },
+      {
+        "from": "naskb.common.analyzer.video",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/video.py",
+          "line": 22
+        }
+      },
+      {
+        "from": "naskb.common.analyzer.video",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/video.py",
+          "line": 22
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 22
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer.folder",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 23
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 24
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 24
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 27
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 265
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 356
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 356
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer.mineru",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 443
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 654
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 672
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 687
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 687
+        }
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 687
+        }
+      },
+      {
+        "from": "naskb.common.clean_export",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/clean_export.py",
+          "line": 13
+        }
+      },
+      {
+        "from": "naskb.common.deep_bench",
+        "to": "naskb.common.chunker",
+        "kind": "import",
+        "evidence": {
+          "file": "common/deep_bench.py",
+          "line": 18
+        }
+      },
+      {
+        "from": "naskb.common.deep_bench",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/deep_bench.py",
+          "line": 115
+        }
+      },
+      {
+        "from": "naskb.common.deep_bench",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/deep_bench.py",
+          "line": 115
+        }
+      },
+      {
+        "from": "naskb.common.deep_eval",
+        "to": "naskb.common.serve",
+        "kind": "import",
+        "evidence": {
+          "file": "common/deep_eval.py",
+          "line": 74
+        }
+      },
+      {
+        "from": "naskb.common.deep_eval",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/deep_eval.py",
+          "line": 75
+        }
+      },
+      {
+        "from": "naskb.common.deep_eval",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/deep_eval.py",
+          "line": 75
+        }
+      },
+      {
+        "from": "naskb.common.desc_store",
+        "to": "naskb.common.hashing",
+        "kind": "import",
+        "evidence": {
+          "file": "common/desc_store.py",
+          "line": 32
+        }
+      },
+      {
+        "from": "naskb.common.desc_store",
+        "to": "naskb.common.hashing",
+        "kind": "import",
+        "evidence": {
+          "file": "common/desc_store.py",
+          "line": 32
+        }
+      },
+      {
+        "from": "naskb.common.desc_store",
+        "to": "naskb.common.hashing",
+        "kind": "import",
+        "evidence": {
+          "file": "common/desc_store.py",
+          "line": 32
+        }
+      },
+      {
+        "from": "naskb.common.desc_store",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/desc_store.py",
+          "line": 36
+        }
+      },
+      {
+        "from": "naskb.common.desc_store",
+        "to": "naskb.common.hashing",
+        "kind": "import",
+        "evidence": {
+          "file": "common/desc_store.py",
+          "line": 261
+        }
+      },
+      {
+        "from": "naskb.common.desc_store",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/desc_store.py",
+          "line": 594
+        }
+      },
+      {
+        "from": "naskb.common.desc_store",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/desc_store.py",
+          "line": 594
+        }
+      },
+      {
+        "from": "naskb.common.desc_store",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/desc_store.py",
+          "line": 594
+        }
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 25
+        }
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 26
+        }
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 26
+        }
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 26
+        }
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 26
+        }
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 27
+        }
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.fs.local",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 28
+        }
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 29
+        }
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 30
+        }
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 31
+        }
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 193
+        }
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 193
+        }
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 206
+        }
+      },
+      {
+        "from": "naskb.common.fs",
+        "to": "naskb.common.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/__init__.py",
+          "line": 2
+        }
+      },
+      {
+        "from": "naskb.common.fs",
+        "to": "naskb.common.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/__init__.py",
+          "line": 2
+        }
+      },
+      {
+        "from": "naskb.common.fs",
+        "to": "naskb.common.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/__init__.py",
+          "line": 2
+        }
+      },
+      {
+        "from": "naskb.common.fs",
+        "to": "naskb.common.local",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/__init__.py",
+          "line": 3
+        }
+      },
+      {
+        "from": "naskb.common.fs.base",
+        "to": "naskb.common.fs.local",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/base.py",
+          "line": 118
+        }
+      },
+      {
+        "from": "naskb.common.fs.base",
+        "to": "naskb.common.fs.webdav",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/base.py",
+          "line": 130
+        }
+      },
+      {
+        "from": "naskb.common.fs.local",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/local.py",
+          "line": 6
+        }
+      },
+      {
+        "from": "naskb.common.fs.local",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/local.py",
+          "line": 6
+        }
+      },
+      {
+        "from": "naskb.common.fs.webdav",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/webdav.py",
+          "line": 13
+        }
+      },
+      {
+        "from": "naskb.common.fs.webdav",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/webdav.py",
+          "line": 13
+        }
+      },
+      {
+        "from": "naskb.common.inventory",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/inventory.py",
+          "line": 18
+        }
+      },
+      {
+        "from": "naskb.common.inventory",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/inventory.py",
+          "line": 18
+        }
+      },
+      {
+        "from": "naskb.common.inventory",
+        "to": "naskb.common.hashing",
+        "kind": "import",
+        "evidence": {
+          "file": "common/inventory.py",
+          "line": 19
+        }
+      },
+      {
+        "from": "naskb.common.inventory",
+        "to": "naskb.common.hashing",
+        "kind": "import",
+        "evidence": {
+          "file": "common/inventory.py",
+          "line": 19
+        }
+      },
+      {
+        "from": "naskb.common.inventory",
+        "to": "naskb.common.hashing",
+        "kind": "import",
+        "evidence": {
+          "file": "common/inventory.py",
+          "line": 19
+        }
+      },
+      {
+        "from": "naskb.common.pgsearch",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/pgsearch.py",
+          "line": 11
+        }
+      },
+      {
+        "from": "naskb.common.pgsearch",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/pgsearch.py",
+          "line": 12
+        }
+      },
+      {
+        "from": "naskb.common.pgsearch",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/pgsearch.py",
+          "line": 12
+        }
+      },
+      {
+        "from": "naskb.common.pgstore",
+        "to": "naskb.common.hashing",
+        "kind": "import",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 24
+        }
+      },
+      {
+        "from": "naskb.common.pgstore",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 25
+        }
+      },
+      {
+        "from": "naskb.common.pgstore",
+        "to": "naskb.common.chunker",
+        "kind": "import",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 26
+        }
+      },
+      {
+        "from": "naskb.common.pgstore",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 296
+        }
+      },
+      {
+        "from": "naskb.common.pgstore",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 588
+        }
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 15
+        }
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 15
+        }
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 591
+        }
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 736
+        }
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.analyzer.folder",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 768
+        }
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 840
+        }
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.fs.webdav",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 853
+        }
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.vector_index",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 805
+        }
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 817
+        }
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 818
+        }
+      },
+      {
+        "from": "naskb.common.retrieval",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/retrieval.py",
+          "line": 18
+        }
+      },
+      {
+        "from": "naskb.common.retrieval",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/retrieval.py",
+          "line": 18
+        }
+      },
+      {
+        "from": "naskb.common.retrieval",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/retrieval.py",
+          "line": 18
+        }
+      },
+      {
+        "from": "naskb.common.retrieval",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/retrieval.py",
+          "line": 18
+        }
+      },
+      {
+        "from": "naskb.common.serve",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/serve.py",
+          "line": 23
+        }
+      },
+      {
+        "from": "naskb.common.serve",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/serve.py",
+          "line": 23
+        }
+      },
+      {
+        "from": "naskb.common.serve",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/serve.py",
+          "line": 23
+        }
+      },
+      {
+        "from": "naskb.common.serve",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/serve.py",
+          "line": 77
+        }
+      },
+      {
+        "from": "naskb.common.serve",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/serve.py",
+          "line": 77
+        }
+      },
+      {
+        "from": "naskb.common.serve",
+        "to": "naskb.common.vector_index",
+        "kind": "import",
+        "evidence": {
+          "file": "common/serve.py",
+          "line": 78
+        }
+      },
+      {
+        "from": "naskb.common.sidecar",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/sidecar.py",
+          "line": 16
+        }
+      },
+      {
+        "from": "naskb.common.sidecar",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/sidecar.py",
+          "line": 16
+        }
+      },
+      {
+        "from": "naskb.common.source_registry",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 23
+        }
+      },
+      {
+        "from": "naskb.common.source_registry",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 24
+        }
+      },
+      {
+        "from": "naskb.common.source_registry",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 24
+        }
+      },
+      {
+        "from": "naskb.common.source_registry",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 24
+        }
+      },
+      {
+        "from": "naskb.common.source_registry",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 95
+        }
+      },
+      {
+        "from": "naskb.common.vector_index",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/vector_index.py",
+          "line": 15
+        }
+      },
+      {
+        "from": "naskb.common.vector_index",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/vector_index.py",
+          "line": 16
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.capabilities",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 21
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.jobs",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 22
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.config",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 34
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 49
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 63
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 64
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 83
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 83
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 84
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.serve",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 85
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 110
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.pgsearch",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 117
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 118
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 128
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 134
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 150
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 161
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 171
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 171
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 310
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 348
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 349
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 379
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 380
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.vector_index",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 381
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 420
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 421
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 444
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 445
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 445
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 445
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 508
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 521
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 521
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 522
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 650
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 222
+        }
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 559
+        }
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 22
+        }
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 22
+        }
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.jobs",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 23
+        }
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 24
+        }
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 25
+        }
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.serve",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 26
+        }
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 27
+        }
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.server.auth",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 28
+        }
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.server.scheduler",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 29
+        }
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.server.routes_sources",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 401
+        }
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.server.routes_content",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 402
+        }
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 61
+        }
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 61
+        }
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.inventory",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 72
+        }
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.inventory",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 72
+        }
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 376
+        }
+      },
+      {
+        "from": "naskb.server.office",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "server/office.py",
+          "line": 50
+        }
+      },
+      {
+        "from": "naskb.server.routes_content",
+        "to": "naskb.server.ranges",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 16
+        }
+      },
+      {
+        "from": "naskb.server.routes_content",
+        "to": "naskb.server.ranges",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 16
+        }
+      },
+      {
+        "from": "naskb.server.routes_content",
+        "to": "naskb.server.thumb",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 277
+        }
+      },
+      {
+        "from": "naskb.server.routes_content",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 232
+        }
+      },
+      {
+        "from": "naskb.server.routes_content",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 232
+        }
+      },
+      {
+        "from": "naskb.server.routes_content",
+        "to": "naskb.server.office",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 233
+        }
+      },
+      {
+        "from": "naskb.server.routes_sources",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 10
+        }
+      },
+      {
+        "from": "naskb.server.routes_sources",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 66
+        }
+      },
+      {
+        "from": "naskb.server.routes_sources",
+        "to": "naskb.common.inventory",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 168
+        }
+      },
+      {
+        "from": "naskb.server.routes_sources",
+        "to": "naskb.common.inventory",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 168
+        }
+      },
+      {
+        "from": "naskb.server.routes_sources",
+        "to": "naskb.common.enrich",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 200
+        }
+      },
+      {
+        "from": "naskb.server.routes_sources",
+        "to": "naskb.common.enrich",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 240
+        }
+      },
+      {
+        "from": "naskb.server.routes_sources",
+        "to": "naskb.common.adopt",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 262
+        }
+      },
+      {
+        "from": "naskb.server.thumb",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "server/thumb.py",
+          "line": 16
+        }
+      },
+      {
+        "from": "naskb.server.thumb",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "server/thumb.py",
+          "line": 17
+        }
+      },
+      {
+        "from": "naskb.server.thumb",
+        "to": "naskb.server.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "server/thumb.py",
+          "line": 115
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.config",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 97
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 98
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 99
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 184
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 184
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 184
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 184
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 184
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 191
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 192
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 192
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 192
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 192
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 192
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 192
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 194
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 194
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 576
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.sidecar",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 665
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.analyzer.folder",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 705
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 706
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 706
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 784
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 784
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 889
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 889
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 890
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 890
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 890
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 968
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 969
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.vector_index",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 970
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.vector_index",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 970
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1010
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1010
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1011
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.serve",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1012
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.serve",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1012
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.config",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1078
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.mcp.server",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1103
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1139
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1187
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1188
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1241
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1242
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1305
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1306
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.config",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1367
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1368
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.config",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1403
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1404
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1404
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1404
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.adopt",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1410
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1411
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.config",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1434
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1435
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.adopt",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1446
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1447
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1463
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.clean_export",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1464
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1491
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1515
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1554
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgsearch",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1555
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.deep_eval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1556
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.deep_eval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1556
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.deep_eval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1556
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.deep_bench",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1603
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.config",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1631
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1632
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1684
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1684
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1685
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1685
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1685
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1686
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1794
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.server.app",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1083
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1115
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgsearch",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1116
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1574
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1574
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 674
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgsearch",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 790
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 791
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.fs.webdav",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1161
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.analyzer.mineru",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 210
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 832
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 832
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.vector_index",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 833
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 917
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 917
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.vector_index",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 918
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 238
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 238
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.analyzer.folder",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 476
+        }
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 265
+        }
+      }
+    ],
+    "reference": [
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.fs.local",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 16
+        },
+        "via": "LocalAdapter"
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 17
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 18
+        },
+        "via": "Doc,collect_docs"
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 18
+        },
+        "via": "Doc,collect_docs"
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 19
+        },
+        "via": "SourceRecord"
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 86
+        },
+        "via": "FileEntry,FolderEntry,NaskbStore"
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 86
+        },
+        "via": "FileEntry,FolderEntry,NaskbStore"
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 86
+        },
+        "via": "FileEntry,FolderEntry,NaskbStore"
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 46
+        },
+        "via": "Embedder,ensure_model"
+      },
+      {
+        "from": "naskb.common.adopt",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/adopt.py",
+          "line": 46
+        },
+        "via": "Embedder,ensure_model"
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        },
+        "via": "DocumentAnalyzer,ExtractionResult,extract_doc,extract_docx,extract_km,extract_mm"
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        },
+        "via": "DocumentAnalyzer,ExtractionResult,extract_doc,extract_docx,extract_km,extract_mm"
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        },
+        "via": "DocumentAnalyzer,ExtractionResult,extract_doc,extract_docx,extract_km,extract_mm"
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        },
+        "via": "DocumentAnalyzer,ExtractionResult,extract_doc,extract_docx,extract_km,extract_mm"
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        },
+        "via": "DocumentAnalyzer,ExtractionResult,extract_doc,extract_docx,extract_km,extract_mm"
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        },
+        "via": "DocumentAnalyzer,ExtractionResult,extract_doc,extract_docx,extract_km,extract_mm"
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        },
+        "via": "DocumentAnalyzer,ExtractionResult,extract_doc,extract_docx,extract_km,extract_mm"
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        },
+        "via": "DocumentAnalyzer,ExtractionResult,extract_doc,extract_docx,extract_km,extract_mm"
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        },
+        "via": "DocumentAnalyzer,ExtractionResult,extract_doc,extract_docx,extract_km,extract_mm"
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 6
+        },
+        "via": "DocumentAnalyzer,ExtractionResult,extract_doc,extract_docx,extract_km,extract_mm"
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.image",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 18
+        },
+        "via": "ImageAnalyzer"
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.audio",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 19
+        },
+        "via": "AudioAnalyzer"
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.video",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 20
+        },
+        "via": "VideoAnalyzer,VideoClassifier"
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.video",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 20
+        },
+        "via": "VideoAnalyzer,VideoClassifier"
+      },
+      {
+        "from": "naskb.common.analyzer",
+        "to": "naskb.common.mineru",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/__init__.py",
+          "line": 21
+        },
+        "via": "MinerUAnalyzer"
+      },
+      {
+        "from": "naskb.common.analyzer.audio",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/audio.py",
+          "line": 17
+        },
+        "via": "BaseLLMClient,LLMError"
+      },
+      {
+        "from": "naskb.common.analyzer.audio",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/audio.py",
+          "line": 17
+        },
+        "via": "BaseLLMClient,LLMError"
+      },
+      {
+        "from": "naskb.common.analyzer.document",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/document.py",
+          "line": 19
+        },
+        "via": "FileSystemAdapter"
+      },
+      {
+        "from": "naskb.common.analyzer.document",
+        "to": "naskb.common.sidecar",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/document.py",
+          "line": 20
+        },
+        "via": "Metadata"
+      },
+      {
+        "from": "naskb.common.analyzer.document",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/document.py",
+          "line": 21
+        },
+        "via": "TEXT_EXTS"
+      },
+      {
+        "from": "naskb.common.analyzer.folder",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/folder.py",
+          "line": 12
+        },
+        "via": "FolderEntry"
+      },
+      {
+        "from": "naskb.common.analyzer.image",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/image.py",
+          "line": 14
+        },
+        "via": "BaseLLMClient,LLMError"
+      },
+      {
+        "from": "naskb.common.analyzer.image",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/image.py",
+          "line": 14
+        },
+        "via": "BaseLLMClient,LLMError"
+      },
+      {
+        "from": "naskb.common.analyzer.video",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/video.py",
+          "line": 22
+        },
+        "via": "BaseLLMClient,LLMError"
+      },
+      {
+        "from": "naskb.common.analyzer.video",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "common/analyzer/video.py",
+          "line": 22
+        },
+        "via": "BaseLLMClient,LLMError"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer.document",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 22
+        },
+        "via": "DocumentAnalyzer"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer.folder",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 23
+        },
+        "via": "FolderAnalyzer"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 24
+        },
+        "via": "FileEntry,NaskbStore"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 24
+        },
+        "via": "FileEntry,NaskbStore"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        },
+        "via": "SUPPORTED_EXTS,DOC_EXTS,IMAGE_EXTS,AUDIO_EXTS,VIDEO_EXTS,is_system_file,is_word_"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        },
+        "via": "SUPPORTED_EXTS,DOC_EXTS,IMAGE_EXTS,AUDIO_EXTS,VIDEO_EXTS,is_system_file,is_word_"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        },
+        "via": "SUPPORTED_EXTS,DOC_EXTS,IMAGE_EXTS,AUDIO_EXTS,VIDEO_EXTS,is_system_file,is_word_"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        },
+        "via": "SUPPORTED_EXTS,DOC_EXTS,IMAGE_EXTS,AUDIO_EXTS,VIDEO_EXTS,is_system_file,is_word_"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        },
+        "via": "SUPPORTED_EXTS,DOC_EXTS,IMAGE_EXTS,AUDIO_EXTS,VIDEO_EXTS,is_system_file,is_word_"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        },
+        "via": "SUPPORTED_EXTS,DOC_EXTS,IMAGE_EXTS,AUDIO_EXTS,VIDEO_EXTS,is_system_file,is_word_"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        },
+        "via": "SUPPORTED_EXTS,DOC_EXTS,IMAGE_EXTS,AUDIO_EXTS,VIDEO_EXTS,is_system_file,is_word_"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        },
+        "via": "SUPPORTED_EXTS,DOC_EXTS,IMAGE_EXTS,AUDIO_EXTS,VIDEO_EXTS,is_system_file,is_word_"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 25
+        },
+        "via": "SUPPORTED_EXTS,DOC_EXTS,IMAGE_EXTS,AUDIO_EXTS,VIDEO_EXTS,is_system_file,is_word_"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 27
+        },
+        "via": "FileSystemAdapter"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 265
+        },
+        "via": "ImageAnalyzer"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 356
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 356
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer.mineru",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 443
+        },
+        "via": "MinerUAnalyzer"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 654
+        },
+        "via": "ImageAnalyzer"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 672
+        },
+        "via": "AudioAnalyzer"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 687
+        },
+        "via": "AudioAnalyzer,VideoAnalyzer,VideoClassifier"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 687
+        },
+        "via": "AudioAnalyzer,VideoAnalyzer,VideoClassifier"
+      },
+      {
+        "from": "naskb.common.batch",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "common/batch.py",
+          "line": 687
+        },
+        "via": "AudioAnalyzer,VideoAnalyzer,VideoClassifier"
+      },
+      {
+        "from": "naskb.common.clean_export",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/clean_export.py",
+          "line": 13
+        },
+        "via": "Doc"
+      },
+      {
+        "from": "naskb.common.deep_bench",
+        "to": "naskb.common.chunker",
+        "kind": "import",
+        "evidence": {
+          "file": "common/deep_bench.py",
+          "line": 18
+        },
+        "via": "chunk_markdown"
+      },
+      {
+        "from": "naskb.common.deep_bench",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/deep_bench.py",
+          "line": 115
+        },
+        "via": "Embedder,model_ready"
+      },
+      {
+        "from": "naskb.common.deep_bench",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/deep_bench.py",
+          "line": 115
+        },
+        "via": "Embedder,model_ready"
+      },
+      {
+        "from": "naskb.common.deep_eval",
+        "to": "naskb.common.serve",
+        "kind": "import",
+        "evidence": {
+          "file": "common/deep_eval.py",
+          "line": 74
+        },
+        "via": "_SchemaBound"
+      },
+      {
+        "from": "naskb.common.deep_eval",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/deep_eval.py",
+          "line": 75
+        },
+        "via": "ask_deep,rag_ask"
+      },
+      {
+        "from": "naskb.common.deep_eval",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/deep_eval.py",
+          "line": 75
+        },
+        "via": "ask_deep,rag_ask"
+      },
+      {
+        "from": "naskb.common.desc_store",
+        "to": "naskb.common.hashing",
+        "kind": "import",
+        "evidence": {
+          "file": "common/desc_store.py",
+          "line": 32
+        },
+        "via": "HASH_ALG_FULL,HASH_ALG_LEGACY,HASH_ALG_SAMPLE"
+      },
+      {
+        "from": "naskb.common.desc_store",
+        "to": "naskb.common.hashing",
+        "kind": "import",
+        "evidence": {
+          "file": "common/desc_store.py",
+          "line": 32
+        },
+        "via": "HASH_ALG_FULL,HASH_ALG_LEGACY,HASH_ALG_SAMPLE"
+      },
+      {
+        "from": "naskb.common.desc_store",
+        "to": "naskb.common.hashing",
+        "kind": "import",
+        "evidence": {
+          "file": "common/desc_store.py",
+          "line": 32
+        },
+        "via": "HASH_ALG_FULL,HASH_ALG_LEGACY,HASH_ALG_SAMPLE"
+      },
+      {
+        "from": "naskb.common.desc_store",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/desc_store.py",
+          "line": 36
+        },
+        "via": "FileSystemAdapter"
+      },
+      {
+        "from": "naskb.common.desc_store",
+        "to": "naskb.common.hashing",
+        "kind": "import",
+        "evidence": {
+          "file": "common/desc_store.py",
+          "line": 261
+        },
+        "via": "sample_ranges"
+      },
+      {
+        "from": "naskb.common.desc_store",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/desc_store.py",
+          "line": 594
+        },
+        "via": "is_supported,is_system_file,is_word_lock"
+      },
+      {
+        "from": "naskb.common.desc_store",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/desc_store.py",
+          "line": 594
+        },
+        "via": "is_supported,is_system_file,is_word_lock"
+      },
+      {
+        "from": "naskb.common.desc_store",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "common/desc_store.py",
+          "line": 594
+        },
+        "via": "is_supported,is_system_file,is_word_lock"
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 25
+        },
+        "via": "analyze_tree"
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 26
+        },
+        "via": "REPO_DIR_NAME,FileEntry,FolderEntry,_fs_read_json"
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 26
+        },
+        "via": "REPO_DIR_NAME,FileEntry,FolderEntry,_fs_read_json"
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 26
+        },
+        "via": "REPO_DIR_NAME,FileEntry,FolderEntry,_fs_read_json"
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 26
+        },
+        "via": "REPO_DIR_NAME,FileEntry,FolderEntry,_fs_read_json"
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 27
+        },
+        "via": "FileSystemAdapter"
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.fs.local",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 28
+        },
+        "via": "LocalAdapter"
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 29
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 30
+        },
+        "via": "Doc"
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 31
+        },
+        "via": "SourceRecord"
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 193
+        },
+        "via": "Embedder,ensure_model"
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 193
+        },
+        "via": "Embedder,ensure_model"
+      },
+      {
+        "from": "naskb.common.enrich",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/enrich.py",
+          "line": 206
+        },
+        "via": "NaskbStore"
+      },
+      {
+        "from": "naskb.common.fs",
+        "to": "naskb.common.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/__init__.py",
+          "line": 2
+        },
+        "via": "FileSystemAdapter,FileStat,_FsspecAdapter"
+      },
+      {
+        "from": "naskb.common.fs",
+        "to": "naskb.common.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/__init__.py",
+          "line": 2
+        },
+        "via": "FileSystemAdapter,FileStat,_FsspecAdapter"
+      },
+      {
+        "from": "naskb.common.fs",
+        "to": "naskb.common.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/__init__.py",
+          "line": 2
+        },
+        "via": "FileSystemAdapter,FileStat,_FsspecAdapter"
+      },
+      {
+        "from": "naskb.common.fs",
+        "to": "naskb.common.local",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/__init__.py",
+          "line": 3
+        },
+        "via": "LocalAdapter"
+      },
+      {
+        "from": "naskb.common.fs.base",
+        "to": "naskb.common.fs.local",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/base.py",
+          "line": 118
+        },
+        "via": "LocalAdapter"
+      },
+      {
+        "from": "naskb.common.fs.base",
+        "to": "naskb.common.fs.webdav",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/base.py",
+          "line": 130
+        },
+        "via": "WebDAVAdapter"
+      },
+      {
+        "from": "naskb.common.fs.local",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/local.py",
+          "line": 6
+        },
+        "via": "FileSystemAdapter,FileStat"
+      },
+      {
+        "from": "naskb.common.fs.local",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/local.py",
+          "line": 6
+        },
+        "via": "FileSystemAdapter,FileStat"
+      },
+      {
+        "from": "naskb.common.fs.webdav",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/webdav.py",
+          "line": 13
+        },
+        "via": "FileSystemAdapter,FileStat"
+      },
+      {
+        "from": "naskb.common.fs.webdav",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/fs/webdav.py",
+          "line": 13
+        },
+        "via": "FileSystemAdapter,FileStat"
+      },
+      {
+        "from": "naskb.common.inventory",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/inventory.py",
+          "line": 18
+        },
+        "via": "FileSystemAdapter,FileStat"
+      },
+      {
+        "from": "naskb.common.inventory",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/inventory.py",
+          "line": 18
+        },
+        "via": "FileSystemAdapter,FileStat"
+      },
+      {
+        "from": "naskb.common.inventory",
+        "to": "naskb.common.hashing",
+        "kind": "import",
+        "evidence": {
+          "file": "common/inventory.py",
+          "line": 19
+        },
+        "via": "HASH_ALG_FULL,HASH_ALG_SAMPLE,sample_ranges"
+      },
+      {
+        "from": "naskb.common.inventory",
+        "to": "naskb.common.hashing",
+        "kind": "import",
+        "evidence": {
+          "file": "common/inventory.py",
+          "line": 19
+        },
+        "via": "HASH_ALG_FULL,HASH_ALG_SAMPLE,sample_ranges"
+      },
+      {
+        "from": "naskb.common.inventory",
+        "to": "naskb.common.hashing",
+        "kind": "import",
+        "evidence": {
+          "file": "common/inventory.py",
+          "line": 19
+        },
+        "via": "HASH_ALG_FULL,HASH_ALG_SAMPLE,sample_ranges"
+      },
+      {
+        "from": "naskb.common.pgsearch",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/pgsearch.py",
+          "line": 11
+        },
+        "via": "Embedder"
+      },
+      {
+        "from": "naskb.common.pgsearch",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/pgsearch.py",
+          "line": 12
+        },
+        "via": "EMBEDDING_MODEL,PgStore"
+      },
+      {
+        "from": "naskb.common.pgsearch",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/pgsearch.py",
+          "line": 12
+        },
+        "via": "EMBEDDING_MODEL,PgStore"
+      },
+      {
+        "from": "naskb.common.pgstore",
+        "to": "naskb.common.hashing",
+        "kind": "import",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 24
+        },
+        "via": "KNOWN_ALGORITHMS"
+      },
+      {
+        "from": "naskb.common.pgstore",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 25
+        },
+        "via": "Doc"
+      },
+      {
+        "from": "naskb.common.pgstore",
+        "to": "naskb.common.chunker",
+        "kind": "import",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 26
+        },
+        "via": "chunk_markdown"
+      },
+      {
+        "from": "naskb.common.pgstore",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 296
+        },
+        "via": "Embedder"
+      },
+      {
+        "from": "naskb.common.pgstore",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 588
+        },
+        "via": "Embedder"
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 15
+        },
+        "via": "NaskbStore,REPO_DIR_NAME"
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 15
+        },
+        "via": "NaskbStore,REPO_DIR_NAME"
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 591
+        },
+        "via": "FileEntry"
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 736
+        },
+        "via": "RootLock"
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.analyzer.folder",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 768
+        },
+        "via": "FolderAnalyzer"
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 840
+        },
+        "via": "normalize_identity"
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.fs.webdav",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 853
+        },
+        "via": "WebDAVAdapter"
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.vector_index",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 805
+        },
+        "via": "VectorIndex"
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 817
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.common.reorganizer",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/reorganizer.py",
+          "line": 818
+        },
+        "via": "collect_docs"
+      },
+      {
+        "from": "naskb.common.retrieval",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/retrieval.py",
+          "line": 18
+        },
+        "via": "REPO_DIR_NAME,FileEntry,FolderEntry,_fs_read_json"
+      },
+      {
+        "from": "naskb.common.retrieval",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/retrieval.py",
+          "line": 18
+        },
+        "via": "REPO_DIR_NAME,FileEntry,FolderEntry,_fs_read_json"
+      },
+      {
+        "from": "naskb.common.retrieval",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/retrieval.py",
+          "line": 18
+        },
+        "via": "REPO_DIR_NAME,FileEntry,FolderEntry,_fs_read_json"
+      },
+      {
+        "from": "naskb.common.retrieval",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "common/retrieval.py",
+          "line": 18
+        },
+        "via": "REPO_DIR_NAME,FileEntry,FolderEntry,_fs_read_json"
+      },
+      {
+        "from": "naskb.common.serve",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/serve.py",
+          "line": 23
+        },
+        "via": "BM25Index,Doc,rag_ask"
+      },
+      {
+        "from": "naskb.common.serve",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/serve.py",
+          "line": 23
+        },
+        "via": "BM25Index,Doc,rag_ask"
+      },
+      {
+        "from": "naskb.common.serve",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/serve.py",
+          "line": 23
+        },
+        "via": "BM25Index,Doc,rag_ask"
+      },
+      {
+        "from": "naskb.common.serve",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/serve.py",
+          "line": 77
+        },
+        "via": "Embedder,model_ready"
+      },
+      {
+        "from": "naskb.common.serve",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/serve.py",
+          "line": 77
+        },
+        "via": "Embedder,model_ready"
+      },
+      {
+        "from": "naskb.common.serve",
+        "to": "naskb.common.vector_index",
+        "kind": "import",
+        "evidence": {
+          "file": "common/serve.py",
+          "line": 78
+        },
+        "via": "VectorIndex"
+      },
+      {
+        "from": "naskb.common.sidecar",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/sidecar.py",
+          "line": 16
+        },
+        "via": "FileSystemAdapter,FileStat"
+      },
+      {
+        "from": "naskb.common.sidecar",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/sidecar.py",
+          "line": 16
+        },
+        "via": "FileSystemAdapter,FileStat"
+      },
+      {
+        "from": "naskb.common.source_registry",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 23
+        },
+        "via": "FileSystemAdapter"
+      },
+      {
+        "from": "naskb.common.source_registry",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 24
+        },
+        "via": "PgStore,normalize_identity,schema_name_for"
+      },
+      {
+        "from": "naskb.common.source_registry",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 24
+        },
+        "via": "PgStore,normalize_identity,schema_name_for"
+      },
+      {
+        "from": "naskb.common.source_registry",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 24
+        },
+        "via": "PgStore,normalize_identity,schema_name_for"
+      },
+      {
+        "from": "naskb.common.source_registry",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 95
+        },
+        "via": "SubRootAdapter"
+      },
+      {
+        "from": "naskb.common.vector_index",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "common/vector_index.py",
+          "line": 15
+        },
+        "via": "Embedder"
+      },
+      {
+        "from": "naskb.common.vector_index",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "common/vector_index.py",
+          "line": 16
+        },
+        "via": "Doc"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.capabilities",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 21
+        },
+        "via": "CAPABILITIES"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.jobs",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 22
+        },
+        "via": "JobManager"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.config",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 34
+        },
+        "via": "Config"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 49
+        },
+        "via": "SourceRegistry"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 63
+        },
+        "via": "NaskbStore"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 64
+        },
+        "via": "FileSystemAdapter"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 83
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 83
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 84
+        },
+        "via": "collect_docs"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.serve",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 85
+        },
+        "via": "KnowledgeCore"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 110
+        },
+        "via": "collect_docs"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.pgsearch",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 117
+        },
+        "via": "PgSearchEngine"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 118
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 128
+        },
+        "via": "Reorganizer"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 134
+        },
+        "via": "_norm_compare"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 150
+        },
+        "via": "_norm_compare"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 161
+        },
+        "via": "_is_under"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 171
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 171
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 310
+        },
+        "via": "analyze_tree"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 348
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 349
+        },
+        "via": "collect_docs"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 379
+        },
+        "via": "Embedder"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 380
+        },
+        "via": "collect_docs"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.vector_index",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 381
+        },
+        "via": "VectorIndex"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 420
+        },
+        "via": "save_plan"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 421
+        },
+        "via": "Reorganizer"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 444
+        },
+        "via": "load_plan"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 445
+        },
+        "via": "Reorganizer,_norm_compare,validate_move"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 445
+        },
+        "via": "Reorganizer,_norm_compare,validate_move"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 445
+        },
+        "via": "Reorganizer,_norm_compare,validate_move"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 508
+        },
+        "via": "load_plan"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 521
+        },
+        "via": "load_plan,mark_applied"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 521
+        },
+        "via": "load_plan,mark_applied"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 522
+        },
+        "via": "Reorganizer"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 650
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 222
+        },
+        "via": "ask_deep"
+      },
+      {
+        "from": "naskb.mcp.server",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "mcp/server.py",
+          "line": 559
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 22
+        },
+        "via": "Embedder,model_ready"
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 22
+        },
+        "via": "Embedder,model_ready"
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.jobs",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 23
+        },
+        "via": "JobManager"
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 24
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 25
+        },
+        "via": "collect_docs"
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.serve",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 26
+        },
+        "via": "KnowledgeCore"
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 27
+        },
+        "via": "SourceRegistry"
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.server.auth",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 28
+        },
+        "via": "AuthPolicy"
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.server.scheduler",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 29
+        },
+        "via": "ScanScheduler"
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.server.routes_sources",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 401
+        },
+        "via": "register_sources_routes"
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.server.routes_content",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 402
+        },
+        "via": "register_content_routes"
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 61
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 61
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.inventory",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 72
+        },
+        "via": "walk_source,compute_missing_hashes"
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.inventory",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 72
+        },
+        "via": "walk_source,compute_missing_hashes"
+      },
+      {
+        "from": "naskb.server.app",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 376
+        },
+        "via": "ask_deep"
+      },
+      {
+        "from": "naskb.server.office",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "server/office.py",
+          "line": 50
+        },
+        "via": "_docx_flow_items"
+      },
+      {
+        "from": "naskb.server.routes_content",
+        "to": "naskb.server.ranges",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 16
+        },
+        "via": "content_range,parse_range"
+      },
+      {
+        "from": "naskb.server.routes_content",
+        "to": "naskb.server.ranges",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 16
+        },
+        "via": "content_range,parse_range"
+      },
+      {
+        "from": "naskb.server.routes_content",
+        "to": "naskb.server.thumb",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 277
+        },
+        "via": "_thumb"
+      },
+      {
+        "from": "naskb.server.routes_content",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 232
+        },
+        "via": "_download_to_tmp,_rm_tmp"
+      },
+      {
+        "from": "naskb.server.routes_content",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 232
+        },
+        "via": "_download_to_tmp,_rm_tmp"
+      },
+      {
+        "from": "naskb.server.routes_content",
+        "to": "naskb.server.office",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 233
+        },
+        "via": "render"
+      },
+      {
+        "from": "naskb.server.routes_sources",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 10
+        },
+        "via": "ACCESS_MODES"
+      },
+      {
+        "from": "naskb.server.routes_sources",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 66
+        },
+        "via": "SourceRecord"
+      },
+      {
+        "from": "naskb.server.routes_sources",
+        "to": "naskb.common.inventory",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 168
+        },
+        "via": "walk_source,compute_missing_hashes"
+      },
+      {
+        "from": "naskb.server.routes_sources",
+        "to": "naskb.common.inventory",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 168
+        },
+        "via": "walk_source,compute_missing_hashes"
+      },
+      {
+        "from": "naskb.server.routes_sources",
+        "to": "naskb.common.enrich",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 200
+        },
+        "via": "enrich_source"
+      },
+      {
+        "from": "naskb.server.routes_sources",
+        "to": "naskb.common.enrich",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 240
+        },
+        "via": "enrich_source"
+      },
+      {
+        "from": "naskb.server.routes_sources",
+        "to": "naskb.common.adopt",
+        "kind": "import",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 262
+        },
+        "via": "adopt_repo"
+      },
+      {
+        "from": "naskb.server.thumb",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "server/thumb.py",
+          "line": 16
+        },
+        "via": "FileSystemAdapter"
+      },
+      {
+        "from": "naskb.server.thumb",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "server/thumb.py",
+          "line": 17
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.server.thumb",
+        "to": "naskb.server.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "server/thumb.py",
+          "line": 115
+        },
+        "via": "_download_to_tmp"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.config",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 97
+        },
+        "via": "Config"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 98
+        },
+        "via": "NaskbStore"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.fs.base",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 99
+        },
+        "via": "FileSystemAdapter"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 184
+        },
+        "via": "AudioAnalyzer,DocumentAnalyzer,ImageAnalyzer,VideoAnalyzer,VideoClassifier"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 184
+        },
+        "via": "AudioAnalyzer,DocumentAnalyzer,ImageAnalyzer,VideoAnalyzer,VideoClassifier"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 184
+        },
+        "via": "AudioAnalyzer,DocumentAnalyzer,ImageAnalyzer,VideoAnalyzer,VideoClassifier"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 184
+        },
+        "via": "AudioAnalyzer,DocumentAnalyzer,ImageAnalyzer,VideoAnalyzer,VideoClassifier"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.analyzer",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 184
+        },
+        "via": "AudioAnalyzer,DocumentAnalyzer,ImageAnalyzer,VideoAnalyzer,VideoClassifier"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 191
+        },
+        "via": "FileEntry"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 192
+        },
+        "via": "DOC_EXTS,IMAGE_EXTS,AUDIO_EXTS,VIDEO_EXTS,meaning_of,guess_mime"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 192
+        },
+        "via": "DOC_EXTS,IMAGE_EXTS,AUDIO_EXTS,VIDEO_EXTS,meaning_of,guess_mime"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 192
+        },
+        "via": "DOC_EXTS,IMAGE_EXTS,AUDIO_EXTS,VIDEO_EXTS,meaning_of,guess_mime"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 192
+        },
+        "via": "DOC_EXTS,IMAGE_EXTS,AUDIO_EXTS,VIDEO_EXTS,meaning_of,guess_mime"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 192
+        },
+        "via": "DOC_EXTS,IMAGE_EXTS,AUDIO_EXTS,VIDEO_EXTS,meaning_of,guess_mime"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.exts",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 192
+        },
+        "via": "DOC_EXTS,IMAGE_EXTS,AUDIO_EXTS,VIDEO_EXTS,meaning_of,guess_mime"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 194
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 194
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 576
+        },
+        "via": "analyze_tree"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.sidecar",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 665
+        },
+        "via": "SidecarData"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.analyzer.folder",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 705
+        },
+        "via": "FolderAnalyzer"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 706
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 706
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 784
+        },
+        "via": "BM25Index,collect_docs"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 784
+        },
+        "via": "BM25Index,collect_docs"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 889
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 889
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 890
+        },
+        "via": "BM25Index,ask,collect_docs"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 890
+        },
+        "via": "BM25Index,ask,collect_docs"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 890
+        },
+        "via": "BM25Index,ask,collect_docs"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 968
+        },
+        "via": "Embedder"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 969
+        },
+        "via": "collect_docs"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.vector_index",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 970
+        },
+        "via": "VectorIndex,index_paths"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.vector_index",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 970
+        },
+        "via": "VectorIndex,index_paths"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1010
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1010
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1011
+        },
+        "via": "collect_docs"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.serve",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1012
+        },
+        "via": "KnowledgeCore,serve"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.serve",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1012
+        },
+        "via": "KnowledgeCore,serve"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.config",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1078
+        },
+        "via": "Config"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.mcp.server",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1103
+        },
+        "via": "run_stdio"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1139
+        },
+        "via": "normalize_identity"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1187
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1188
+        },
+        "via": "collect_docs"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1241
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1242
+        },
+        "via": "collect_docs"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1305
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1306
+        },
+        "via": "collect_docs"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.config",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1367
+        },
+        "via": "Config"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1368
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.config",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1403
+        },
+        "via": "Config"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1404
+        },
+        "via": "ACCESS_MODES,SourceRecord,SourceRegistry"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1404
+        },
+        "via": "ACCESS_MODES,SourceRecord,SourceRegistry"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1404
+        },
+        "via": "ACCESS_MODES,SourceRecord,SourceRegistry"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.adopt",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1410
+        },
+        "via": "adopt_repo"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1411
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.config",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1434
+        },
+        "via": "Config"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.source_registry",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1435
+        },
+        "via": "SourceRegistry"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.adopt",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1446
+        },
+        "via": "export_repo"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1447
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.retrieval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1463
+        },
+        "via": "collect_docs"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.clean_export",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1464
+        },
+        "via": "export_clean"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1491
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1515
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1554
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgsearch",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1555
+        },
+        "via": "PgSearchEngine"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.deep_eval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1556
+        },
+        "via": "load_questions,run_eval,write_report"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.deep_eval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1556
+        },
+        "via": "load_questions,run_eval,write_report"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.deep_eval",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1556
+        },
+        "via": "load_questions,run_eval,write_report"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.deep_bench",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1603
+        },
+        "via": "benchmark"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.config",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1631
+        },
+        "via": "Config"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1632
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1684
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1684
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1685
+        },
+        "via": "load_plan,mark_applied,save_plan"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1685
+        },
+        "via": "load_plan,mark_applied,save_plan"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.plan_store",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1685
+        },
+        "via": "load_plan,mark_applied,save_plan"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.reorganizer",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1686
+        },
+        "via": "Reorganizer"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1794
+        },
+        "via": "FileEntry"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.server.app",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1083
+        },
+        "via": "run"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1115
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgsearch",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1116
+        },
+        "via": "PgSearchEngine"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1574
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.llm",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1574
+        },
+        "via": "LLMConfig,create_llm_client"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.desc_store",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 674
+        },
+        "via": "_fs_read_json"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgsearch",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 790
+        },
+        "via": "PgSearchEngine"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.pgstore",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 791
+        },
+        "via": "PgStore"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.fs.webdav",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 1161
+        },
+        "via": "WebDAVAdapter"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.analyzer.mineru",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 210
+        },
+        "via": "MinerUAnalyzer"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 832
+        },
+        "via": "Embedder,model_ready"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 832
+        },
+        "via": "Embedder,model_ready"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.vector_index",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 833
+        },
+        "via": "VectorIndex"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 917
+        },
+        "via": "Embedder,model_ready"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.embeddings",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 917
+        },
+        "via": "Embedder,model_ready"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.vector_index",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 918
+        },
+        "via": "VectorIndex"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 238
+        },
+        "via": "_docx_to_pdf,_extract_docx_images"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 238
+        },
+        "via": "_docx_to_pdf,_extract_docx_images"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.analyzer.folder",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 476
+        },
+        "via": "FolderAnalyzer"
+      },
+      {
+        "from": "naskb.skill.cli",
+        "to": "naskb.common.batch",
+        "kind": "import",
+        "evidence": {
+          "file": "skill/cli.py",
+          "line": 265
+        },
+        "via": "_make_word_app"
+      }
+    ],
+    "assetRef": [
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 80
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "vectors",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 111
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 131
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "folders",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 141
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "nas_registry",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 159
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "termbase",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 182
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "nas_registry",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 242
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "nas_registry",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 1004
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "nas_registry",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 1017
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "nas_registry",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 1160
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "nas_registry",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 250
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 472
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "vectors",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 481
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 315
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "termbase",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 666
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "termbase",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 676
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 686
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 699
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "vectors",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 705
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 741
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "folders",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 842
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "folders",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 845
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "folders",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 860
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 868
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "folders",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 895
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 912
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 981
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 1032
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "folders",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 1036
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "vectors",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 1051
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 1064
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "vectors",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 1073
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 1095
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "folders",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 1144
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 402
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "vectors",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 421
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 436
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "vectors",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 455
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 607
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "vectors",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 631
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 819
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "folders",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 834
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 943
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 952
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 363
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 381
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "vectors",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 519
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "vectors",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 636
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 754
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 787
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 799
+        }
+      },
+      {
+        "unit": "naskb.common.pgstore",
+        "asset": "resources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/pgstore.py",
+          "line": 807
+        }
+      },
+      {
+        "unit": "naskb.common.source_registry",
+        "asset": "sources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 288
+        }
+      },
+      {
+        "unit": "naskb.common.source_registry",
+        "asset": "sources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 245
+        }
+      },
+      {
+        "unit": "naskb.common.source_registry",
+        "asset": "sources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 262
+        }
+      },
+      {
+        "unit": "naskb.common.source_registry",
+        "asset": "sources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 266
+        }
+      },
+      {
+        "unit": "naskb.common.source_registry",
+        "asset": "sources",
+        "assetKind": "table",
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 270
+        }
+      }
+    ],
+    "literal": [
+      {
+        "unit": "naskb.common.source_registry",
+        "domain": "access_mode",
+        "value": "rw",
+        "inComparison": false,
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 27
+        }
+      },
+      {
+        "unit": "naskb.common.source_registry",
+        "domain": "access_mode",
+        "value": "ro",
+        "inComparison": false,
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 27
+        }
+      },
+      {
+        "unit": "naskb.common.source_registry",
+        "domain": "access_mode",
+        "value": "rw",
+        "inComparison": false,
+        "evidence": {
+          "file": "common/source_registry.py",
+          "line": 43
+        }
+      }
+    ],
+    "registry": [
+      {
+        "set": "routes",
+        "key": "get /api/stats",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 156
+        }
+      },
+      {
+        "set": "routes:retrieval",
+        "key": "get /api/stats",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 156
+        }
+      },
+      {
+        "set": "routes",
+        "key": "get /api/search",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 160
+        }
+      },
+      {
+        "set": "routes:retrieval",
+        "key": "get /api/search",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 160
+        }
+      },
+      {
+        "set": "routes",
+        "key": "post /api/ask",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 176
+        }
+      },
+      {
+        "set": "routes:retrieval",
+        "key": "post /api/ask",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 176
+        }
+      },
+      {
+        "set": "routes",
+        "key": "post /api/reload",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 195
+        }
+      },
+      {
+        "set": "routes:retrieval",
+        "key": "post /api/reload",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 195
+        }
+      },
+      {
+        "set": "routes",
+        "key": "get /api/config/public",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 203
+        }
+      },
+      {
+        "set": "routes:platform",
+        "key": "get /api/config/public",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 203
+        }
+      },
+      {
+        "set": "routes",
+        "key": "get /api/kb/search",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 209
+        }
+      },
+      {
+        "set": "routes:retrieval",
+        "key": "get /api/kb/search",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 209
+        }
+      },
+      {
+        "set": "routes",
+        "key": "post /api/kb/ask",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 305
+        }
+      },
+      {
+        "set": "routes:deep",
+        "key": "post /api/kb/ask",
+        "evidence": {
+          "file": "server/app.py",
+          "line": 305
+        }
+      },
+      {
+        "set": "routes",
+        "key": "get /api/folder",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 67
+        }
+      },
+      {
+        "set": "routes:platform",
+        "key": "get /api/folder",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 67
+        }
+      },
+      {
+        "set": "routes",
+        "key": "get /api/tree",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 100
+        }
+      },
+      {
+        "set": "routes:platform",
+        "key": "get /api/tree",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 100
+        }
+      },
+      {
+        "set": "routes",
+        "key": "get /api/files/{rid}",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 116
+        }
+      },
+      {
+        "set": "routes:platform",
+        "key": "get /api/files/{rid}",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 116
+        }
+      },
+      {
+        "set": "routes",
+        "key": "get /api/files/{rid}/download",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 134
+        }
+      },
+      {
+        "set": "routes:platform",
+        "key": "get /api/files/{rid}/download",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 134
+        }
+      },
+      {
+        "set": "routes",
+        "key": "get /api/files/{rid}/preview",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 193
+        }
+      },
+      {
+        "set": "routes:platform",
+        "key": "get /api/files/{rid}/preview",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 193
+        }
+      },
+      {
+        "set": "routes",
+        "key": "get /api/files/{rid}/parsed",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 255
+        }
+      },
+      {
+        "set": "routes:platform",
+        "key": "get /api/files/{rid}/parsed",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 255
+        }
+      },
+      {
+        "set": "routes",
+        "key": "get /api/files/{rid}/thumbnail",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 274
+        }
+      },
+      {
+        "set": "routes:platform",
+        "key": "get /api/files/{rid}/thumbnail",
+        "evidence": {
+          "file": "server/routes_content.py",
+          "line": 274
+        }
+      },
+      {
+        "set": "routes",
+        "key": "get /api/sources",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 49
+        }
+      },
+      {
+        "set": "routes:source",
+        "key": "get /api/sources",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 49
+        }
+      },
+      {
+        "set": "routes",
+        "key": "post /api/sources",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 63
+        }
+      },
+      {
+        "set": "routes:source",
+        "key": "post /api/sources",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 63
+        }
+      },
+      {
+        "set": "routes",
+        "key": "patch /api/sources/{sid}",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 81
+        }
+      },
+      {
+        "set": "routes:source",
+        "key": "patch /api/sources/{sid}",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 81
+        }
+      },
+      {
+        "set": "routes",
+        "key": "delete /api/sources/{sid}",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 105
+        }
+      },
+      {
+        "set": "routes:source",
+        "key": "delete /api/sources/{sid}",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 105
+        }
+      },
+      {
+        "set": "routes",
+        "key": "post /api/sources/{sid}/test",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 124
+        }
+      },
+      {
+        "set": "routes:source",
+        "key": "post /api/sources/{sid}/test",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 124
+        }
+      },
+      {
+        "set": "routes",
+        "key": "post /api/sources/{sid}/scan",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 134
+        }
+      },
+      {
+        "set": "routes:source",
+        "key": "post /api/sources/{sid}/scan",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 134
+        }
+      },
+      {
+        "set": "routes",
+        "key": "get /api/sources/{sid}/changes",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 160
+        }
+      },
+      {
+        "set": "routes:source",
+        "key": "get /api/sources/{sid}/changes",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 160
+        }
+      },
+      {
+        "set": "routes",
+        "key": "post /api/sources/{sid}/confirm",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 185
+        }
+      },
+      {
+        "set": "routes:source",
+        "key": "post /api/sources/{sid}/confirm",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 185
+        }
+      },
+      {
+        "set": "routes",
+        "key": "post /api/sources/{sid}/analyze",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 227
+        }
+      },
+      {
+        "set": "routes:source",
+        "key": "post /api/sources/{sid}/analyze",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 227
+        }
+      },
+      {
+        "set": "routes",
+        "key": "post /api/sources/{sid}/adopt",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 253
+        }
+      },
+      {
+        "set": "routes:source",
+        "key": "post /api/sources/{sid}/adopt",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 253
+        }
+      },
+      {
+        "set": "routes",
+        "key": "get /api/sources/{sid}/report",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 274
+        }
+      },
+      {
+        "set": "routes:source",
+        "key": "get /api/sources/{sid}/report",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 274
+        }
+      },
+      {
+        "set": "routes",
+        "key": "post /api/pg/rebind",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 291
+        }
+      },
+      {
+        "set": "routes:retrieval",
+        "key": "post /api/pg/rebind",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 291
+        }
+      },
+      {
+        "set": "routes",
+        "key": "get /api/jobs",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 318
+        }
+      },
+      {
+        "set": "routes:platform",
+        "key": "get /api/jobs",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 318
+        }
+      },
+      {
+        "set": "routes",
+        "key": "get /api/jobs/{job_id}",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 323
+        }
+      },
+      {
+        "set": "routes:platform",
+        "key": "get /api/jobs/{job_id}",
+        "evidence": {
+          "file": "server/routes_sources.py",
+          "line": 323
+        }
+      }
+    ]
+  }
+}

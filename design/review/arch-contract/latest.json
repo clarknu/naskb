@@ -1,0 +1,18 @@
+{
+  "summary": {
+    "end_slug": "arch-contract",
+    "producer": "backend-architecture-design",
+    "total_scanned": 51,
+    "total_issues": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "rulesChecked": 11,
+    "reviewLedgerCount": 4,
+    "debtsTotal": 0,
+    "debtsActive": 0,
+    "unmatchedUnits": 0,
+    "unregisteredAssets": 46
+  },
+  "issues": []
+}
