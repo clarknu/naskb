@@ -1,8 +1,8 @@
 # Page Mock 测试目录说明
 
 > 本目录为 tdd-build Stage 2（Page Mock TDD）的执行目录。
-> **执行层已接入**（2026-08-24，P-002）：基于 Vitest + @vue/test-utils + jsdom，所有 HTTP 由
-> fetch mock 按 URL 分派拦截（后端零依赖，等价于 MSW 的 mock 网络能力）。
+> **执行层已接入**（2026-08-24，P-002：vitest + @vue/test-utils + jsdom + fetch mock，HTTP 全 mock）；
+> **2026-08-24 P-002 补全**：TC-M003/M006/M007/M010 落地，10 用例全覆盖。
 > 用例规格：`design/07-tdd/page-mock/web-console-tdd-design.md`（TC-M001~M010）。
 
 ## 已接入说明
@@ -28,19 +28,24 @@
 ```bash
 cd naskb/web
 npm i        # 首次安装
-npm run test # 等价 vitest run
+npm run test # = vitest run（主套件）+ vitest run --config vitest.config.init.mjs（初始化时序）
 ```
 
 > 说明：本目录位于仓库根（`tests/page-mock/`），而 vitest 配置在 `naskb/web/` 下，`include` 通过
 > 相对路径跨 root 引用。若在别处运行，以 `naskb/web` 为工作目录执行即可。
+> **双项目结构**：`app-shell-init.spec.js`（模块初始化时序）需在 app-core 加载前播种 hash/token，
+> 与主套件 setup 冲突，故置于 `web-console/init/` 子目录由 `vitest.config.init.mjs`（setup =
+> `tests/init-setup.js`）单独执行；主配置 include 为 `web-console/*.spec.js` 单层 glob，天然不匹配。
 
 ### 与 tdd-execute( page-mock ) 的对应
 
-- 用例按 `{client-slug}`（= `web-console`）组织为四个 spec 文件：
-  - `search.spec.js`：TC-M001（检索成功渲染）/ TC-M002（检索失败 error）
-  - `sources.spec.js`：TC-M004（表单校验）/ TC-M005（注册 Toast）
+- 用例按 `{client-slug}`（= `web-console`）组织为五个 spec 文件 + init 子目录一个：
+  - `search.spec.js`：TC-M001（检索成功渲染）/ TC-M002（检索失败 error）/ TC-M003（问答生成 + 来源 + “生成中”禁用）
+  - `sources.spec.js`：TC-M004（表单校验）/ TC-M005（注册 Toast）/ TC-M006（操作列按钮 + 删除 confirm）/ TC-M007（变更确认清单）
   - `jobs.spec.js`：TC-M008（任务中心初始渲染；轮询细节以 setInterval 打桩跳过）
   - `file-modal.spec.js`：TC-M009（元数据 + viewable 预览分派）
+  - `app-shell.spec.js`：TC-M010①/③/④（hash 路由切换 / token 保存持久化与请求携带 / 401 引导）
+  - `init/app-shell-init.spec.js`：TC-M010②（模块初始化时序：直达 hash + localStorage 令牌恢复；独立 vitest 项目）
 - 断言全部中文描述；mock fetch 按 URL 分派返回契约形状（取自 `design/04-platform-api/data/rest/*`）。
 - 组件的 `template` 字符串由测试侧的 esm-bundler（含 compiler）在挂载时编译。
 
@@ -55,10 +60,11 @@ npm run test # 等价 vitest run
 
 ### 覆盖情况（相对 TC 规格）
 
-- 已实现：TC-M001、TC-M002、TC-M004、TC-M005、TC-M008、TC-M009。
-- 未实现（⏳ 待后续，见 07-tdd 规格标注）：TC-M003（问答生成）、TC-M006（操作列权限显隐+删除确认）、
-  TC-M007（变更确认清单勾选）、TC-M010（hash 直达 + 401 引导）—— 分别涉及 LLM 生成交互、权限口径
-  显隐（需按 perm_ref 基线）、`confirm` 删改确认交互、路由/持久化/401 引导，可后续迭代补充。
+- **全部已实现（TC-M001 ~ M010，10/10）**：TC-M003（问答生成）、TC-M006（操作列 + 删除确认）、
+  TC-M007（变更确认清单）、TC-M010（hash 路由 + token 持久化 + 401 引导）已于 P-002 补全批次落地；
+  其中 TC-M010 拆为运行时链路（app-shell.spec.js）与模块初始化时序（init/ 独立项目）两部分。
+- 口径记录：TC-M006 的「按 perm_ref 显隐」为 v1 设计假设，DD-009 全身份模型下**不适用**——见
+  07-tdd 设计稿 TC-M006 口径说明；TC-M010 的 401 引导文案锚定 api() 的 `err.code === 401` 分支。
 
 ## 引用
 

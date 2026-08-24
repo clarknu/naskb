@@ -1,9 +1,11 @@
-/* TC-M001 / TC-M002 —— 检索问答页
+/* TC-M001 / TC-M002 / TC-M003 —— 检索问答页
  * 位置：tests/page-mock/web-console/search.spec.js
  * 说明：
  *  - mock GET /api/kb/search（按 URL 分派），组件内部 api() 走 Fetch mock，网络全部拦截。
  *  - 组件为 options 对象（template 字符串），测试侧由 vue esm-bundler full build（含 runtime compiler）编译；
  *  - 无 timer/轮询依赖，可直接断言初始渲染与失败态。
+ *  - TC-M003：POST /api/ask 生成型交互 —— 「生成中」禁用态以 deferred responder 挂起请求断言，
+ *    完成后恢复按钮；answer + sources 按模板逐段断言。
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
@@ -54,5 +56,54 @@ describe('TC-M002 检索失败展示错误', () => {
     expect(wrapper.findAll('tbody tr').length).toBe(0);
     // 说明：组件空态提示（v-else-if="!searching" → “输入关键词开始检索…”）因组件逻辑逐行保留
     //       而未按 searchErr 门禁，故失败态下仍会显示该初始提示条；此处不视为失败，属已知 UI 差距（见报告）。
+  });
+});
+
+/* ── TC-M003 问答生成与来源（追加，P-002 补全） ── */
+describe('TC-M003 问答生成与来源', () => {
+  it('mock POST /api/ask → answer 渲染 + 来源列表逐条展示', async () => {
+    globalThis.__addApiMock('POST', '/api/ask', () =>
+      globalThis.__jsonResponse(200, {
+        answer: '月租金为 3,200 元，约定押一付三；详见 docs/合同.pdf。',
+        sources: ['docs/合同.pdf', 'docs/补充协议.pdf'],
+      }));
+
+    const wrapper = mount(SearchView);
+    await wrapper.findAll('input')[1].setValue('月租金是多少？');
+    await wrapper.findAll('button')[1].trigger('click');
+    await flushPromises();
+
+    const text = wrapper.text();
+    // answer 渲染（原文含关键信息）
+    expect(text).toContain('月租金为 3,200 元');
+    expect(text).toContain('押一付三');
+    // 来源列表逐条（模板：来源：· <s>）
+    expect(text).toContain('来源：');
+    expect(text).toContain('docs/合同.pdf');
+    expect(text).toContain('docs/补充协议.pdf');
+  });
+
+  it('生成中：请求挂起 → 按钮 disabled + “生成中…”，完成后恢复可点', async () => {
+    let resolveAsk;
+    globalThis.__addApiMock('POST', '/api/ask', () =>
+      new Promise((res) => { resolveAsk = res; }));
+
+    const wrapper = mount(SearchView);
+    await wrapper.findAll('input')[1].setValue('月租金是多少？');
+    const askBtn = wrapper.findAll('button')[1];
+    await askBtn.trigger('click');
+    await flushPromises();
+
+    // 挂起中：按钮禁用 + 文案切换（模板 :disabled="asking" / {{ asking ? '生成中…' : '提问' }}）
+    expect(askBtn.attributes('disabled')).toBeDefined();
+    expect(askBtn.text()).toBe('生成中…');
+
+    // 完成：恢复可点 + 文案还原
+    resolveAsk(globalThis.__jsonResponse(200, { answer: '月租金为 3,200 元。', sources: [] }));
+    await flushPromises();
+    const restored = wrapper.findAll('button')[1];
+    expect(restored.attributes('disabled')).toBeUndefined();
+    expect(restored.text()).toBe('提问');
+    expect(wrapper.text()).toContain('月租金为 3,200 元。');
   });
 });

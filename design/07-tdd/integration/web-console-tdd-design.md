@@ -55,7 +55,9 @@
 
 ## 执行方式（本机约定，DD-009）
 
-1. **启动平台服务**（测试开工前）：`python run.py --host 127.0.0.1`（工作区配置测试 token：`NASKB_data/config.toml [server] tokens`）。
+1. **启动平台服务**（测试开工前）：`python run.py --host 127.0.0.1`（工作区配置测试 token：`NASKB_data/config.toml [server] tokens`；
+   **隔离工作区样板**见 `tests/integration/e2e-work.config.example.toml`——复制为 `config.toml` 后
+   `python run.py --work <隔离目录> --port 8877`，避免污染生产工作区；`NASKB_E2E_TOKEN` 对应输入）。
 2. **驱动**：全局 Playwright MCP server（本机 `C:\Soft\Playwright MCP`）——Reasonix 桌面版全局 playwright 插件（`--headless --isolated --executable-path C:\Soft\Playwright MCP\browsers\chromium-1234\...\chrome.exe`）提供 browser_* 工具；或直接运行等价驱动脚本：
    ```
    node scripts/e2e/e2e-journeys.mjs [--base http://127.0.0.1:8765]

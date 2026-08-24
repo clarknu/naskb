@@ -68,3 +68,21 @@
 ### 理由
 
 - 用户拍板补全 page-mock 执行层；采用 fetch mock（等价 MSW）实现后端零依赖；App 组件保持逐行逻辑，仅将全局 Vue 解构改为 ESM 导入；浏览器运行时依旧**零构建**（import map + 原生 ESM）。
+
+---
+
+## 变更 4：Page Mock 用例补全（TC-M003/M006/M007/M010）（P-002 后续）
+
+**类型**：测试用例补全｜**来源**：用户拍板（2026-08-24，🟢 四项一次做完）
+
+### 变更内容
+
+| 之前 | 之后 |
+|------|------|
+| 已实现 TC-M001/M002/M004/M005/M008/M009；M003/M006/M007/M010 ⏳ | **10/10 全覆盖**：M003/M006/M007 按规格落地；M010 拆运行时链路 + 模块初始化时序两部分 |
+
+- `search.spec.js` +2：TC-M003 问答生成（answer + sources 渲染；“生成中”按钮禁用以 deferred responder 断言）
+- `sources.spec.js` +5：TC-M006（操作列 8 按钮恒渲染——DD-009 全身份口径，取代 v1「按 perm_ref 显隐」；删除 confirm 取消/确认分支）、TC-M007（变化清单分组 + 默认全选 + 取消勾选提交 rel_paths 子集）
+- `app-shell.spec.js`（新）：TC-M010①/③/④——hashchange 视图切换、令牌保存 → localStorage → api() Authorization、无令牌 401 → “需要管理员令牌（右上角设置）”引导
+- `init/app-shell-init.spec.js`（新）+ `naskb/web/tests/init-setup.js` + `vitest.config.init.mjs`：TC-M010② 模块初始化时序——在 app-core 加载**前**播种 `#/sources` + localStorage 令牌，断言初始化读取（刷新直达/持久化恢复语义）；`npm run test` = 主套件 + init 项目连跑
+- 已知点（记录不隐藏）：jsdom 对 location.hash 赋值不触发 hashchange（显式 dispatch）；fetch mock 首命中即用，`/api/sources` 前缀会吞 `/changes`（spec 内按精确性排序注册）

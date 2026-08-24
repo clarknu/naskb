@@ -1,28 +1,34 @@
-// viewer-smoke.mjs — SFDS viewer 渲染核实（document-asset-format §6 强制验证流程）
-// 用法：
-//   1) 一次性依赖：mkdir .scratch/pw && cd .scratch/pw && npm init -y && npm i playwright（浏览器走 playwright 缓存）
-//   2) node scripts/viewer-smoke.mjs
-// 断言：file:// 打开 5 个 viewer（workflow/er/api/architecture/design-viewer），0 console error、0 pageerror、
-//       关键内容（域列表/端点/公共约定/架构/L3/功能树）渲染命中。
+// viewer-smoke.mjs — NASKB 设计资产 viewer 渲染核实（document-asset-format §6 强制验证流程）
+//
+// 与官方门禁的分工（2026-08-24 对齐核实）：
+//  - 官方 `_shared/viewer-tests/verify-fixed.mjs`：验证 **方法论 bundle 自带模板 viewer**
+//    （skills/*/templates，5 技能：business-workflow/entity-relationship/mobile-app-design/
+//    desktop-ui-design/backend-architecture-design）——本机实测 5/5 PASS（0 console error、
+//    0 pageerror、emptyTexts 空）。注意其用例清单不含 api-design（本轮项目 api-viewer 由本脚本覆盖，
+//    如需官方工具覆盖 api-design 模板，需在 bundle 侧登记（用户工作，未代改）。
+//  - 本脚本：验证 **本项目设计资产 viewer**（design/02..06 的 viewer + data/*.js，含 api-viewer），
+//    断言 0 console error、0 pageerror + 关键内容渲染命中。
+//
+// 执行约定（同 e2e-journeys.mjs）：复用全局 Playwright MCP 同源引擎（C:\Soft\Playwright MCP\
+// server\node_modules\playwright-core + browsers\chromium-1234 自带内核）；其他机器用该机自己的
+// Playwright MCP 配置（环境变量 NASKB_E2E_PW_MCP 指向 MCP 根）。无需 .scratch/pw 一次性安装。
+// 用法：node scripts/viewer-smoke.mjs
 import { pathToFileURL } from "url";
 import path from "path";
 import { createRequire } from "module";
 
-// playwright 依赖：优先本机项目安装，其次 .scratch/pw（一次性环境：npm i playwright）
+const MCP_ROOT = process.env.NASKB_E2E_PW_MCP || "C:/Soft/Playwright MCP";
+const require = createRequire(import.meta.url);
 let pw;
 try {
-  pw = await import("playwright");
+  pw = require(path.join(MCP_ROOT, "server", "node_modules", "playwright-core"));
 } catch {
-  const require = createRequire(import.meta.url);
-  try {
-    pw = require(path.resolve(".scratch", "pw", "node_modules", "playwright"));
-  } catch {
-    console.error("[viewer-smoke] 需要 playwright：.scratch/pw 下 `npm i playwright`（浏览器走 playwright 缓存）");
-    process.exit(2);
-  }
+  console.error(`[viewer-smoke] 需要全局 Playwright MCP 引擎（未找到 ${MCP_ROOT}）；其他机器设置 NASKB_E2E_PW_MCP 指向该机 MCP 根。`);
+  process.exit(2);
 }
-const { chromium } = pw;
-const root = path.resolve(process.cwd());const targets = [
+const EXEC = path.join(MCP_ROOT, "browsers", "chromium-1234", "chrome-win64", "chrome.exe");
+
+const targets = [
   { name: "workflow-viewer", file: "design/02-business-workflow/workflow-viewer.html",
     expect: ["来源管理", "采集与分析", "主流程", "权限清单"], mode: "load" },
   { name: "er-viewer", file: "design/03-entity-relationship/er-viewer.html",
@@ -35,7 +41,8 @@ const root = path.resolve(process.cwd());const targets = [
     expect: ["功能结构树", "检索问答", "知识来源"], mode: "wait" },
 ];
 
-const browser = await chromium.launch();
+const root = path.resolve(process.cwd());
+const browser = await pw.chromium.launch({ headless: true, executablePath: EXEC, args: ["--no-sandbox"] });
 let failures = 0;
 for (const t of targets) {
   const page = await browser.newPage();

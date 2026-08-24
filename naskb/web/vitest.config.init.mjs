@@ -5,13 +5,13 @@ import { defineConfig } from 'vitest/config';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const vueBundler = path.resolve(__dirname, 'node_modules/vue/dist/vue.esm-bundler.js');
 
+// 独立项目：TC-M010② 模块初始化时序（tests/page-mock/web-console/init/app-shell-init.spec.js）
+// 与 vitest.config.mjs 的唯一差别：setup = tests/init-setup.js（播种 hash/token 后再加载 app-core）。
 export default defineConfig({
   test: {
     environment: 'jsdom',
-    setupFiles: ['./tests/setup.js'],
-    // 单层 glob：web-console 下所有 spec；init/ 子目录的 app-shell-init.spec.js 由独立项目执行
-    //（需在 app-core 加载前播种 hash/token，见 vitest.config.init.mjs）
-    include: ['../../tests/page-mock/web-console/*.spec.js'],
+    setupFiles: ['./tests/init-setup.js'],
+    include: ['../../tests/page-mock/web-console/init/*.spec.js'],
     css: false,
   },
   server: { fs: { allow: [path.resolve(__dirname, '..', '..'), path.resolve(__dirname, 'node_modules')] } },

@@ -1,6 +1,7 @@
 # TDD 设计（Page Mock）：web-console
 
-> **执行层已接入（vitest + @vue/test-utils + jsdom + fetch mock，等价 MSW），2026-08-24 P-002 完成。**
+> **执行层已接入（vitest + @vue/test-utils + jsdom + fetch mock，等价 MSW），2026-08-24 P-002 完成；
+> 2026-08-24 P-002 补全（TC-M003/M006/M007/M010）+ 独立项目覆盖模块初始化时序。**
 > 工具链与运行说明见 `tests/page-mock/README.md`；已实现用例标 ✅，未实现标 ⏳（原因见各用例注）。
 
 > 基于页面设计 v1 | API 设计 v1
@@ -33,9 +34,9 @@
 - **断言清单**: ✅ 页内 error 块展示；✅ 不显示空列表（区分空态）
 
 ### TC-M003: 问答生成与来源
-- **类型**: 正常流程 ｜ **状态**: ⏳ 待后续（未实现）
-- **断言清单**: ✅ answer 渲染 + sources 列表；✅ 生成中按钮 disabled（“生成中…”）
-- **未实现原因**: 涉及 `/api/ask` 生成型交互与「生成中」按钮禁用状态；本轮只实现可行子集，留待后续补测。
+- **类型**: 正常流程 ｜ **状态**: ✅ 已实现（search.spec.js，P-002 补全）
+- **断言清单**: ✅ answer 渲染 + sources 列表；✅ 生成中按钮 disabled（“生成中…”，deferred responder 挂起断言）
+- **实现说明**: POST /api/ask 契约形状（answer + sources）mock；“生成中”以「挂起 promise → 断言禁用 → resolve → 断言恢复」覆盖。
 
 ### TC-M004: 来源表单校验
 - **类型**: 边界条件 ｜ **状态**: ✅ 已实现（sources.spec.js）
@@ -46,14 +47,18 @@
 - **断言清单**: ✅ 成功 Toast（来源已注册）+ 表单收起 + 列表刷新；✅ 失败 Toast（注册失败 + 原因）
 
 ### TC-M006: 来源操作列按钮状态
-- **类型**: 权限 UI ｜ **状态**: ⏳ 待后续（未实现）
-- **断言清单**: ✅ 按 perm_ref 显隐（无令牌时写操作按钮…口径差异见 notes）；✅ 删除前 confirm 弹窗
-- **未实现原因**: 需按 perm_ref 权限基线驱动按钮显隐；当前 app-core 未内置权限映射，且删除确认依赖 confirm 交互，留待权限口径落定后补测。
+- **类型**: 权限 UI ｜ **状态**: ✅ 已实现（sources.spec.js，P-002 补全）
+- **断言清单**: ✅ 操作列 8 个操作按钮恒渲染（权限点覆盖）；✅ 删除前 confirm 弹窗（取消 → 不发 DELETE；确认 → DELETE + toast“已删除” + 列表刷新）
+- **口径说明（DD-009 全身份模型，取代 v1「按 perm_ref 显隐」）**: 无匿名只读角色（匿名全部移除），单管理员 Bearer 全身份 → UI 不做按 perm_ref 的按钮显隐；
+  SourceRegister/SourceTest/SourceScan/SourceAnalyze/SourceChangesView/SourceChangeConfirm/SourceDeepToggle/SourceAdopt/SourceEnable/SourceDelete
+  等权限点由服务端逐点执行，UI 恒定渲染全部操作按钮。删除确认依赖 confirm 弹窗（只读源附“入库知识将一并清除”文案——删除调用在组件内，文案随 s.access_mode 动态拼接）。
 
 ### TC-M007: 变更确认清单交互
-- **类型**: 正常流程 ｜ **状态**: ⏳ 待后续（未实现）
+- **类型**: 正常流程 ｜ **状态**: ✅ 已实现（sources.spec.js，P-002 补全）
 - **断言清单**: ✅ 差异分组渲染（新增/变更/消失）；✅ 勾选后确认按钮提交 rel_paths；✅ 消失项文案（仅标记不物理删除）
-- **未实现原因**: 变更确认清单（GET /changes → 勾选 → POST /confirm）为主干交互，本轮优先覆盖检索/来源/任务/模态；作为后续迭代项。
+- **实现说明**: GET {sid}/changes → `s._chg`（added/changed/missing 分组）→ 默认全选 added+changed → 取消勾选后
+  POST {sid}/confirm 提交 `{ rel_paths: [勾选子集] }` → toast“确认同步已提交（任务 …）”+ 清单收起；pollJob 轮询以 setInterval 打桩跳过。
+- **注意**: fetch mock 为「首个命中即用」，`/api/sources` 前缀串匹配会吞掉 `/api/sources/{sid}/changes`——changes/confirm 路由必须注册在前（spec 内已按此排序）。
 
 ### TC-M008: 任务中心轮询
 - **类型**: 交互 ｜ **状态**: ✅ 已实现（jobs.spec.js；仅断言初始渲染，轮询细节以 setInterval 打桩跳过）
@@ -65,6 +70,13 @@
 - **断言清单**: ✅ 元数据 kv 完整（路径/分类/标签/摘要/指纹/大小时间/分析时间）；✅ 预览按 viewable 分派（含 parsed iframe、html srcdoc、none 提示）；✅ 下载 href 指向 download_url
 
 ### TC-M010: 浏览器兼容校验
-- **类型**: 边界条件 ｜ **状态**: ⏳ 待后续（未实现）
+- **类型**: 边界条件 ｜ **状态**: ✅ 已实现（app-shell.spec.js + init/app-shell-init.spec.js，P-002 补全）
 - **断言清单**: ✅ hash 路由直达（#/sources 等）恢复视图；✅ token 持久化（localStorage）与 401 引导（“需要管理员令牌”）
-- **未实现原因**: 涉及 App 根组件级路由/持久化/401 交互，需要在挂载完整 App（含 hashchange 与 config 拉取）的边界下断言；本轮只测视图组件，根组件路由与 401 引导留待后续。
+- **实现说明（两部分）**:
+  - 运行时链路（app-shell.spec.js）：①hashchange → 视图切换（#/sources 来源页 / #/jobs 任务中心 / #/ 回检索页）；
+    ③令牌保存 → localStorage 落盘 + 徽章“🔑 已配置令牌” + api() 请求自动携带 Authorization；
+    ④无令牌 401 → 组件 error 块展示“需要管理员令牌（右上角设置）” + 顶栏“🔒 需要令牌”。
+  - **模块初始化时序**（独立 vitest 项目 vitest.config.init.mjs + tests/init-setup.js，spec 于 web-console/init/ 子目录）：
+    在 app-core 加载**前**播种 location.hash='#/sources' 与 localStorage 令牌，断言模块初始化读取
+    （state.route='sources'、state.token='tok-restore-001'）——即“刷新直达/持久化恢复”语义
+    （浏览器中 state.route/state.token 由 app-core 模块加载瞬间读取）。

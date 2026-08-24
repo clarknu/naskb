@@ -5,7 +5,8 @@
 
 | # | 门禁 | 本项目命令/证据 |
 |---|------|----------------|
-| 1 | 全量测试绿 | `python -m pytest tests/ -v`（重组后目录：tests/api unit integration；0 失败） |
+| 1 | 全量测试绿 | `python -m pytest tests/ -v`（重组后目录：tests/api unit integration；0 失败）；
+前端契约 `cd naskb/web && npm run test`（Page Mock 10 用例 + 初始化时序 2 例；vitest 主套件 + init 项目连跑） |
 | 2 | e2e 绿 | 浏览器 E2E（保留，DD-009）：执行入口 = **全局 Playwright MCP server**（本机 `C:\Soft\Playwright MCP`，Reasonix 桌面版全局配置；他机用该机自己的 Playwright MCP 配置）；旅程规格 `design/07-tdd/integration/web-console-tdd-design.md`（TC-I001~I003）；证据截图 `tests/integration/evidence/` |
 | 3 | ORM-DB 无差异 | 无 ORM/迁移工具：`python -m pytest tests/integration/test_pgstore.py -v`（真 PG schema 断言）+ 人工核对 pgstore _DDL_* 与库结构 |
 | 4 | 迁移预演 | dev 环境先跑 `_ensure_pg_table` 链（幂等建表成功）后再发 prod（fail-fast 闸门） |

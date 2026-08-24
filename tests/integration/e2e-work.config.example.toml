@@ -1,0 +1,23 @@
+# E2E 隔离工作区配置样板（tests/integration/e2e-work.config.example.toml）
+#
+# 用途：DD-009 全身份口径 E2E 演练。E2E 需要在“测试 token + 非生产工作区”下启动平台，
+# 避免污染 NASKB_data/（生产配置）——把本文件复制为隔离工作区 config.toml，例如：
+#
+#   mkdir e2e-work          # 或用任意临时目录
+#   copy e2e-work.config.example.toml e2e-work\config.toml
+#   python run.py --host 127.0.0.1 --port 8877 --work e2e-work
+#   $env:NASKB_E2E_TOKEN='e2e-token-20260824'; $env:NASKB_E2E_BASE='http://127.0.0.1:8877'
+#   node scripts/e2e/e2e-journeys.mjs
+#
+# 说明：token 模式演练（全身份口径）——[server] tokens 配置一个测试令牌（密钥不入库、
+# 不随分发；正式发布仍按 release/policy.md 门禁 5 的 [server] tokens + [llm.*] api_key 配置）。
+
+[server]
+tokens = ["e2e-token-20260824"]
+
+[analyzer]
+max_chars = 100000
+max_file_mb = 100
+
+[llm.text]
+api_key = ""

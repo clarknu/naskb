@@ -4,7 +4,7 @@
   "private": true,
   "description": "NASKB Web 控制台 —— Vue3 全局构建静态包（运行时零构建，无打包步骤）。此 package.json 仅为 Page Mock TDD 执行层提供 vitest 工具链。",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run && vitest run --config vitest.config.init.mjs"
   },
   "dependencies": {
     "vue": "^3.5.41"
