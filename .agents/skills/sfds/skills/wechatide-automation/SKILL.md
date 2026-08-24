@@ -6,14 +6,18 @@ lineage:
   origin: arb-hub
   case: CASE-011
   source: inbox/boxing-competition-operation/wechatide-setup@2026-08-23（泛化吸收）
-  note: 本技能为方法论层通用版，泛化自 boxing wechatide-setup 的可复用内容；boxing 专属连接参数/端口/AppID 保留在其项目实例中。
+  note: 本技能为方法论层通用版，泛化自 boxing wechatide-setup 的可复用内容；boxing 专属连接参数/端口/AppID 保留在其项目实例中。与外部工具技能 `wechatide-skill`（WeChat IDE 自带，不在 bundle 内）是不同概念——本技能是对它的方法论扩展（详见文首「概念区分」）。
 ---
 
 # WeChat IDE 自动化（使用说明）
 
 本技能说明如何用**外置的微信开发者工具（wechatide）**做小程序开发调试与自动化测试（含多端同步）。工具本体是外部件（随 DevTools 单向同步）；本技能是**使用与判定说明**，是 boxing `wechatide-setup` 的可复用泛化。
 
-> 角色分工：本技能（方法论层：怎么用、怎么判定）· `wechatide-skill`（外部同步的根入口，其 `environment-readiness` 为门禁/令牌权威）· 项目实例（连接参数、端口、AppID，见各项目 harness 配置）。
+> **⚠️ 概念区分（本 bundle 最常见误区，务必先读）：**
+> - **`wechatide-skill`**：**WeChat IDE 自带的工具技能**（外部件，随 DevTools 单向同步）——**不在本方法论 bundle 内**。它提供工具根入口 + `environment-readiness`（门禁/令牌权威）+ `automator` / `wechatide-tools` 用法。正常情况下由 WeChat IDE 侧安装/同步，`<bundle>/skills/` 下找不到它。
+> - **`wechatide-automation`（本技能）**：我们的**方法论扩展**，描述**何时能用**（能力门判定）+ **怎么接入 SFDS 流水线**（drives tdd-execute Stage 2b）。它消费/驱动外部的 `wechatide-skill`，但**不是**那个工具技能本身。
+> - 三者关系：`wechatide-skill`（外部工具技能：工具怎么用）→ **本技能 `wechatide-automation`**（方法论：何时能用 + 怎么接入）→ 项目实例（连接参数/端口/AppID，见各项目 harness 配置）。
+> - 路由与登记以 **`wechatide-automation`** 为准：触发词路由表、pipeline-registry、development-standard §4 均用此名；上下文里凡提到 `wechatide-skill` 都指**外部工具技能**，切勿与 `wechatide-automation` 混为一谈。
 
 ## 能力门（第一步必须判）
 

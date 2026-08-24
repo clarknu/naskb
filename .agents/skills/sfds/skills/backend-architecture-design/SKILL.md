@@ -473,7 +473,7 @@ _trace: {
 
 > **模板文件位于：** `templates/`（与本 SKILL.md 同目录分发）。
 > 首次使用时，从 templates 复制 `architecture-viewer.html` 和 `data/loader.js` 到项目 `design/05-backend-architecture/` 目录。
-> `data/example-topology.js` 提供最小示例，供新项目参考。
+> `data/system-topology.js`（以及 `data/deployment-profile.js` 等）在模板目录 `templates/data/` 提供最小示例，供新项目参考。
 
 **数据文件格式：** 挂载到 `window.ARCH_DATA` 命名空间（如 `window.ARCH_DATA["system-topology"] = {...}`），由 `architecture-viewer.html` 加载渲染。与 `workflow-viewer.html` / `er-viewer.html` / `api-viewer.html` 遵循相同模式。双击打开即可，无需 HTTP 服务器。
 

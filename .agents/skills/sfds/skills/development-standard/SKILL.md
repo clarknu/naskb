@@ -94,7 +94,7 @@ lineage:
 │   ├── 04-platform-api/data/          ← API 设计数据文件（§8.3）
 │   ├── 05-backend-architecture/data/    ← 后端架构设计（§8.3b，含 arch-contract/design-decisions）
 │   ├── 06-{client-slug}/data/           ← 各端页面设计（§8.4）
-│   ├── 07-tdd/                          ← TDD 测试设计文档（§8.5）
+│   ├── 07-tdd/{stage}/                  ← TDD 测试设计文档（§8.5，stage=api/page-mock/miniprogram/integration）
 │   ├── pipeline-state.js                ← 管线状态（调度模式数据源，随阶段推进更新）
 │   └── review/                          ← 复查报告
 ```
@@ -129,7 +129,7 @@ lineage:
 **生成后必执行**（填充铁律表，模板中为空标记块）：
 
 ```bash
-node .agents/skills/_shared/gen/generate-trigger-table.mjs --write
+node .agents/skills/sfds/_shared/gen/generate-trigger-table.mjs --write
 ```
 
 ### 1.4 提取标准文档
@@ -207,7 +207,7 @@ node .agents/skills/_shared/gen/generate-trigger-table.mjs --write
 
 | 数据 | 位置 | 职责 |
 |------|------|------|
-| 管线注册表 | `.agents/skills/_shared/pipeline-registry.js`（`window.SFDS_DATA`） | 阶段序、每阶段 skill/触发词/出口门禁、准入契约、分发规则——**单一真相源** |
+| 管线注册表 | `.agents/skills/sfds/_shared/pipeline-registry.js`（`window.SFDS_DATA`） | 阶段序、每阶段 skill/触发词/出口门禁、准入契约、分发规则——**单一真相源** |
 | 管线状态 | `design/pipeline-state.js`（`window.PIPELINE_DATA`） | 本项目各阶段 status（done/partial/in-progress/not-started）+ 证据 + 历史 |
 
 ### 4.2 判定流程
@@ -233,14 +233,14 @@ node .agents/skills/_shared/gen/generate-trigger-table.mjs --write
 
 - **推进必须有证据**——"我觉得做完了"不是证据，exitGates 的 check 项才是
 - **状态必须落盘**——每次判定后更新 `design/pipeline-state.js`（status/history），会话记忆不算状态
-- **触发词表是派生物**——AGENTS.md 铁律表由 `scripts/generate-trigger-table.mjs` 从注册表生成，禁止手编（改注册表 → 跑生成脚本）
+- **触发词表是派生物**——AGENTS.md 铁律表由 `.agents/skills/sfds/_shared/gen/generate-trigger-table.mjs` 从注册表生成，禁止手编（改注册表 → 跑生成脚本）
 
 ---
 
 ## 5. 本 skill 的迭代说明
 
 **迭代-发布周期：**
-1. 在本项目 `.agents/skills/development-standard/` 中修改本文件和模板（项目级为工作副本）
+1. 在本项目 `.agents/skills/sfds/skills/development-standard/` 中修改本文件和模板（项目级为工作副本）
 2. 在本项目验证
 3. 稳定后如需其他项目复用 → 复制到全局 skill 目录发布（如 `~/.agents/skills/` 或 Reasonix 全局目录，见 reasonix-guide）。**发布后注意保持双副本同步，或以项目级为准避免漂移**
 
@@ -410,10 +410,10 @@ AI 生成的代码 + AI 写的测试 = 同一套认知模型的产物。如果�
 | `review` | 复查、一致性检查、全量复查、校核、对齐检查 | 全项目复查：13 个维度（D0-D12）逐层一致性校核 + 交互式迭代修复闭环，调度各 skill 的一致性检查模式 | §9 |
 | `consolidate-raw-input` | 整理原始输入、整理原始需求、需求归档 | 将原始设计讨论记录整合为结构清晰的规范文档，原始文件归档至 original-logs/ | §7 |
 | `sync-design-to-publish` | 发布、同步发布 | 项目专属：将 design/ 下的设计文档查看器同步到 publish/ 发布目录并部署（wrangler/Cloudflare Pages），非通用方法论 | — |
-| `wechatide-skill` | 微信开发者工具、小程序预览、小程序调试 | 微信开发者工具任务执行根入口（环境检查 → 预览/自动化/调试/编译/初始化/项目列表/云/安装更新），工具集成层 | — |
+| `wechatide-automation` | 微信开发者工具、小程序预览、小程序调试 | 微信开发者工具（wechatide）使用与小程序自动化测试——能力门判定 + 驱动用法 | — |
 
-> 技能定义文件位于 `.agents/skills/{skill-name}/SKILL.md`（项目级，项目工作空间下的统一目录）或其他约定目录（全局 `~/.agents/skills/`，见 reasonix-guide 的 discovery dirs）。
-> **双副本策略：** 项目级 `.agents/skills/` 为工作副本（优先加载）；如需全局复用再发布到全局目录（`~/.agents/skills/`），并保持两处同步，避免漂移。
+> 技能定义文件位于 `.agents/skills/sfds/skills/{skill-name}/SKILL.md`（项目级，项目工作空间下的统一目录）或其他约定目录（全局 `~/.agents/skills/`，见 reasonix-guide 的 discovery dirs）。
+> **双副本策略：** 项目级 `.agents/skills/sfds/` 为工作副本（优先加载）；如需全局复用再发布到全局目录（`~/.agents/skills/`），并保持两处同步，避免漂移。
 
 #### 4.1 Skill 设计约束
 
@@ -429,7 +429,7 @@ AI 生成的代码 + AI 写的测试 = 同一套认知模型的产物。如果�
 
 **一致性检查职责的完整委托表见 `review` skill。** 各 skill 的检查模式在各自 SKILL.md 中定义。
 
-> 所有一致性检查的输出格式统一遵循共享规范 `.agents/skills/_shared/consistency-check-format.md`（与各 skill 目录平级），新 skill 必须先读该规范再定义检查模式。
+> 所有一致性检查的输出格式统一遵循共享规范 `.agents/skills/sfds/_shared/consistency-check-format.md`（与各 skill 目录平级），新 skill 必须先读该规范再定义检查模式。
 
 #### 4.2 Skill 生命周期管理（弃用 / 下线纪律）
 
@@ -480,11 +480,9 @@ src/
 
 ```
 tests/
-├── tdd-design/                # TDD 测试设计文档（design/ 的结构化输出也可在此备份）
-├── integration/               # 集成测试代码
-├── unit/                      # 单元测试代码
-├── e2e/                       # 端到端测试
-└── test-reports/              # 自动化测试报告
+├── {stage}/                   # stage = api / page-mock / miniprogram / integration（tdd-build §6 汇总）
+│   └── {domain|client-slug}/  # 各阶段测试代码（门控按用例层级，不强制物理目录分离）
+└── test-reports/              # 自动化测试报告（tests/test-reports/{stage}-execute-report-{date}.md）
 ```
 
 > **与 design/07-tdd/ 的关系：** `design/07-tdd/` 是设计阶段的测试规格（给人看、给 AI 看），`tests/` 是执行验证的代码和报告。两者不重复——前者是设计产出，后者是执行产物。
@@ -547,7 +545,7 @@ PS_DATA.domainRegistry = {
 design/
 ├── domain-registry.js              # 域注册表（§5.3）
 ├── design-decisions.js             # 设计决策日志（§6.4）——记录跨步骤的设计决策及其理由
-├── raw-input/                      # 原始交互存档（§7）
+├── 01-raw-input/                    # 原始交互存档（§7）
 ├── 02-business-workflow/           # §8.1 业务工作流
 │   ├── workflow-viewer.html
 │   └── data/
@@ -568,7 +566,7 @@ design/
 ├── 06-{client-slug}/                # §8.4 页面设计（端类型见下表）
 │   ├── design-viewer.html
 │   └── data/
-├── 07-tdd/                          # §8.5 TDD 测试设计
+├── 07-tdd/{stage}/                  # §8.5 TDD 测试设计（stage=api/page-mock/miniprogram/integration）
 │   └── {domain-slug}-tdd-design.md
 └── review/                         # §9 复查报告（元流程，不编步骤号）
     ├── sync-status.js               #   资产同步状态追踪（§6.5）
@@ -861,7 +859,7 @@ review skill 负责任何调度和汇总。
 - **职责:** 测试执行（Phase 3）。运行全量测试、失败分类与溯源、修复循环至全绿、输出测试报告。
 - **前置条件:** §8.5 测试代码编译通过 + §8.6 API 代码编译通过 + 数据库已迁移
 - **输入:** §8.5 测试代码 + §8.6 API 实现 + §8.7 用户端代码
-- **产出:** 测试执行报告（`test-reports/tdd-execute-report-{date}.md`）+ 修复记录
+- **产出:** 测试执行报告（`tests/test-reports/{stage}-execute-report-{date}.md`，stage=api/page-mock/miniprogram/integration）+ 修复记录
 - **下游:** §8.9b e2e（预留）+ Review 复查门控
 
 > **⚠️ 本步骤是流水线的关键质量关口。** 测试必须全部通过（0 失败）方可进入 Review 或提交代码。
@@ -909,7 +907,7 @@ review skill 负责任何调度和汇总。
 
 3. **执行：** `npx playwright test --project=chromium`。不可用的端（如微信小程序）跳过。
 
-4. **输出：** Playwright 测试报告（HTML + JSON），追加到 `test-reports/` 目录。
+4. **输出：** Playwright 测试报告（HTML + JSON），追加到 `tests/test-reports/` 目录。
 
 5. **退出条件：** 可执行的旅程全部通过。不可执行的环境/端 → 记录跳过，不阻断。
 

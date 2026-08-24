@@ -586,7 +586,7 @@ C1 计划输出后，**必须停止**。输出以下确认提示：
 | C — i18n 硬编码检测 | `scripts/validate-i18n-usage.mjs` | 0 违规 |
 | D — 枚举 i18n 同步 | `scripts/build-enum-i18n.mjs --dry-run` | 无新枚举未同步 |
 | E — 前后端 API 对齐 | `scripts/validate-frontend-api-alignment.mjs` | PATH NOT FOUND = 0, BODY FIELD mismatch = 0 |
-| F — 架构契约校验（L2+） | `python scripts/probes/python_static.py` → `node .agents/skills/_shared/arch-contract/run.mjs --contract design/05-backend-architecture/data/arch-contract.js --facts scripts/probes/out/facts.json --report design/review/arch-contract/latest.json` | 退出码 0（未豁免 mechanical 违规 = 0） |
+| F — 架构契约校验（L2+） | `python scripts/probes/python_static.py` → `node .agents/skills/sfds/_shared/arch-contract/run.mjs --contract design/05-backend-architecture/data/arch-contract.js --facts scripts/probes/out/facts.json --report design/review/arch-contract/latest.json` | 退出码 0（未豁免 mechanical 违规 = 0） |
 
 > 项目 `scripts/` 已有 `validate-frontend-api-alignment.mjs`（Vue 3 + FastAPI 版）；其余脚本若不存在，按 Review skill §0.2 规则生成后运行。任何不通过项 → 生成问题条目，修复后再进 Review。
 > **裁剪规则（AUD-2 定案）**：校验项在目标项目**无对应资产**（如无 i18n/前端、无非架构项目）时，该项**按 PASS 处理**并在验证报告中注明「裁剪：无对应资产」；若资产存在但脚本缺失 → 生成脚本后运行，不得跳过。

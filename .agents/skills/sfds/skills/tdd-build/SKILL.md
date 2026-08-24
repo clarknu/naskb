@@ -798,21 +798,24 @@ Stage 3 的执行命令（由 `tdd-execute(integration)` 执行）——**以 `t
 
 ### 6.4 输出格式
 
+> 输出格式遵循共享规范 `_shared/consistency-check-format.md`：`summary` 字段按 §1，`type` 必须来自 §2 注册表（本 skill 的枚举已在 §2 登记），`source` 用 §3 的 `tdd-to-code`。
+
 ```json
 {
   "summary": {
-    "stage": "api | page-mock | miniprogram | integration",
-    "scope": "domain-slug or client-slug",
-    "tc_in_design": 0,
-    "tc_in_code": 0,
-    "matched_tc": 0,
+    "end_slug": "{domain|client-slug}",
+    "total_scanned": 0,
     "total_issues": 0,
-    "code_compiles": true
+    "high": 0,
+    "medium": 0,
+    "low": 0
   },
   "issues": [
     {
-      "severity": "high",
+      "severity": "high | medium | low",
       "type": "missing_endpoint_test | missing_component_test | missing_journey_test | assertion_mismatch | fixture_mismatch | compile_error | architecture_contract_missing | untraced_tc | trace_chain_broken | orphan_tc",
+      "source": "tdd-to-code",
+      "ref_path": "{上游 TDD 设计资产定位：文件 + 节点/行}",
       "detail": "...",
       "suggestion": "..."
     }

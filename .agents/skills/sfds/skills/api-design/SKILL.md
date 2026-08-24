@@ -210,7 +210,7 @@ design/04-platform-api/
 }
 ```
 
-> **完整模板**：`.agents/skills/api-design/templates/rest-domain-template.js`（含 GET 列表 + POST 创建两个带注释的示例端点）
+> **完整模板**：`.agents/skills/sfds/skills/api-design/templates/rest-domain-template.js`（含 GET 列表 + POST 创建两个带注释的示例端点）
 
 ### 4.5 模板文件
 
@@ -218,9 +218,9 @@ design/04-platform-api/
 
 | 模板 | 路径 |
 |------|------|
-| 协议定义 | `.agents/skills/api-design/templates/protocol-template.js` |
-| 设备数据（IoT） | `.agents/skills/api-design/templates/device-data-template.js` |
-| 领域数据（REST） | `.agents/skills/api-design/templates/rest-domain-template.js` |
+| 协议定义 | `.agents/skills/sfds/skills/api-design/templates/protocol-template.js` |
+| 设备数据（IoT） | `.agents/skills/sfds/skills/api-design/templates/device-data-template.js` |
+| 领域数据（REST） | `.agents/skills/sfds/skills/api-design/templates/rest-domain-template.js` |
 
 ---
 
@@ -296,7 +296,7 @@ cp design/04-platform-api/api-viewer.html publish/api/index.html
 - [ ] 每个端点：错误场景引用 §7.2 错误码区间
 - [ ] GET 端点标注 `caching`、POST 标注 `idempotency`
 - [ ] 响应定义含 JSON 示例 + 字段说明表
-- [ ] Viewer `dataFiles` 数组注册新文件
+- [ ] 新文件经 `data/loader.js` 的 files 列表注册（viewer 通过 `data/loader.js` 注入数据）
 
 ### 6.4 新增协议检查清单
 
@@ -309,7 +309,7 @@ cp design/04-platform-api/api-viewer.html publish/api/index.html
 - [ ] `sharedEnums` 含 `message_type` + `action_name`
 - [ ] `categories` 与 device section `children` 对应
 - [ ] 示例文件创建
-- [ ] Viewer `dataFiles` 数组注册新文件
+- [ ] 新文件经 `data/loader.js` 的 files 列表注册（viewer 通过 `data/loader.js` 注入数据）
 - [ ] `file://` 验证通过，0 errors
 - [ ] 发布同步覆盖子目录（铁律 7）
 
@@ -317,7 +317,7 @@ cp design/04-platform-api/api-viewer.html publish/api/index.html
 
 ## 9. Viewer 增强模式（实战沉淀）
 
-> 以下模式已在 `api-viewer.html` 参考实现中验证，新增项目或新增协议时可参照。
+> ⚠️ **当前分发的 `api-viewer.html` 为 REST 视图参考实现**（已落地域下拉、端点卡片、公共约定渲染）；本节描述的协议 Tab、三级 hash 路由、流式 RPC 渲染等增强**尚未实现于模板**（属规划中，见 §10.5 🟡）。新增项目参照时须先确认 viewer 已具备这些能力，勿将本节当作已验证事实直接套用。
 
 ### 9.1 侧边栏二级菜单
 
@@ -390,7 +390,7 @@ cp design/04-platform-api/api-viewer.html publish/api/index.html
 - **参数描述带单位**：利用 limits.unit 提供多地区单位转换提示
 - **不暴露的指令**：connect/heartbeat/status_notification/firmware_update 等平台/设备内部指令不对 AI 暴露
 
-数据文件 `data/ai-tools/tools.js`，协议定义 `data/ai-tools/protocol.js`，Viewer 注册第三个 Tab。
+数据文件 `data/ai-tools/tools.js`，协议定义 `data/ai-tools/protocol.js`，Viewer 注册第三个 Tab（**规划中**：当前 `api-viewer.html` 未实现协议/AI Tools 视图，协议资产现阶段以数据文件 + 人工查阅方式交付，见本节 🟡）。
 
 ### 10.6 AI 工具契约设计铁律（LLM 消费者视角，2026-08-23 教训固化）
 

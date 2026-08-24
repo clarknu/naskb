@@ -1,5 +1,5 @@
 // compare.mjs — 架构契约比较器（纯函数，无 IO，技术中性）
-// 规范：.agents/skills/_shared/arch-contract-spec.md（v0.1）
+// 规范：.agents/skills/sfds/_shared/arch-contract-spec.md（v0.1）
 // 输入：契约对象 + 事实对象 + 已解析的 design:// 指针值 + 今日日期
 // 输出：{ summary, issues, exitCode }，报告结构遵循 _shared/consistency-check-format.md
 

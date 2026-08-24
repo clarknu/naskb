@@ -3,7 +3,7 @@
  *
  * 职责：全 skill 的阶段归属、触发词、上下游关系、阶段出口门禁的**唯一权威登记处**。
  * 派生物（禁止手编，改了也会被下次生成覆盖）：
- *   - AGENTS.md 铁律表触发词段（scripts/generate-trigger-table.mjs 生成）
+ *   - AGENTS.md 铁律表触发词段（.agents/skills/sfds/_shared/gen/generate-trigger-table.mjs 生成）
  * 消费者：
  *   - development-standard「调度模式」（读注册表 + design/pipeline-state.js 判定下一步/门禁）
  *   - 新 skill 准入（§admission 契约：登记即接线，未登记 = 方法论孤岛）
@@ -30,6 +30,11 @@ window.SFDS_DATA["pipeline-registry"] = (function () {
       { id: "review",     name: "全量复查",   order: 10, skills: ["review"], exitGates: [{ name: "D0-D12 通过且无新问题类别", check: "review 报告 + 收敛判据（§10）" }] },
       { id: "release",    name: "发布",       order: 11, skills: ["release-management"], exitGates: [{ name: "门禁 9 项全过 + tag", check: "release/policy.md" }] }
     ],
+
+    // ═══ exitGates.check 占位符约定 ═══
+    // {slug}=域/端 slug；{client}=端 client-slug；{NN}=设计目录编号前缀（与 development-standard 编号一致，
+    // 如 ui 阶段=「06-」）。tests/test_arch_contract.py 是 Python 探针的门禁封装——架构契约门禁本身是语言无关的
+    // （node _shared/arch-contract/run.mjs 退出码 0），该 .py 只是探针适配层，其他语言用等价适配即可。
 
     // 常驻旁路（不属于主序，任意阶段可触发）
     bypass: [
@@ -128,11 +133,11 @@ window.SFDS_DATA["pipeline-registry"] = (function () {
         summary: "发布管理方法论——环境层级/发布门禁 9 项/版本规范/回滚（项目配置 release/）",
         inputs: ["全绿测试", "review 报告"], outputs: ["tag vX.Y.Z", "线上部署", "CHANGELOG"],
         upstream: ["review"], downstream: [] },
-      { name: "wechatide-skill", layer: "工具", stage: "bypass", priority: 5,
+      { name: "wechatide-automation", layer: "工具", stage: "bypass", priority: 5,
         triggers: ["微信开发者工具", "小程序预览", "小程序调试"],
-        summary: "微信开发者工具任务执行根入口（创建/编译/预览/上传/调试/云开发）",
-        inputs: ["小程序项目"], outputs: ["开发者工具操作"],
-        upstream: ["mobile-code-gen"], downstream: [] }
+        summary: "微信开发者工具（wechatide）使用与小程序自动化测试——能力门判定（有外置工具→可做自动化+做法 / 无→做不了、需补充）+ 驱动用法",
+        inputs: ["微信开发者工具", "小程序项目"], outputs: ["判定结论 / 小程序自动化测试结果"],
+        upstream: ["mobile-code-gen", "tdd-execute"], downstream: [] }
     ],
 
     // ═══ 入口架构（谁在每次会话始终在场）═══
@@ -153,7 +158,7 @@ window.SFDS_DATA["pipeline-registry"] = (function () {
       procedure: [
         "1. 在本注册表 skills[] 增加登记（或修改既有条目）",
         "2. 创建/更新 {skill}/SKILL.md（frontmatter 与登记一致；遵循 document-asset-format 如含文档产物）",
-        "3. 跑 scripts/generate-trigger-table.mjs --write 刷新 AGENTS.md 铁律表",
+        "3. 跑 .agents/skills/sfds/_shared/gen/generate-trigger-table.mjs --write 刷新 AGENTS.md 铁律表",
         "4. 涉及门禁/检查的，同步接线 review / iterate / release 对应条目"
       ],
       islandRule: "未登记本注册表的 skill = 方法论孤岛：不出现在铁律表、不被调度模式认知、不参与阶段门禁——等同不存在"
@@ -161,7 +166,7 @@ window.SFDS_DATA["pipeline-registry"] = (function () {
 
     // ═══ 分发（项目级 ↔ 全局级）═══
     distribution: {
-      projectLevel: ".agents/skills/（跟项目迭代，成熟后升全局）",
+      projectLevel: ".agents/skills/sfds/（跟项目迭代，成熟后升全局）",
       globalLevel: "~/.agents/skills/（跨项目复用）",
       reconcile: "_shared/dist/reconcile.mjs（逐 skill 版本 + 内容 hash 对账：该升级/该回流/一致）",
       rule: "对账脚本报告为分发决策依据；_shared/ 规范文件双侧保持同步"

@@ -126,5 +126,5 @@ design/{NN}-{stage}/
 
 - 任何 viewer 交付物必须在其头部注释（或同目录 data-schema.md）**声明数据契约**：全局变量 + 顶层键 schema；数据模板 / loader 清单 / 样例必须与契约完全一致。
 - **模板样例全量填充**：loader 清单每个模块都要有配套样例；原样套用模板渲染不得出现「暂无数据 / 数据未加载 / 加载失败」。
-- **回归门禁**：viewer/数据模板/loader 变更必须跑 `tools/viewer-tests/verify-fixed.mjs`（0 console error、0 pageerror、emptyTexts 为空）并通过截图人工复核。
+- **回归门禁**：viewer/数据模板/loader 变更必须跑 `.agents/skills/sfds/_shared/viewer-tests/verify-fixed.mjs`（0 console error、0 pageerror、emptyTexts 为空）并通过截图人工复核。若消费项目未安装 playwright，需先 `npm i -D playwright` + `npx playwright install chromium`。
 - 新 viewer 准入：先过以上检查再合入。

@@ -958,7 +958,7 @@ function switchDomain() {
   if (domainId === 'all') {
     // 渲染总 ER 全景
     container.innerHTML = renderCoreER();
-    document.getElementById('stats').textContent = '跨域全景 — 全部 8 个域';
+    document.getElementById('stats').textContent = '跨域全景 — 全部 ' + Object.keys(ALL_DATA.domains).length + ' 个域';
     container.querySelectorAll('a[href^="?domain="]').forEach(function(a) {
       a.addEventListener('click', function(e) {
         e.preventDefault();

@@ -5,7 +5,7 @@ whenToUse: "任何时候，只要工作与项目研发相关：项目初始化�
 lineage:
   origin: arb-hub
   case: CASE-011
-  note: NASKB 试行版：父技能+子技能单目录打包，迁移即整夹复制。子技能正文内的 .agents/skills/_shared/… 一律解释为 <本文件夹>/_shared/…。
+  note: NASKB 试行版：父技能+子技能单目录打包，迁移即整夹复制。bundle 内所有 `.agents/skills/…` 路径（子技能正文、模板、共享规范、脚本输出）一律解释为 `<本文件夹>/…`（本项目即 `.agents/skills/sfds/…`），即 `.agents/skills/_shared/…` → `.agents/skills/sfds/_shared/…`、`.agents/skills/<skill>/…` → `.agents/skills/sfds/skills/<skill>/…`；`~/.agents/skills/…`（全局分发）保持原样。
   children: 20
 ---
 
@@ -55,7 +55,7 @@ lineage:
 2. **读取全文**：读 `skills/<name>/SKILL.md` 的完整正文——它的 frontmatter（name/description/triggers）在 bundle 模式下只是元数据（不自动触发），**真正要执行的是它正文里的「触发条件 → 执行流程 → 输出格式」**。
 3. **按其执行**：遵循该子技能给出的步骤、命令、输出；需要模板/数据时引用同目录下的资源。
 4. **设计资产落地**：子技能内置的模板（viewer.html、data/*.js、域注册表/pipeline-state 等）在首次使用时**物化到项目 `design/` 对应编号目录**（由 `development-standard` 初始化流程统一铺设骨架）。方法论升级必须连同这些资产更新（见其 frontmatter `assets`）。
-5. **共享层**：`_shared/`（pipeline-registry.js、document-asset-format.md、arch-contract-spec.md、consistency-check-format.md 等）被相关子技能引用；bundle 模式下子技能正文的 `.agents/skills/_shared/…` 一律解释为 `<本文件夹>/_shared/…`。
+5. **共享层（全 bundle 通用路径约定）**：`_shared/`（pipeline-registry.js、document-asset-format.md、arch-contract-spec.md、consistency-check-format.md 等）被相关子技能引用；bundle 模式下**正文/模板/共享规范/脚本输出**中的 `.agents/skills/…` 一律解释为 `<本文件夹>/…`（本项目 = `.agents/skills/sfds/…`）——即 `.agents/skills/_shared/…` → `.agents/skills/sfds/_shared/…`、`.agents/skills/<skill>/…` → `.agents/skills/sfds/skills/<skill>/…`；`~/.agents/skills/…`（全局分发）保持原样。
 6. **审计/裁决件**：各子技能的 MERGE-NOTES / ACCEPTANCE / CHANGELOG 已移到 `_audit/<能力>/` 下，供查证该能力域的三方分歧与仲裁结论，不参与运行。
 
 ## 项目首次接入（初始化）

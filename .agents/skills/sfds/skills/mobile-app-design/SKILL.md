@@ -617,8 +617,12 @@ PS_DATA["{client-slug}"].tree = {
 {
   "summary": {
     "end_slug": "{client-slug}",
-    "total_components_scanned": 0,
+    "total_scanned": 0,
     "total_issues": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "total_components_scanned": 0,
     "entities_covered": 0,
     "entities_uncovered": 0,
     "field_issues": 0,
@@ -631,8 +635,8 @@ PS_DATA["{client-slug}"].tree = {
     {
       "severity": "high",
       "type": "field_mismatch",
-      "source": "er-to-api",
-      "ref_path": ["标签：XX", "页面：XX", "功能区：YY", "组件：ZZ"],
+      "source": "er-to-frontend",
+      "ref_path": "页面：XX / 功能区：YY / 组件：ZZ",
       "ref_entity": "domain-slug:EntityName",
       "ref_field": "EntityName.fieldName",
       "detail": "字段 Competition.old_status 在 ER 中已不存在",

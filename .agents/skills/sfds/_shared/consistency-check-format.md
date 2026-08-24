@@ -66,8 +66,17 @@
 | `api_call_mismatch` | 前端 API 调用与后端路由/DTO 不一致 | mobile-code-gen, desktop-code-gen, review |
 | `design_code_mismatch` | 代码与设计不一致 | api-code-gen, mobile-code-gen, desktop-code-gen |
 | `arch_rule_violation` | 分层/模块边界/缓存/可靠性等架构约束违反 | backend-architecture-design, api-code-gen |
-| `test_case_missing` | TDD 用例缺失 | tdd-build |
+| `test_case_missing` | TDD 用例缺失（泛用，详见下方 tdd-build 细类） | tdd-build |
 | `assertion_mismatch` | 测试断言与 TDD 设计不一致 | tdd-build |
+| `missing_endpoint_test` | API TDD 用例缺失 | tdd-build |
+| `missing_component_test` | 页面组件 TDD 用例缺失 | tdd-build |
+| `missing_journey_test` | 关键旅程 TDD 用例缺失 | tdd-build |
+| `fixture_mismatch` | TDD 设计声明的 fixture 与代码构造不一致 | tdd-build |
+| `compile_error` | 测试代码编译/语法未通过 | tdd-build |
+| `architecture_contract_missing` | 架构契约未声明/未登记 enforcement | tdd-build, backend-architecture-design |
+| `untraced_tc` | 测试用例无正向追溯链 | tdd-build |
+| `trace_chain_broken` | 测试用例追溯链中间断裂 | tdd-build |
+| `orphan_tc` | 测试用例无上游设计依据 | tdd-build |
 | `data_flow_broken` | 跨步骤数据流断裂（上游产出下游未接收） | 全部 skill |
 | `untraceable` | 无法追溯到原始需求 | 全部 skill |
 
@@ -90,6 +99,9 @@
 | `code-to-api` | 页面代码 → API 代码（前后端集成） | review（委托 code-gen） |
 | `tdd-to-code` | TDD 设计 → 测试代码 | tdd-build |
 | `test-to-api` | 测试代码 → API 代码（执行验证） | tdd-execute |
+| `raw-input-to-workflow` | 原始需求 → 工作流 | review（D1 原始需求追溯） |
+| `raw-input-to-er` | 原始需求 → ER | review（D1 原始需求追溯） |
+| `raw-input-to-frontend` | 原始需求 → 前端功能设计 | review（D1 原始需求追溯） |
 
 ## 4. review 汇总规则
 
@@ -104,4 +116,4 @@ review skill 调度各 skill 的一致性检查模式后，按以下规则合并
 
 - 修改本文件后，必须同步检查所有引用方 SKILL.md 中的枚举描述是否一致
 - 新增枚举必须先在 §2/§3 注册，再被 skill 引用
-- 本文件随 `_shared/` 目录整体分发：项目级 `.agents/skills/_shared/` 与全局 `~/.agents/skills/_shared/` 保持同步
+- 本文件随 `_shared/` 目录整体分发：项目级 `.agents/skills/sfds/_shared/` 与全局 `~/.agents/skills/_shared/` 保持同步

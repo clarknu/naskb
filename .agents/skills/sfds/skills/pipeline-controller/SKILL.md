@@ -104,7 +104,7 @@ lineage:
 
 ## 首次使用（bootstrap）
 
-在某个项目第一次用时：把 `templates/pipeline.md` 复制为 `<项目>/.pipeline/PIPELINE.md`；在 `.pipeline/` 下放入 `scripts/lock.ps1`、`scripts/freshness.ps1`；探测该项目可用的 verify 命令（读 package.json / 构建脚本），列给用户确认后写入 PIPELINE.md。之后该项目的队列就由这份文件驱动。
+在某个项目第一次用时：把本 skill 自带的 `templates/PIPELINE.md` 复制为 `<项目>/.pipeline/PIPELINE.md`；把 `scripts/lock.ps1`、`scripts/freshness.ps1`（本 skill 自带）复制到 `<项目>/.pipeline/`（与下方文件布局一致：脚本在 `.pipeline/` 根，无 `scripts/` 子层）；探测该项目可用的 verify 命令（读 package.json / 构建脚本），列给用户确认后写入 PIPELINE.md。之后该项目的队列就由这份文件驱动。
 
 ## 文件布局（每项目）
 

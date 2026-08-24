@@ -582,15 +582,19 @@ PS_DATA["{client-slug}"].tree = {
 {
   "summary": {
     "end_slug": "operation-ui",
-    "total_components_scanned": 0,
-    "total_issues": 0
+    "total_scanned": 0,
+    "total_issues": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "total_components_scanned": 0
   },
   "issues": [
     {
       "severity": "high",
       "type": "field_mismatch",
-      "source": "xx-to-xx",
-      "ref_path": ["页面：XX", "功能区：YY", "组件：ZZ"],
+      "source": "er-to-frontend",
+      "ref_path": "页面：XX / 功能区：YY / 组件：ZZ",
       "ref_entity": "domain-slug:EntityName",
       "detail": "字段 Competition.old_status 在 ER 中已不存在",
       "suggestion": "更新 refFields 和 desc 中的状态描述"

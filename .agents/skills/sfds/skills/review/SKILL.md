@@ -565,7 +565,7 @@ Review 检查的是全链条产物的一致性。所有被检查的产物必须�
 
 | 检查项 | 方法 |
 |--------|------|
-| **架构契约机械校验（L2+，先行）** | **运行器判定，非人读：`node .agents/skills/_shared/arch-contract/run.mjs --contract design/05-backend-architecture/data/arch-contract.js --facts scripts/probes/out/facts.json --report design/review/arch-contract/latest.json`（探针先跑）。退出码 0 = mechanical 全过；非 0 → 逐条看 high 未豁免违规。mechanical 部分以报告为准不再人读代码，AI 仅走查 heuristic WARN 与契约 reviewLedger（规范 `_shared/arch-contract-spec.md` §10）** |
+| **架构契约机械校验（L2+，先行）** | **运行器判定，非人读：`node .agents/skills/sfds/_shared/arch-contract/run.mjs --contract design/05-backend-architecture/data/arch-contract.js --facts scripts/probes/out/facts.json --report design/review/arch-contract/latest.json`（探针先跑）。退出码 0 = mechanical 全过；非 0 → 逐条看 high 未豁免违规。mechanical 部分以报告为准不再人读代码，AI 仅走查 heuristic WARN 与契约 reviewLedger（规范 `_shared/arch-contract-spec.md` §10）** |
 | 跨域实体引用是否在 core-er.js 中注册 | cross_domain → core_relations |
 | 引用实体的 slug 是否与域注册表一致 | slug → domain-registry |
 | API 跨域调用链是否完整 | 上下游端点 |

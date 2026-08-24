@@ -75,7 +75,7 @@ AI 是约束的作者和被约束者，不是约束的裁判。**
 
 | 组成 | 归属 | 稳定性 |
 |------|------|--------|
-| 本规范 + runner.mjs + compare.mjs | skill 分发（`.agents/skills/_shared/arch-contract/`） | 随 skill 版本升级，项目不修改 |
+| 本规范 + runner.mjs + compare.mjs | skill 分发（`.agents/skills/sfds/_shared/arch-contract/`） | 随 skill 版本升级，项目不修改 |
 | arch-contract.js | 项目 `design/05-backend-architecture/data/` | 随架构设计演进 |
 | 探针脚本 + golden 快照 | 项目 `scripts/probes/` | 换技术栈时重写，仅此一处 |
 | 门禁接线 | 项目（release policy / iterate C3.1 / pytest） | 一次接线 |
@@ -360,12 +360,12 @@ AI 修改探针后必须重跑并 diff 快照——**非预期 diff 即探针回
 ## 7. 运行器与比较器（skill 分发）
 
 ```
-.agents/skills/_shared/arch-contract/
+.agents/skills/sfds/_shared/arch-contract/
   run.mjs        # 运行器：加载契约 → 校验 facts schema → 解析 design:// 指针 → 调比较器 → 出报告
   compare.mjs    # 比较器：纯 JSON in / JSON out，只做分组匹配 + 集合运算，无 IO 副作用
 ```
 
-- 调用：`node .agents/skills/_shared/arch-contract/run.mjs --contract design/.../arch-contract.js --facts scripts/probes/out/facts.json --report design/review/arch-contract/<date>.json`
+- 调用：`node .agents/skills/sfds/_shared/arch-contract/run.mjs --contract design/.../arch-contract.js --facts scripts/probes/out/facts.json --report design/review/arch-contract/<date>.json`
 - **退出码：** `0` = 通过（含 warn-only）；`1` = 存在未豁免的 mechanical 违规或豁免已过期；`2` = 基础设施失败（schema 不合、指针解析失败、探针崩溃）。
 - 报告结构遵循 `consistency-check-format.md`，扩展字段：`issues[].ruleId`、`issues[].enforcement`、`issues[].debtMatched`；`summary` 增加 `rulesChecked` / `debtsActive` / `unmatchedUnits`。type 用 `arch_rule_violation`，source 用 `architecture-to-code`，report producer 记 `backend-architecture-design`。
 
@@ -467,6 +467,6 @@ knownDebts: [
 
 ## 14. 变更管理
 
-- 本文件随 `_shared/` 目录整体分发（项目级 `.agents/skills/_shared/` ↔ 全局 `~/.agents/skills/_shared/`），与 `consistency-check-format.md` 同步策略一致。
+- 本文件随 `_shared/` 目录整体分发（项目级 `.agents/skills/sfds/_shared/` ↔ 全局 `~/.agents/skills/_shared/`），与 `consistency-check-format.md` 同步策略一致。
 - 修改文法/事实 schema/退出码 → 升版本号并在文首记录；下游（runner/compare、各 SKILL.md 接线、项目契约）同步检查。
 - v0.1 → v1.0 的转正条件：首个项目完成 §11 六步实例化 + 一轮发布门禁真实拦截记录。

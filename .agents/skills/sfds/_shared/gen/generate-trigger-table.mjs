@@ -2,8 +2,8 @@
 // generate-trigger-table.mjs — 从 pipeline-registry.js 生成 AGENTS.md 铁律表（单一真相源的派生物）
 //
 // 用法：
-//   node .agents/skills/_shared/gen/generate-trigger-table.mjs            # 预览（stdout）
-//   node .agents/skills/_shared/gen/generate-trigger-table.mjs --write     # 写入 AGENTS.md（需已存在标记块）
+//   node .agents/skills/sfds/_shared/gen/generate-trigger-table.mjs            # 预览（stdout）
+//   node .agents/skills/sfds/_shared/gen/generate-trigger-table.mjs --write     # 写入 AGENTS.md（需已存在标记块）
 //
 // 标记块（AGENTS.md 内手工放置一次）：
 //   <!-- BEGIN skill-table (generated from pipeline-registry.js; edit registry, not here) -->
@@ -38,7 +38,7 @@ const block = [
   '',
   '> **任何任务，只要其意图与下表触发词匹配，必须先调用对应 Skill，按技能规定的流程推进工作。**',
   '> **禁止**在未加载 Skill 的情况下直接对 `design/` 或 `src/` 做 Read→Edit→Write 操作。',
-  '> 本表由 `.agents/skills/_shared/pipeline-registry.js` 生成（`node .agents/skills/_shared/gen/generate-trigger-table.mjs --write`），勿手编。',
+  '> 本表由 `.agents/skills/sfds/_shared/pipeline-registry.js` 生成（`node .agents/skills/sfds/_shared/gen/generate-trigger-table.mjs --write`），勿手编。',
   '',
   '| 触发词 | 技能 | 层 | 一句话 |',
   '|--------|------|----|------|',

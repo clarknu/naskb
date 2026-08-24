@@ -11,7 +11,7 @@ window.PIPELINE_DATA["pipeline-state"] = (function () {
   return {
     version: "1",
     projectName: "{{project-name}}",
-    registryRef: ".agents/skills/_shared/pipeline-registry.js",
+    registryRef: ".agents/skills/sfds/_shared/pipeline-registry.js",
 
     stages: [
       { id: "raw-input",  status: "in-progress", evidence: [], note: "起始阶段" },
