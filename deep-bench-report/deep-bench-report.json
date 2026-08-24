@@ -1,0 +1,61 @@
+{
+  "synthetic": "self-built structure (fictional values)",
+  "n_questions": 9,
+  "sweep": [
+    {
+      "target_chars": 800,
+      "limit_chars": 1200,
+      "overlap_ratio": 0.12,
+      "n_chunks": 15,
+      "scored": 9,
+      "recall@3": 1.0,
+      "recall@5": 1.0
+    },
+    {
+      "target_chars": 500,
+      "limit_chars": 800,
+      "overlap_ratio": 0.12,
+      "n_chunks": 15,
+      "scored": 9,
+      "recall@3": 1.0,
+      "recall@5": 1.0
+    },
+    {
+      "target_chars": 500,
+      "limit_chars": 800,
+      "overlap_ratio": 0.25,
+      "n_chunks": 15,
+      "scored": 9,
+      "recall@3": 1.0,
+      "recall@5": 1.0
+    },
+    {
+      "target_chars": 1000,
+      "limit_chars": 1600,
+      "overlap_ratio": 0.12,
+      "n_chunks": 15,
+      "scored": 9,
+      "recall@3": 1.0,
+      "recall@5": 1.0
+    },
+    {
+      "target_chars": 800,
+      "limit_chars": 1200,
+      "overlap_ratio": 0.0,
+      "n_chunks": 15,
+      "scored": 9,
+      "recall@3": 1.0,
+      "recall@5": 1.0
+    }
+  ],
+  "recommended": {
+    "target_chars": 800,
+    "limit_chars": 1200,
+    "overlap_ratio": 0.12,
+    "n_chunks": 15,
+    "scored": 9,
+    "recall@3": 1.0,
+    "recall@5": 1.0
+  },
+  "note": "合成基准锁定的初始参数；真实标准文档后续验证可再微调。摘要级检索只能整文件召回、无法到条款，故不与其并列比 recall，仅作为『条款级能定位到条款』的结构性对照。"
+}

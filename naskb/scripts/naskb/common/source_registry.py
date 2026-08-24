@@ -44,6 +44,7 @@ class SourceRecord:
     label: str = ""
     scan_auto: bool = False            # 调度器自动周期扫描
     scan_interval_min: int = 60
+    deep: bool = False                 # 来源级深度分析（REQ-R5-06：分析时自动建条款级 chunk）
     enabled: bool = True
     verify_ssl: bool = True
     source_id: str = field(
@@ -180,7 +181,8 @@ class SourceRegistry:
     def update(self, source_id: str, **fields) -> SourceRecord:
         allowed = {"alias", "protocol", "host", "port", "username",
                    "password", "root_path", "url", "access_mode", "label",
-                   "scan_auto", "scan_interval_min", "enabled", "verify_ssl"}
+                   "scan_auto", "scan_interval_min", "deep", "enabled",
+                   "verify_ssl"}
         with self._lock:
             rows = self._load_all()
             target = None

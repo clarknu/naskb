@@ -172,6 +172,10 @@ class KnowledgeCore:
     def set_llm(self, client) -> None:
         self._llm = client
 
+    def get_llm(self):
+        """暴露 LLM 客户端（平台 /api/kb/ask 深度问答用；未配置返回 None）。"""
+        return self._llm
+
 
 # ═══════════════════════════════════════════════════════════════════
 # HTTP 层

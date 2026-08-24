@@ -37,7 +37,8 @@ def staging_repo_dir(work_path: str, source_id: str) -> str:
     return os.path.join(work_path, "store", "tmp", "repos", source_id)
 
 
-def _doc_from_entry(rel: str, entry: FileEntry, data_full: Optional[FileEntry]) -> Doc:
+def _doc_from_entry(rel: str, entry: FileEntry, data_full: Optional[FileEntry],
+                    repo_dir: Optional[str] = None) -> Doc:
     if data_full is not None:
         entry = data_full
     text = "\n".join(x for x in (
@@ -46,12 +47,19 @@ def _doc_from_entry(rel: str, entry: FileEntry, data_full: Optional[FileEntry]) 
     context = "\n".join(x for x in (
         rel, entry.summary, entry.category, " ".join(entry.tags),
         entry.content_description, entry.transcription, entry.ocr_text) if x)
+    artifacts = entry.exif.get("mineru_artifacts") or {}
+    md_abs = ""
+    if repo_dir and artifacts.get("md_path"):
+        md_abs = os.path.join(
+            repo_dir, REPO_DIR_NAME, str(artifacts["md_path"]).lstrip("/\\"),
+        ).replace("\\", "/")
     return Doc(
         path=rel, kind="file", text=text,
         summary=entry.summary, category=entry.category, tags=entry.tags,
         content_description=entry.content_description,
         file_type=entry.file_type or "",
-        artifacts=entry.exif.get("mineru_artifacts") or {},
+        artifacts=artifacts,
+        md_abs=md_abs,
         context=context, file_hash=entry.file_hash,
         hash_algorithm=entry.hash_algorithm, size_bytes=entry.size_bytes,
         mtime=entry.mtime, ctime=entry.ctime,
@@ -77,12 +85,12 @@ def collect_staging_docs(staging_adapter: FileSystemAdapter,
         if not isinstance(data, dict):
             continue
         if f.name == "index.json":
+            repo_dir = os.path.dirname(os.path.dirname(f.path))
             for raw in data.get("files") or []:
                 entry = FileEntry.from_dict(raw)
                 full = None
                 df = raw.get("data_file")
                 if df:
-                    repo_dir = os.path.dirname(os.path.dirname(f.path))
                     df_path = os.path.join(repo_dir, REPO_DIR_NAME,
                                            "files", df).replace("\\", "/")
                     if staging_adapter.exists(df_path):
@@ -92,7 +100,8 @@ def collect_staging_docs(staging_adapter: FileSystemAdapter,
                 rel = raw.get("path") or ""
                 if not rel or not text_nonempty(entry):
                     continue
-                file_docs.append(_doc_from_entry(rel, entry, full))
+                file_docs.append(_doc_from_entry(rel, entry, full,
+                                                 repo_dir=repo_dir))
         else:
             fe = FolderEntry.from_dict(data)
             rel_dir = os.path.dirname(os.path.dirname(f.path))
@@ -140,6 +149,34 @@ def cleanup_artifacts(work_path: str, source_id: str) -> int:
                 dirs.remove(d)
                 removed += 1
     return removed
+
+
+def _enrich_deep(pg, schema, file_docs, source, config, embedder) -> dict:
+    """来源级深度分析钩子（REQ-R5-06）：整源（match_all）生成条款级 chunk 行。
+
+    用暂存 md（`_doc_from_entry` 已解析的 doc.md_abs）；可写源/只读源皆可。
+    在 `cleanup_artifacts` 之前调用，暂存 md 此时仍在。
+    """
+    if not getattr(source, "deep", False):
+        return {"skipped": "deep 未开启"}
+    deep_cfg = config.deep_doc_cfg()
+    deep_cfg["enabled"] = True          # 来源级开关即显式启用
+    deep_docs = [d for d in file_docs if d.text.strip()]
+
+    def read_md(d):
+        if not d.md_abs:
+            return None
+        try:
+            with open(d.md_abs, encoding="utf-8") as fh:
+                return fh.read()
+        except Exception:
+            return None
+
+    st = pg.sync_chunks(schema, deep_docs, deep_cfg=deep_cfg,
+                        embedder=embedder, source_id=source.source_id,
+                        read_md=read_md, match_all=True)
+    return {k: v for k, v in st.items() if k != "errors"} | {
+        "errors": st["errors"][:10]}
 
 
 def enrich_source(source: SourceRecord, pg: PgStore, config,
@@ -205,9 +242,13 @@ def enrich_source(source: SourceRecord, pg: PgStore, config,
                         summary=fd.summary, description=fd.context,
                         tags=fd.tags)
             report["folders"] = len(folder_docs)
+            # 来源级深度分析（REQ-R5-06）：在清理暂存 md 之前生成 chunk
+            report["deep"] = _enrich_deep(
+                pg, schema, file_docs, source, config, embedder)
         else:
             report["sync"] = {"skipped": "schema 未派生（来源未完成注册校验）"}
             report["folders"] = 0
+            report["deep"] = {"skipped": "schema 未派生"}
     finally:
         embedder.close()
 

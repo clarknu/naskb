@@ -26,10 +26,12 @@ class PgSearchEngine:
 
     def search(self, query: str, top_k: int = 10,
                kind: Optional[str] = None,
-               schema: Optional[str] = None) -> list[dict]:
+               schema: Optional[str] = None,
+               level: str = "summary") -> list[dict]:
         """语义检索指定 NAS schema；返回与 BM25Index.search 同构的结果。
 
         schema 缺省依次用：默认 schema（构造时绑定）→ 注册表第一条。
+        level: 'summary'（文档级，默认）/'chunk'（条款级，REQ-R5-06）。
         """
         schema = schema or self._default_schema
         if schema is None:
@@ -38,7 +40,32 @@ class PgSearchEngine:
                 return []
             schema = nas_list[0]["schema_name"]
         vec = self._emb.encode_one(query)
-        rows = self._pg.search(schema, vec, top_k=top_k, model=EMBEDDING_MODEL)
+        rows = self._pg.search(schema, vec, top_k=top_k, model=EMBEDDING_MODEL,
+                               level=level)
+        return self._render(rows, kind, schema, level)
+
+    def search_chunks(self, query: str, top_k: int = 10,
+                      schema: Optional[str] = None,
+                      score_min: Optional[float] = None) -> list[dict]:
+        """条款级检索（REQ-R5-06）：只查 level='chunk' 行，暴露 title_path。
+
+        供深度问答（两级引用/保真直返）与 /api/kb/ask 使用。
+        """
+        schema = schema or self._default_schema
+        if schema is None:
+            nas_list = self._pg.list_nas()
+            if not nas_list:
+                return []
+            schema = nas_list[0]["schema_name"]
+        vec = self._emb.encode_one(query)
+        rows = self._pg.search(schema, vec, top_k=top_k, model=EMBEDDING_MODEL,
+                               level="chunk")
+        hits = self._render(rows, None, schema, "chunk")
+        if score_min is not None:
+            hits = [h for h in hits if h["score"] >= score_min]
+        return hits
+
+    def _render(self, rows, kind, schema, level) -> list[dict]:
         hits = []
         for r in rows:
             if kind and r["kind"] != kind:
@@ -47,6 +74,9 @@ class PgSearchEngine:
                 "score": float(r["score"]),
                 "path": r["path"],
                 "kind": r["kind"],
+                "level": r.get("level") or level,
+                "chunk_seq": r.get("chunk_seq"),
+                "title_path": list(r.get("title_path") or []),
                 "summary": r["summary"],
                 "category": r["category"],
                 "tags": list(r["tags"] or []),
