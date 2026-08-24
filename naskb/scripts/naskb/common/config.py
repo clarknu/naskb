@@ -118,8 +118,8 @@ class Config:
         self.pg_user: str = pg_cfg.get("user", "")
         self.pg_password: str = pg_cfg.get("password", "")
         self.pg_database: str = pg_cfg.get("database", "naskb")
-        self.pg_vector_table: str = pg_cfg.get("vector_table", "naskb_vectors")
-        self.pg_vector_dim: int = int(pg_cfg.get("vector_dim", 512))
+        # ⚠️ 已废弃（DD-009 批次 B-04）：pg_vector_table/pg_vector_dim 从未被代码使用
+        #（pgstore 硬编码 EMBEDDING_DIM=512、表名 schema.vectors），不再读取/保存。
 
         # ── [nas]（NAS 列表：多台各自命名，主配置来源）──
         self.nas_list: list[dict[str, Any]] = []
@@ -148,8 +148,44 @@ class Config:
         server_cfg = data.get("server", {})
         self.server_tokens: list[str] = [
             str(t) for t in (server_cfg.get("tokens") or []) if str(t).strip()]
-        self.anonymous_read: bool = bool(
-            server_cfg.get("anonymous_read", True))
+        # ⚠️ 已废弃（DD-009 匿名移除）：保留属性仅为兼容旧 fixture 读取（默认 False），
+        # 认证逻辑不再使用匿名通道；save()/示例不再写该键。
+        self.anonymous_read: bool = False
+
+        # ── [deep]（条款级 chunk 检索增强，REQ-R5-06）──
+        deep_cfg = data.get("deep", {})
+        self.deep_enabled: bool = bool(deep_cfg.get("enabled", False))
+        self.deep_roots: list[str] = [str(r) for r in deep_cfg.get("roots", [])]
+        self.deep_target_chars: int = int(deep_cfg.get("target_chars", 800))
+        self.deep_limit_chars: int = int(deep_cfg.get("limit_chars", 1200))
+        self.deep_overlap_ratio: float = float(deep_cfg.get("overlap_ratio", 0.12))
+        self.deep_direct_return: bool = bool(deep_cfg.get("direct_return", False))
+        self.deep_direct_return_similarity: float = float(
+            deep_cfg.get("direct_return_similarity", 0.9))
+        self.deep_max_context_chars: int = int(
+            deep_cfg.get("max_context_chars", 5000))
+        self.deep_top_n: int = int(deep_cfg.get("top_n", 5))
+        self.deep_min_score: float = float(deep_cfg.get("min_score", 0.6))
+        self.deep_chunker_version: str = str(
+            deep_cfg.get("chunker_version", "1"))
+        self.deep_no_hit_mode: str = deep_cfg.get("no_hit_mode", "designated")
+
+    def deep_doc_cfg(self) -> dict:
+        """规范化 [deep] 配置，供 sync_chunks 与检索/问答层使用。"""
+        return {
+            "enabled": self.deep_enabled,
+            "roots": self.deep_roots,
+            "target_chars": self.deep_target_chars,
+            "limit_chars": self.deep_limit_chars,
+            "overlap_ratio": self.deep_overlap_ratio,
+            "direct_return": self.deep_direct_return,
+            "direct_return_similarity": self.deep_direct_return_similarity,
+            "max_context_chars": self.deep_max_context_chars,
+            "top_n": self.deep_top_n,
+            "min_score": self.deep_min_score,
+            "chunker_version": self.deep_chunker_version,
+            "no_hit_mode": self.deep_no_hit_mode,
+        }
 
     @property
     def pg_enabled(self) -> bool:
@@ -305,8 +341,6 @@ class Config:
             if self.pg_password:
                 lines.append(f'password = "{self._toml_str(self.pg_password)}"')
             lines.append(f'database = "{self._toml_str(self.pg_database)}"')
-            lines.append(f'vector_table = "{self._toml_str(self.pg_vector_table)}"')
-            lines.append(f"vector_dim = {self.pg_vector_dim}")
             lines.append("")
 
         # ── [nas]（NAS 列表）──
@@ -378,7 +412,5 @@ class Config:
                 "port": self.pg_port,
                 "user": self.pg_user,
                 "database": self.pg_database,
-                "vector_table": self.pg_vector_table,
-                "vector_dim": self.pg_vector_dim,
             },
         }

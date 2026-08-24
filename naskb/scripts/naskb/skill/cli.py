@@ -1096,7 +1096,7 @@ def desc_serve_platform(ctx, host, port):
 def desc_serve_mcp(ctx, roots, pg_flag):
     """启动 MCP server（stdio 传输）：本地 Agent（Claude Desktop/Cursor 等）接入。
 
-    工具面 14 个 kb_*（检索/问答/入库/整理）；分钟级操作返回 job_id，
+    工具面 17 个 kb_*（检索/问答/入库/整理）；分钟级操作返回 job_id，
     用 kb_job_status 查询。在 mcp.json 里配 command 为
     `naskb desc serve-mcp --root <库目录>` 即可接入。
     """
@@ -1227,6 +1227,74 @@ def desc_sync_vectors(ctx, root, nas_alias, rebuild):
         fs.close()
 
 
+@desc.command("sync-chunks")
+@click.argument("root", required=False, default=".")
+@click.option("--nas", "nas_alias", default=None,
+              help="[[nas]] 别名（缺省按当前连接方式推断 NAS 身份）")
+@click.pass_context
+def desc_sync_chunks(ctx, root, nas_alias):
+    """把深析目录的 MinerU Markdown 分段并写入条款级 chunk 向量行（REQ-R5-06）。
+
+    仅对 config.toml [deep].roots 圈定的目录生效；每个深析文档先删后建 chunk 行，
+    不触碰摘要行。需要 [deep].enabled=true 且已配置 [pg]。
+    """
+    from ..common.pgstore import PgStore
+    from ..common.retrieval import collect_docs
+
+    store, fs, config = _make_desc_store(ctx, path_hint=root)
+    try:
+        if not config.pg_enabled:
+            print("[naskb] config.toml 未配置 [pg]，跳过（PG 为可选增强）")
+            return
+        deep_cfg = config.deep_doc_cfg()
+        if not deep_cfg["enabled"]:
+            print("[naskb] [deep].enabled=false，跳过（在 config.toml 打开并设置 roots）")
+            return
+        protocol, host, port, username = _resolve_nas_identity(
+            ctx, config, nas_alias, fs)
+        pg = PgStore(config)
+        nas = pg.get_or_create_nas(protocol, host, port, username)
+        schema = nas["schema_name"]
+        print(f"[naskb] NAS 身份: {protocol}://{host}:{port} "
+              f"(user={username or '-'}) → schema {schema}")
+        print(f"[naskb] 深析根: {deep_cfg['roots']}  "
+              f"(target={deep_cfg['target_chars']}, limit={deep_cfg['limit_chars']}, "
+              f"overlap={deep_cfg['overlap_ratio']})")
+        docs = collect_docs(fs, root)
+        if not docs:
+            print("[naskb] 没有找到描述数据（先运行 desc analyze-tree）")
+            return
+
+        def _read_md(doc):
+            if not doc.md_abs:
+                return None
+            try:
+                return fs.read_text(doc.md_abs)
+            except Exception:
+                return None
+
+        stats = pg.sync_chunks(schema, docs, deep_cfg=deep_cfg,
+                               source_id=None, read_md=_read_md)
+        print("[naskb] ═══ chunk 同步汇总 ═══")
+        print(f"  命中深析文档: {stats['documents']}  "
+              f"chunk 行: {stats['chunks']}")
+        print(f"  非深析跳过: {stats['skipped_not_deep']}  "
+              f"无资源: {stats['skipped_no_resource']}  "
+              f"无 md: {stats['skipped_no_md']}  "
+              f"空文档: {stats['empty_doc']}")
+        if stats["errors"]:
+            print(f"  异常: {len(stats['errors'])} 条（见前 3 条）")
+            for e in stats["errors"][:3]:
+                print(f"    - {e}")
+        termbase = pg.list_termbase(schema)
+        if termbase:
+            print(f"[naskb] 术语表 {len(termbase)} 条（关键词通道二期用）")
+    except Exception as e:
+        raise click.ClickException(f"chunk 同步失败: {e}")
+    finally:
+        fs.close()
+
+
 @desc.command("sync-status")
 @click.argument("root", required=False, default=".")
 @click.option("--nas", "nas_alias", default=None,
@@ -1333,7 +1401,7 @@ def desc_pg_status(ctx):
 def desc_adopt(ctx, root, nas_alias):
     """收编存量 .naskb：把来源端已有的描述仓库导入系统 PG 主库（REQ-R7-13）。"""
     from ..common.config import Config
-    from ..common.source_registry import SourceRecord, SourceRegistry
+    from ..common.source_registry import ACCESS_MODES, SourceRecord, SourceRegistry
 
     config = Config.from_work_path(_get_work_path(ctx.obj.get("work_path")))
     if not config.pg_enabled:
@@ -1347,7 +1415,7 @@ def desc_adopt(ctx, root, nas_alias):
     rec = SourceRecord(
         alias="adopt-" + (nas_alias or (host or "local"))[:24],
         protocol=protocol, host=host, port=port, username=username,
-        root_path=root, access_mode="rw", scan_auto=False)
+        root_path=root, access_mode=ACCESS_MODES[0], scan_auto=False)
     reg = SourceRegistry(config2)
     existing = reg.get(rec.alias)
     rec = existing if existing else reg.create(rec)
@@ -1379,6 +1447,177 @@ def desc_export_repo(ctx, out_dir, nas_alias, root):
     from ..common.pgstore import PgStore
     result = export_repo(PgStore(config), config, rec, out_dir)
     print(f"[naskb] 导出完成: {result}")
+
+
+@desc.command("export-clean")
+@click.argument("out_dir")
+@click.option("--root", "root", default=".", help="来源根（用于推断 NAS 身份）")
+@click.option("--zip", is_flag=True, default=False,
+              help="打包为单个 ZIP（默认输出为目录）")
+@click.pass_context
+def desc_export_clean(ctx, out_dir, root, zip):
+    """把 .naskb 分析产物导出为干净 Markdown/ZIP（REQ-R5-02 公共资产）。
+
+    供外部深度引擎消费或人工取用；每文档一个 .md（front matter + 摘要 + 全文）。
+    """
+    from ..common.retrieval import collect_docs
+    from ..common.clean_export import export_clean
+
+    store, fs, config = _make_desc_store(ctx, path_hint=root)
+    try:
+        docs = collect_docs(fs, root)
+        file_docs = [d for d in docs if d.kind == "file"]
+        if not file_docs:
+            print("[naskb] 没有找到描述数据（先运行 desc analyze-tree）")
+            return
+        result = export_clean(file_docs, out_dir, zip=zip)
+        print(f"[naskb] 导出 {result['files']} 个文件、"
+              f"{result['chars']} 字符 → {result['out']}")
+    except Exception as e:
+        raise click.ClickException(f"导出失败: {e}")
+    finally:
+        fs.close()
+
+
+@desc.command("termbase-add")
+@click.argument("terms", nargs=-1, required=True)
+@click.option("--nas", "nas_alias", default=None, help="[[nas]] 别名")
+@click.pass_context
+def desc_termbase_add(ctx, terms, nas_alias):
+    """向当前 NAS 术语表写入词条（jieba 自定义词典，关键词通道二期用）。
+
+    术语作为用户词典双向注入（索引+查询），保证型号/产品名不被切碎。
+    """
+    from ..common.pgstore import PgStore
+
+    store, fs, config = _make_desc_store(ctx, path_hint=".")
+    try:
+        if not config.pg_enabled:
+            print("[naskb] 术语表需要 config.toml 配置 [pg]")
+            return
+        protocol, host, port, username = _resolve_nas_identity(
+            ctx, config, nas_alias, fs)
+        pg = PgStore(config)
+        nas = pg.get_or_create_nas(protocol, host, port, username)
+        n = pg.add_termbase(nas["schema_name"], terms)
+        print(f"[naskb] 新增 {n} 条术语 → {nas['schema_name']}")
+    except Exception as e:
+        raise click.ClickException(f"术语写入失败: {e}")
+    finally:
+        fs.close()
+
+
+@desc.command("termbase-list")
+@click.option("--nas", "nas_alias", default=None, help="[[nas]] 别名")
+@click.pass_context
+def desc_termbase_list(ctx, nas_alias):
+    """列出当前 NAS 术语表（关键词通道二期用）。"""
+    from ..common.pgstore import PgStore
+
+    store, fs, config = _make_desc_store(ctx, path_hint=".")
+    try:
+        if not config.pg_enabled:
+            print("[naskb] 术语表需要 config.toml 配置 [pg]")
+            return
+        protocol, host, port, username = _resolve_nas_identity(
+            ctx, config, nas_alias, fs)
+        pg = PgStore(config)
+        nas = pg.get_or_create_nas(protocol, host, port, username)
+        terms = pg.list_termbase(nas["schema_name"])
+        if terms:
+            print(f"[naskb] 术语表（{len(terms)} 条）→ {nas['schema_name']}:")
+            for t in terms:
+                print(f"  - {t}")
+        else:
+            print(f"[naskb] 术语表为空（用 desc termbase-add 添加）")
+    except Exception as e:
+        raise click.ClickException(f"术语读取失败: {e}")
+    finally:
+        fs.close()
+
+
+@desc.command("deep-eval")
+@click.argument("root", required=False, default=".")
+@click.option("--questions", required=True,
+              help="JSON 问题集：{\"questions\":[{\"q\":\"...\",\"expect\":\"...\"}]} "
+                   "或纯字符串数组")
+@click.option("--nas", "nas_alias", default=None, help="[[nas]] 别名")
+@click.option("--out", default="deep-eval-report", show_default=True,
+              help="报告输出目录")
+@click.pass_context
+def desc_deep_eval(ctx, root, questions, nas_alias, out):
+    """深度分析评测（REQ-R5-06 Stage 3）：条款级 vs 摘要级 固定问题集对比。
+
+    需要 [pg] + [llm.text] 配置；对每题同时跑 chunk 级（两级引用）与摘要级各一遍，
+    输出 report.json（含逐题结果 + 聚合指标），用于调 target/limit/overlap/min_score。
+    """
+    from ..common.pgstore import PgStore
+    from ..common.pgsearch import PgSearchEngine
+    from ..common.deep_eval import load_questions, run_eval, write_report
+
+    store, fs, config = _make_desc_store(ctx, path_hint=root)
+    try:
+        if not config.pg_enabled:
+            print("[naskb] 评测需要 config.toml 配置 [pg]")
+            return
+        deep_cfg = config.deep_doc_cfg()
+        if not deep_cfg["enabled"]:
+            print("[naskb] 提示：[deep].enabled=false（chunk 路径为空，对比将偏向摘要级）")
+        if not getattr(config, "llm_text", None):
+            print("[naskb] 评测需要 [llm.text] 配置（DeepSeek）")
+            return
+        protocol, host, port, username = _resolve_nas_identity(
+            ctx, config, nas_alias, fs)
+        pg = PgStore(config)
+        nas = pg.get_or_create_nas(protocol, host, port, username)
+        schema = nas["schema_name"]
+        from ..common.llm import LLMConfig, create_llm_client
+        llm = create_llm_client(LLMConfig.from_dict(config.llm_text))
+        engine = PgSearchEngine(pg, config.work_path, default_schema=schema)
+        try:
+            qs = load_questions(questions)
+            if not qs:
+                print("[naskb] 问题集为空")
+                return
+            results = run_eval(engine, llm, deep_cfg, schema, qs)
+            write_report(results, out)
+        finally:
+            engine.close()
+    except Exception as e:
+        raise click.ClickException(f"评测失败: {e}")
+    finally:
+        fs.close()
+
+
+@desc.command("deep-bench")
+@click.option("--out", default="deep-bench-report", show_default=True,
+              help="报告输出目录")
+@click.pass_context
+def desc_deep_bench(ctx, out):
+    """合成基准确认（Stage 3）：条款级检索召回 + 参数扫描，锁定初始参数。
+
+    用结构逼真的合成标准 + 代码生成问题集（期望条款由构造保证），
+    对 target/limit/overlap 网格扫描，按 recall@5 选优。无需真实标准/
+    人工标注；[llm.text] 非必需（只做检索召回，不调 LLM）。
+    """
+    from ..common.deep_bench import benchmark
+
+    work = _get_work_path(ctx.obj.get("work_path"))
+    res = benchmark(work, write_report_to=out)
+    if "error" in res:
+        print(f"[naskb] {res['error']}")
+        return
+    print(f"[naskb] 合成基准（{res['n_questions']} 题，自建结构/虚构数值）")
+    for s in res["sweep"]:
+        print(f"  target={s['target_chars']} limit={s['limit_chars']} "
+              f"overlap={s['overlap_ratio']:.2f} → {s['n_chunks']} 块, "
+              f"recall@3={s['recall@3']:.2%}, recall@5={s['recall@5']:.2%}")
+    if res["recommended"]:
+        b = res["recommended"]
+        print(f"[naskb] 推荐初始参数: target={b['target_chars']} "
+              f"limit={b['limit_chars']} overlap={b['overlap_ratio']} "
+              f"(recall@5={b['recall@5']:.2%})")
+    print(f"[naskb] {res['note']}")
 
 
 @desc.command("pg-rebind")

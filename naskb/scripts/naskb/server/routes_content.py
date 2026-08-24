@@ -61,6 +61,39 @@ def register_content_routes(app) -> None:
     def _ext(name: str) -> str:
         return name.rsplit(".", 1)[-1].lower() if "." in name else ""
 
+    # ── 目录条目（/api/folder，DD-009 拍板接回 2026-08-24）──
+
+    @app.get("/api/folder")
+    async def folder_entry(request: Request, src: str = Query(""),
+                           dir: str = Query("")):
+        s = st(request)
+        if s.pg is None:
+            raise HTTPException(400, detail="目录条目需要配置 [pg] 知识主库")
+        record = s.registry.get(src)
+        if record is None:
+            raise HTTPException(404, detail=f"来源不存在: {src}")
+        rel = dir.strip().strip("/")
+        entry = None
+        get_folder = getattr(s.pg, "get_folder", None)
+        if get_folder is not None:
+            entry = get_folder(record.schema_name, record.source_id, rel)
+        if entry is not None:
+            entry["source"] = "folders"
+        else:
+            # 兜底：现场枚举（空目录=合法条目；folders 表未登记时仍给一致结构）
+            _dirs, files = s.pg.list_dir(record.schema_name,
+                                         record.source_id, rel)
+            entry = {
+                "rel_path": rel,
+                "name": rel.split("/")[-1] if rel else record.alias,
+                "summary": None,
+                "description": None,
+                "tags": [],
+                "file_count": len(files),
+                "source": "generated",
+            }
+        return {"folder": entry}
+
     # ── 目录浏览（罗列检索，REQ-R7-09）──
 
     @app.get("/api/tree")

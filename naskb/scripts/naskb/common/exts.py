@@ -20,6 +20,13 @@ from pathlib import Path
 
 DOC_EXTS = {".txt", ".md", ".pdf", ".docx", ".xlsx", ".pptx", ".doc", ".xls",
             ".km", ".mmap", ".csv", ".json", ".rtf"}
+# 纯文本子集（§B-05 统一：文档分析器快速提取路径使用，权威定义在此，
+# 与 DOC_EXTS 的关系 = 可走"纯文本直读"的文档扩展名集合（⊆ 文档类全集 + 少量代码/配置文本））
+TEXT_EXTS = {
+    ".txt", ".md", ".markdown", ".rst", ".org", ".adoc", ".asciidoc",
+    ".csv", ".tsv", ".json", ".yaml", ".yml", ".toml", ".xml",
+    ".html", ".htm", ".css", ".js", ".ts", ".py", ".log", ".ini", ".cfg",
+}
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tif",
               ".tiff", ".heic", ".avif"}
 AUDIO_EXTS = {".mp3", ".wav", ".m4a", ".flac", ".aac", ".ogg", ".wma",

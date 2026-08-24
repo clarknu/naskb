@@ -44,6 +44,32 @@ class TestLegacyContract:
                                  "total_docs", "nas"}
         assert isinstance(d["hits"], list)
 
+
+class TestKbAsk:
+    """深度条款问答端点（REQ-R5-06）；无 PG/LLM 时降级或明确报错。"""
+
+    def test_missing_question_400(self, open_client):
+        r = open_client.post("/api/kb/ask", json={})
+        assert r.status_code == 400
+
+    def test_no_llm_503(self, open_client):
+        # 无 [llm.text] → 明确返回 503（不静默）
+        r = open_client.post("/api/kb/ask", json={"question": "保压多久"})
+        assert r.status_code == 503
+
+
+class TestSourceChangesGuard:
+    """确认清单差分端点：无 [pg] 时明确 400（不静默）。"""
+
+    def test_changes_requires_pg(self, open_client):
+        r = open_client.get("/api/sources/nonexist/changes")
+        assert r.status_code == 400
+        assert "pg" in r.json()["detail"]
+
+    def test_confirm_requires_pg(self, open_client):
+        r = open_client.post("/api/sources/nonexist/confirm", json={"rel_paths": []})
+        assert r.status_code == 400
+
     def test_ask_missing_question_400_shape(self, open_client):
         r = open_client.post("/api/ask", json={})
         assert r.status_code == 400
@@ -108,10 +134,14 @@ class TestSourceCrud:
 
 
 class TestAuth:
-    def test_anonymous_read_allowed(self, locked_client):
-        # 匿名只读：stats 开放；sources 列表需要 token
-        assert locked_client.get("/api/stats").status_code == 200
+    def test_anon_exceptions_only(self, locked_client):
+        # DD-009 匿名移除：仅引导端点/直链匿名；业务端点一律 401
+        assert locked_client.get("/api/stats").status_code == 401
         assert locked_client.get("/api/sources").status_code == 401
+        assert locked_client.get("/api/kb/search",
+                                 params={"query": "x"}).status_code == 401
+        assert locked_client.get("/api/config/public").status_code == 200
+        assert locked_client.get("/api/openapi.json").status_code == 200
 
     def test_bearer_grants_admin(self, locked_client):
         h = {"Authorization": "Bearer t0ken"}
@@ -122,14 +152,57 @@ class TestAuth:
         h = {"Authorization": "Bearer wrong"}
         assert locked_client.get("/api/sources", headers=h).status_code == 401
 
-    def test_anonymous_off_locks_reads(self, tmp_path):
+    def test_no_tokens_open_mode(self, tmp_path):
+        # 未配置 tokens = 本机开放模式（enabled=False 全放行）
         from naskb.server.app import create_app
-        app = create_app(_Cfg(tmp_path, tokens=["t"], anon=False))
+        app = create_app(_Cfg(tmp_path, tokens=[], anon=False))
         with TestClient(app) as c:
-            assert c.get("/api/stats").status_code == 401
-            h = {"Authorization": "Bearer t"}
-            assert c.get("/api/stats", headers=h).status_code == 200
+            assert c.get("/api/stats").status_code == 200
 
     def test_public_config(self, locked_client):
         d = locked_client.get("/api/config/public").json()
-        assert d["auth_required"] is True and d["anonymous_read"] is True
+        assert d["auth_required"] is True and d["anonymous_read"] is False
+
+
+class TestDd009Endpoints:
+    """DD-009 拍板批次回归：report 接回 / folder 端点 / deep 关闭钩子（无 PG 路径）。"""
+
+    def _src(self, client, tmp_path):
+        root = tmp_path / "src"
+        root.mkdir()
+        (root / "a.txt").write_text("hello", encoding="utf-8")
+        r = client.post("/api/sources?test=true", json={
+            "alias": "dd009-src", "protocol": "local", "access_mode": "ro",
+            "root_path": str(root)})
+        assert r.status_code == 200, r.text
+        return r.json()["source"]["source_id"]
+
+    def test_report_endpoint_restored(self, open_client, tmp_path):
+        sid = self._src(open_client, tmp_path)
+        r = open_client.get(f"/api/sources/{sid}/report")
+        assert r.status_code == 200
+        d = r.json()
+        assert set(d.keys()) >= {"source", "backend"}
+        assert d["source"]["alias"] == "dd009-src"
+        assert d["backend"] in ("pg", "json")
+
+    def test_report_404(self, open_client):
+        assert open_client.get(
+            "/api/sources/00000000-0000-0000-0000-000000000000/report"
+        ).status_code == 404
+
+    def test_folder_endpoint_requires_pg(self, open_client, tmp_path):
+        sid = self._src(open_client, tmp_path)
+        r = open_client.get("/api/folder", params={"src": sid, "dir": ""})
+        assert r.status_code == 400
+        assert "pg" in r.json()["detail"]
+
+    def test_deep_toggle_no_pg_cleanup_skipped(self, open_client, tmp_path):
+        sid = self._src(open_client, tmp_path)
+        r = open_client.patch(f"/api/sources/{sid}", json={"deep": True})
+        assert r.status_code == 200 and r.json()["source"]["deep"] is True
+        r2 = open_client.patch(f"/api/sources/{sid}", json={"deep": False})
+        assert r2.status_code == 200
+        d = r2.json()
+        assert d["source"]["deep"] is False
+        assert d.get("note") is None  # 无 PG → 清理钩子跳过，note 为 None

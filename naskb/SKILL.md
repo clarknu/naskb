@@ -27,6 +27,9 @@ applyTo: "*"
 | 问答（RAG） | `naskb desc ask "问题"`（语义/BM25 召回 top-k → DeepSeek 生成，带来源） |
 | 内部问答服务 | `naskb desc serve [--host 127.0.0.1 --port 8765 --open]`（Web UI + `/api/search` `/api/ask`，见下） |
 | 同步 PG 向量库 | `naskb desc sync-vectors <root> [--nas <alias>] [--rebuild]`（.naskb → PG 多 NAS 独立 schema，增/改/删/移增量；未配 `[pg]` 自动跳过） |
+| 同步条款级 chunk 行 | `naskb desc sync-chunks <root> [--nas <alias>]`（深析目录 MinerU md 分段成 chunk 向量行；需 `[deep].enabled`，REQ-R5-06） |
+| 导出干净文本 | `naskb desc export-clean <out_dir> [--zip]`（.naskb 分析产物 → 干净 Markdown/ZIP，供外部引擎，REQ-R5-02） |
+| 术语表管理 | `naskb desc termbase-add <词>... [--nas]` / `naskb desc termbase-list [--nas]`（jieba 自定义词典，关键词通道二期用） |
 | PG 一致性报告 | `naskb desc sync-status <root> [--nas]`（只读差异清单）/ `naskb desc pg-status`（已注册 NAS 向量库统计） |
 | 目录整理规划 | `naskb desc plan-reorganize <root>`（DeepSeek 出方案，只输出不动） |
 | 执行整理 | 确认方案后 `naskb desc plan-reorganize <root> --apply` |
@@ -67,6 +70,17 @@ NAS 场景：`naskb desc --webdav-url <url> [--webdav-user <u> --webdav-pass <p>
 - `[llm.vision]` / `[llm.audio]` MiMo：图片识别/音频转写
 - `[analyzer.mineru]`：扫描件 OCR（本机 CPU，MINERU_MODEL_SOURCE=modelscope）
 - `[webdav]`：NAS 连接（verify_ssl=false 群晖自签）
+
+## 深度分析（条款级，REQ-R5-06）
+
+对**标准/规范/研发类文档**、需要条款级精细问答（如"6.3.2 条怎么规定""表 4 耐压要求"）的场景：
+
+- 职责：文件发现级摘要检索仍是默认；深度分析在 `[deep].roots` 圈定的目录上叠加**条款级第二层**——MinerU 结构化 Markdown 按标题层级分段成 chunk 向量行（`vectors.level='chunk'`），问答可引用到「文件 + 章节」两级。
+- 启用：config.toml 设 `[deep].enabled=true` 并设置 `roots`；先 `desc sync-vectors`（建摘要行/资源）再 `desc sync-chunks`（建 chunk 行）。只读源（无持久 md）会回退全文分段（已知缺口）。
+- **系统级（推荐）**：平台「来源」页给来源开「深度分析」（`SourceRecord.deep`），该来源的扫描/分析/定时会自动按标题层级建条款级 chunk 行（只读源用暂存 md，不留存）；来源页可查看「变更」确认清单（新增/变更/消失），勾选后「确认同步并分析」（`/api/sources/{id}/changes`、`/confirm`）。
+- 检索/问答：`desc search`/`desc ask` 走文档级；平台 `POST /api/kb/ask` 走条款级（两级引用 + 保真直返 + 无命中兜底）。保真直返：命中相似度 ≥ `direct_return_similarity` 直接返回条款原文不调 LLM（防改写）。无命中默认"未找到依据"（诚实性）。
+- 参数（`[deep]`）：`target_chars`/`limit_chars`/`overlap_ratio` 分段；`direct_return`/`direct_return_similarity` 直返；`no_hit_mode`（designated|llm_fallback）；`max_context_chars`；`top_n`/`min_score`。
+- 法律纪律：设计学习自开源项目（只读源码），实现零拷贝（REQ-R6-07）。
 
 ## 常用流程示例
 

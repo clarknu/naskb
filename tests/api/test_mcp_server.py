@@ -10,6 +10,7 @@ import pytest
 
 from naskb.common.desc_store import FileEntry, NaskbStore
 from naskb.common.fs.local import LocalAdapter
+from naskb.common.source_registry import SourceRecord
 from naskb.mcp.server import NasKbService, build_mcp
 
 
@@ -43,6 +44,26 @@ def _wait_job(svc, job_id, timeout=30.0):
     raise TimeoutError(f"job {job_id} 未在 {timeout}s 内完成: {last}")
 
 
+class _FakePg:
+    """内容层 PG 替身：list_dir / get_resource 返回受控行（不建真实连接）。
+
+    模拟 pgstore.PgStore.list_dir 的原始行形状（含多余字段），
+    用于验证 kb_list_tree 的规范投影确实收敛到目标字段。
+    """
+
+    def list_dir(self, schema_name, source_id, parent_dir=""):
+        dirs = [{"rel_path": "财务", "name": "财务", "summary": "财会单据",
+                 "description": "发票/报销", "tags": [], "file_count": 1}]
+        files = [{"resource_id": "r-0001", "rel_path": "财务/发票1.pdf",
+                  "name": "发票1.pdf", "size_bytes": 123, "mtime": 0.0,
+                  "status": "ok", "summary": "房租发票", "file_type": "pdf",
+                  "category": "财务", "tags": [], "ext": ".pdf"}]
+        return dirs, files
+
+    def get_resource(self, schema_name, resource_id):
+        return {"resource_id": resource_id, "rel_path": "财务/发票1.pdf"}
+
+
 class TestServiceInit:
     def test_build_and_stats(self, kb_env):
         work, nas = kb_env
@@ -64,7 +85,9 @@ class TestServiceInit:
                     "kb_ingest", "kb_sync_vectors", "kb_index_vectors",
                     "kb_job_status", "kb_list_jobs", "kb_plan_reorganize",
                     "kb_preview_reorganize", "kb_apply_reorganize",
-                    "kb_status", "kb_stats"} <= names
+                    "kb_status", "kb_stats",
+                    "kb_list_sources", "kb_list_tree",
+                    "kb_get_file_url"} <= names
         finally:
             svc.shutdown()
 
@@ -227,5 +250,116 @@ class TestJobs:
             assert "error" in svc.kb_job_status("no-such")
             out = svc.kb_list_jobs()
             assert "jobs" in out
+        finally:
+            svc.shutdown()
+
+
+class TestDeepParams:
+    """kb_search level / kb_ask deep 参数面（无 PG 时的回退路径）。"""
+
+    def test_kb_search_level_default_and_chunk_fallback(self, kb_env):
+        work, nas = kb_env
+        svc = NasKbService(str(work), [str(nas)], pg=False)
+        try:
+            raw = svc.kb_search("发票", top_k=3)
+            assert raw["level"] == "summary"
+            chunk = svc.kb_search("发票", top_k=3, level="chunk")
+            assert chunk["level"] == "chunk"
+            assert isinstance(chunk["hits"], list)
+        finally:
+            svc.shutdown()
+
+    def test_kb_ask_deep_fallback_when_no_pg(self, kb_env):
+        work, nas = kb_env
+        svc = NasKbService(str(work), [str(nas)], pg=False)
+        try:
+            svc._core.set_llm(None)      # 确定性：无 LLM → 走 error 回退，不联网
+            r = svc.kb_ask("发票租金多少", deep=True)
+            assert r.get("error") or "sources" in r
+        finally:
+            svc.shutdown()
+
+
+class TestSourceTools:
+    """阶段 C 预留的 3 个来源化工具：注册 + 调用返回结构 sanity。
+
+    复用现有替身模式：PG 依赖用 _FakePg 注入（参考 _new_llm 的注入风格），
+    来源用 registry.create 注册（JSON 后端，无 PG 也可跑）。
+    """
+
+    @staticmethod
+    def _register(svc, nas, **kw):
+        """注册一条本地来源并返回注册记录。"""
+        fields = {"alias": "nas-local", "protocol": "local",
+                  "root_path": str(nas), "access_mode": "ro"}
+        fields.update(kw)
+        return svc.registry.create(SourceRecord(**fields))
+
+    def test_list_sources_structure(self, kb_env):
+        work, nas = kb_env
+        svc = NasKbService(str(work), [str(nas)])
+        try:
+            self._register(svc, nas, password="supersecret", deep=True)
+            out = svc.kb_list_sources()
+            assert "sources" in out
+            s = out["sources"][0]
+            for k in ("source_id", "alias", "protocol", "access_mode",
+                      "enabled", "deep"):
+                assert k in s
+            assert s["alias"] == "nas-local"
+            assert s["protocol"] == "local"
+            assert s["access_mode"] == "ro"
+            assert s["enabled"] is True
+            assert s["deep"] is True
+            # 脱敏：密码不得明文暴露
+            assert s["password"] == "******"
+        finally:
+            svc.shutdown()
+
+    def test_list_tree_structure(self, kb_env, monkeypatch):
+        work, nas = kb_env
+        svc = NasKbService(str(work), [str(nas)])
+        try:
+            rec = self._register(svc, nas)
+            fake = _FakePg()
+            # 让 [pg] 视为已配置（启用 kernel 路径），再注入 _pg 替身
+            monkeypatch.setattr(svc.config, "pg_host", "fake-host")
+            monkeypatch.setattr(svc, "_pg", lambda: fake)
+            out = svc.kb_list_tree(rec.alias)
+            assert out["source"] == "nas-local"
+            assert out["dir"] == ""
+            d = out["dirs"][0]
+            assert d["rel_path"] == "财务" and d["file_count"] == 1
+            assert "description" not in d and "tags" not in d   # 已投影收敛
+            f = out["files"][0]
+            assert f["resource_id"] == "r-0001"
+            assert f["name"] == "发票1.pdf"
+            assert f["size_bytes"] == 123
+            assert f["summary"] == "房租发票"
+            assert f["category"] == "财务"
+            assert f["status"] == "ok"
+            assert "rel_path" not in f and "ext" not in f        # 资源以 id 定位
+        finally:
+            svc.shutdown()
+
+    def test_get_file_url_structure(self, kb_env):
+        work, nas = kb_env
+        svc = NasKbService(str(work), [str(nas)])
+        try:
+            rec = self._register(svc, nas)
+            # 未配 server_base_url → 相对路径（getattr 兜底）
+            out = svc.kb_get_file_url("r-0001", rec.alias)
+            assert out["url"] == "/api/files/r-0001/download?src=nas-local"
+            # 无 [pg] → canonical 为空且不抛异常（读操作防御）
+            assert out["canonical"] == ""
+            # 配 server_base_url → 拼绝对前缀
+            svc.config.server_base_url = "http://127.0.0.1:9000"
+            out2 = svc.kb_get_file_url("r-0001", rec.alias)
+            assert out2["url"] == (
+                "http://127.0.0.1:9000"
+                "/api/files/r-0001/download?src=nas-local")
+            # 来源不存在 → 抛 ValueError（安全边界）
+            with pytest.raises(ValueError):
+                svc.kb_get_file_url("r-0001", "no-such-source")
         finally:
             svc.shutdown()

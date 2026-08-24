@@ -7,6 +7,8 @@ from typing import Any, Optional
 from fastapi import Body, HTTPException, Query, Request
 from pydantic import BaseModel
 
+from ..common.source_registry import ACCESS_MODES
+
 
 class SourceIn(BaseModel):
     alias: str
@@ -17,10 +19,11 @@ class SourceIn(BaseModel):
     password: str = ""
     root_path: str = ""
     url: str = ""
-    access_mode: str = "rw"
+    access_mode: str = ACCESS_MODES[0]  # K-001 清理：引用唯一权威定义（source_registry.ACCESS_MODES）
     label: str = ""
     scan_auto: bool = False
     scan_interval_min: int = 60
+    deep: bool = False                 # 来源级深度分析（REQ-R5-06）
     enabled: bool = True
     verify_ssl: bool = True
 
@@ -80,13 +83,23 @@ def register_sources_routes(app) -> None:
         s = st(request)
         fields = {k: v for k, v in (body or {}).items()
                   if k != "source_id" and v != "******"}
+        before = s.registry.get(sid)
         try:
             rec = s.registry.update(sid, **fields)
         except KeyError:
             raise HTTPException(404, detail=f"来源不存在: {sid}")
         except ValueError as e:
             raise HTTPException(422, detail=str(e))
-        return {"source": rec.to_api()}
+        # deep 关闭语义（DD-009）：清理该来源存量条款级 chunk 向量行（失败不阻断）
+        note = None
+        if (before is not None and before.deep and fields.get("deep") is False
+                and s.pg is not None and rec.schema_name):
+            try:
+                removed = s.pg.delete_chunk_rows(rec.schema_name, rec.source_id)
+                note = f"deep 关闭：已清理条款级 chunk 行 {removed} 条"
+            except Exception as e:
+                note = f"deep 关闭：条款级 chunk 清理失败（{e}）"
+        return {"source": rec.to_api(), "note": note}
 
     @app.delete("/api/sources/{sid}")
     async def delete_source(request: Request, sid: str,
@@ -141,6 +154,73 @@ def register_sources_routes(app) -> None:
         job_id = s.jobs.submit("scan", run)
         return {"job_id": job_id, "hint": "GET /api/jobs/{job_id} 查询进度"}
 
+    # ── 确认清单（REQ-R5-06/系统流程）：dry-run 差异 + 确认后分析 ──
+
+    @app.get("/api/sources/{sid}/changes")
+    async def source_changes(request: Request, sid: str,
+                             hash: bool = Query(False, alias="hash")):
+        s = st(request)
+        if s.pg is None:
+            raise HTTPException(400, detail="差异报告需要配置 [pg] 知识主库")
+        rec = s.registry.get(sid)
+        if rec is None:
+            raise HTTPException(404, detail=f"来源不存在: {sid}")
+        from ..common.inventory import walk_source, compute_missing_hashes
+        fs = rec.open_adapter()
+        try:
+            items, skipped_big = walk_source(fs)
+            hashed_now = 0
+            if hash or rec.protocol == "local":
+                hashed_now = compute_missing_hashes(fs, items)
+        finally:
+            try:
+                fs.close()
+            except Exception:
+                pass
+        diff = s.pg.source_changes(rec.schema_name, rec.source_id, items)
+        return {"alias": rec.alias, "diff": diff,
+                "skipped_big": skipped_big, "hashed_now": hashed_now}
+
+    @app.post("/api/sources/{sid}/confirm")
+    async def confirm_changes(request: Request, sid: str,
+                              body: dict = Body(...)):
+        """确认清单选中后触发：先对账（幂等），再调度 AI 分析入库。
+
+        body: {"rel_paths": [...]}（可选，记录为本次确认子集）。
+        rel_paths 提供时供前端展示/审计；分析仍按来源幂等执行（analyze
+        只重析 hash 变化的文件，与子集天然一致）。返回 job_id（分析任务）。
+        """
+        s = st(request)
+        if s.pg is None:
+            raise HTTPException(400, detail="确认同步需要配置 [pg] 知识主库")
+        rec = s.registry.get(sid)
+        if rec is None:
+            raise HTTPException(404, detail=f"来源不存在: {sid}")
+        rel_paths = body.get("rel_paths")
+        from ..common.enrich import enrich_source
+        config = s.config
+
+        def run(job):
+            job["progress"] = 0.02
+            job["message"] = "确认对账…"
+
+            def prog(p: float, m: str) -> None:
+                job["progress"] = min(0.05 + float(p) * 0.9, 0.95)
+                job["message"] = m
+
+            reconcile = s.scan_source_fn(rec, do_hash=True, on_progress=prog)
+            job["reconcile"] = reconcile
+            result = enrich_source(
+                rec, s.pg, config, on_progress=lambda p, m: (
+                    job.__setitem__("progress", min(float(p), 1.0)),
+                    job.__setitem__("message", m)))
+            return {"reconcile": reconcile, "analyze": result,
+                    "confirmed": rel_paths or "all"}
+
+        job_id = s.jobs.submit("confirm", run)
+        return {"job_id": job_id, "confirmed": rel_paths or "all",
+                "hint": "长任务：GET /api/jobs/{job_id} 查询"}
+
     # ── AI 富化（分析入库）──
 
     @app.post("/api/sources/{sid}/analyze")
@@ -189,7 +269,8 @@ def register_sources_routes(app) -> None:
         return {"job_id": job_id,
                 "hint": "收编来源端已有的 .naskb 描述仓库；GET /api/jobs/{job_id}"}
 
-    # ── 一致性报告 ──    @app.get("/api/sources/{sid}/report")
+    # ── 一致性报告（DD-009 拍板接回：2026-08-24 恢复装饰器）──
+    @app.get("/api/sources/{sid}/report")
     async def source_report(request: Request, sid: str):
         s = st(request)
         rec = s.registry.get(sid)

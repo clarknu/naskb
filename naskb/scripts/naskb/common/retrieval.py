@@ -31,6 +31,7 @@ class Doc:
     content_description: str = ""   # 内容描述（v3：入库 PG 独立列）
     file_type: str = ""             # 类型标记（扩展名/类别名，v3）
     artifacts: dict = field(default_factory=dict)   # 解析产物登记（解析视图用）
+    md_abs: str = ""            # 绝对 MinerU Markdown 路径（chunk 分段源，REQ-R5-06）
     # 指纹（REQ-R4-05 / ADR-20260816-4）：sync-vectors 与去重使用
     file_hash: str = ""
     hash_algorithm: str = ""
@@ -116,6 +117,18 @@ class BM25Index:
         ]
 
 
+def _to_rel(path: str, root: str) -> str:
+    """统一路径语义（B-06）：归一到源内相对路径（posix）；跨盘符保留原值。"""
+    p = path.replace("\\", "/")
+    try:
+        r = os.path.relpath(p, root).replace("\\", "/")
+    except ValueError:
+        return p
+    if r in (".", ""):
+        return p.split("/")[-1] if "/" in p else p
+    return r.lstrip("./")
+
+
 def collect_docs(fs, root: str, repo_name: str = ".naskb") -> list[Doc]:
     """遍历目录树，读取所有 .naskb/index.json + folder.json 构建 Doc 列表。"""
     docs: list[Doc] = []
@@ -150,6 +163,10 @@ def collect_docs(fs, root: str, repo_name: str = ".naskb") -> list[Doc]:
                 # 只是 provenance，可能是历史本地路径或迁移前路径）
                 cur_path = os.path.join(repo_dir, raw.get("path", "")) \
                     .replace("\\", "/")
+                # B-06 统一语义（2026-08-24）：Doc.path = 源内相对路径（posix），
+                # 与 collect_staging_docs 及数据库 rel_path 列一致；跨盘符（Windows
+                # 分区）时退化为绝对路径。
+                cur_path = _to_rel(cur_path, root)
                 # 检索索引文本：只用摘要+描述（用户拍板——全文不参与向量/关键词检索，
                 # 避免全文高频词稀释主题）；全文保留在 context 供 RAG 生成阶段使用
                 text = "\n".join(x for x in (
@@ -163,6 +180,13 @@ def collect_docs(fs, root: str, repo_name: str = ".naskb") -> list[Doc]:
                     entry.ocr_text) if x)
                 if not text.strip():
                     continue
+                _artifacts = entry.exif.get("mineru_artifacts") or {}
+                _md_abs = ""
+                if _artifacts.get("md_path"):
+                    _md_abs = os.path.join(
+                        repo_dir, REPO_DIR_NAME,
+                        str(_artifacts["md_path"]).lstrip("/\\"),
+                    ).replace("\\", "/")
                 docs.append(Doc(
                     path=cur_path,
                     kind="file",
@@ -173,7 +197,8 @@ def collect_docs(fs, root: str, repo_name: str = ".naskb") -> list[Doc]:
                     context=context,
                     content_description=entry.content_description,
                     file_type=entry.file_type,
-                    artifacts=entry.exif.get("mineru_artifacts") or {},
+                    artifacts=_artifacts,
+                    md_abs=_md_abs,
                     file_hash=entry.file_hash,
                     hash_algorithm=entry.hash_algorithm,
                     size_bytes=entry.size_bytes,
@@ -188,7 +213,7 @@ def collect_docs(fs, root: str, repo_name: str = ".naskb") -> list[Doc]:
             if not text.strip():
                 continue
             docs.append(Doc(
-                path=repo_dir, kind="folder", text=text,
+                path=_to_rel(repo_dir, root), kind="folder", text=text,
                 summary=entry.summary, category="目录", tags=entry.tags,
                 context=text))
     return docs
@@ -229,3 +254,87 @@ def ask(client, index: BM25Index, question: str, top_k: int = 5,
     )
     answer = client.complete(prompt)
     return {"answer": answer, "sources": [h["path"] for h in hits]}
+
+
+def ask_deep(client, searcher, question: str, *,
+             top_k: int = 5, context_chars: int = 6000,
+             direct_return: bool = False,
+             direct_return_similarity: float = 0.9,
+             no_hit_mode: str = "designated") -> dict:
+    """条款级 RAG 问答（REQ-R5-06）：两级引用 + 保真直返 + 无命中兜底。
+
+    searcher: 具有 search_chunks(query, top_k=None) -> list[dict] 的对象，
+              每个 hit 含 path/level/chunk_seq/title_path/text/context/score。
+    direct_return: 最高分命中相似度 ≥ direct_return_similarity 时，直接返回
+                   该条款原文+两级出处，不调 LLM（标准条款保真，防改写）。
+    no_hit_mode: 'designated'（默认，明确"未找到依据"）/ 'llm_fallback'
+                 （裸问模型，回答前缀声明未依据库内文档）。
+    返回 answer/sources（路径列表）/citations（两级引用对象）/engine/mode。
+    """
+    method = getattr(searcher, "search_chunks", None)
+    hits = (method(question, top_k=top_k) if callable(method)
+            else searcher.search(question, top_k=top_k))
+    if not hits:
+        return _no_hit(client, question, no_hit_mode)
+
+    best = hits[0]
+    if direct_return and float(best.get("score") or 0) >= direct_return_similarity:
+        return {
+            "answer": (best.get("context") or best.get("text") or "").strip(),
+            "sources": [best.get("path") or ""],
+            "citations": [_cite(best)],
+            "engine": "pg-chunk", "mode": "direct",
+            "score": float(best.get("score") or 0),
+        }
+
+    blocks: list[str] = []
+    budget = context_chars
+    for i, h in enumerate(hits):
+        path = h.get("path") or ""
+        cats = " ▸ ".join(t for t in (h.get("title_path") or []) if t)
+        head = f"[{i + 1}] {path}（{cats or '未分节'}）"
+        body = (h.get("context") or h.get("text") or "").strip()
+        if not body:
+            continue
+        if len(head) + len(body) > budget:
+            body = body[:max(0, budget - len(head))]
+        blocks.append(f"{head}:\n{body}")
+        budget -= len(head) + len(body) + 2
+        if budget <= 0:
+            break
+    ctx = "\n\n".join(blocks) if blocks else ""
+    if not ctx:
+        return _no_hit(client, question, no_hit_mode)
+
+    prompt = (
+        "你是一个知识库条款问答助手。以下是按相关性检索到的**条款片段**"
+        "（每条含文件路径与章节路径）。\n"
+        "请只依据这些片段回答用户的问题；引用时注明条款编号或章节路径；"
+        "若片段不足以回答，直接说\"知识库中未找到可依据的条款\"。"
+        "回答用中文。\n\n"
+        f"检索到的条款片段:\n{ctx}\n\n用户问题: {question}"
+    )
+    answer = client.complete(prompt)
+    citations = [_cite(h) for h in hits]
+    return {"answer": answer, "sources": [h.get("path", "") for h in hits],
+            "citations": citations, "engine": "pg-chunk", "mode": "rag"}
+
+
+def _cite(h: dict) -> dict:
+    """两级引用对象：文件路径 + 条款路径 + 块序 + 分数。"""
+    return {"path": h.get("path", ""), "chunk_seq": h.get("chunk_seq"),
+            "title_path": list(h.get("title_path") or []),
+            "score": round(float(h.get("score") or 0), 6)}
+
+
+def _no_hit(client, question: str, mode: str) -> dict:
+    if mode == "llm_fallback":
+        try:
+            answer = client.complete(
+                f"用户问题: {question}\n请回答；若依据不足请明确说明。")
+        except Exception:
+            answer = "（模型未就绪）"
+        return {"answer": answer, "sources": [], "citations": [],
+                "engine": "pg-chunk", "mode": "no_hit_fallback"}
+    return {"answer": "知识库中未找到可依据的条款内容。", "sources": [],
+            "citations": [], "engine": "pg-chunk", "mode": "no_hit_designated"}

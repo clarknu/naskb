@@ -264,7 +264,7 @@ const SourcesView = {
       alias: "", protocol: "local", access_mode: "ro",
       root_path: "", url: "", username: "", password: "",
       label: "", scan_auto: false, scan_interval_min: 60,
-      verify_ssl: true,
+      deep: false, verify_ssl: true,
     });
     async function load() {
       const d = await api("/api/sources");
@@ -277,7 +277,7 @@ const SourcesView = {
         showForm.value = false;
         Object.assign(form, { alias: "", protocol: "local", access_mode: "ro",
           root_path: "", url: "", username: "", password: "", label: "",
-          scan_auto: false, scan_interval_min: 60 });
+          scan_auto: false, scan_interval_min: 60, deep: false });
         await load();
       } catch (e) { toast("注册失败：" + e.message); }
     }
@@ -314,8 +314,10 @@ const SourcesView = {
           if (j.status === "completed") {
             clearInterval(t);
             const r = j.result || {};
+            const deep = r.deep || {};
             toast("扫描完成：新增 " + (r.added ?? "?") + " · 变更 " +
-              (r.stale_source ?? "?") + " · 消失 " + (r.missing ?? "?"));
+              (r.stale_source ?? "?") + " · 消失 " + (r.missing ?? "?") +
+              (deep.chunks ? " · 条款 " + deep.chunks : ""));
             await load();
           } else if (j.status === "failed") { clearInterval(t); toast("扫描失败：" + j.error); }
         } catch (e) { clearInterval(t); }
@@ -336,8 +338,40 @@ const SourcesView = {
         await load();
       } catch (e) { toast(e.message); }
     }
+    async function toggleDeep(s) {
+      if (s.deep && !confirm("关闭深度分析将清理该来源存量条款级 chunk（不可逆），确认？")) return;
+      try {
+        await api("/api/sources/" + s.source_id, {
+          method: "PATCH", body: { deep: !s.deep } });
+        await load();
+      } catch (e) { toast(e.message); }
+    }
+    async function changes(s) {
+      try {
+        const d = await api("/api/sources/" + s.source_id + "/changes");
+        s._chg = d.diff || {};
+        s._sel = new Set([...(s._chg.added || []), ...(s._chg.changed || [])]);
+        toast("差异：新增 " + (s._chg.added || []).length +
+          " · 变更 " + (s._chg.changed || []).length +
+          " · 消失 " + (s._chg.missing || []).length);
+      } catch (e) { toast(e.message); }
+    }
+    function toggleSel(s, p) {
+      if (s._sel.has(p)) s._sel.delete(p); else s._sel.add(p);
+    }
+    async function confirmCh(s) {
+      const rels = s._sel ? Array.from(s._sel) : [];
+      try {
+        const { job_id } = await api("/api/sources/" + s.source_id + "/confirm",
+          { method: "POST", body: { rel_paths: rels } });
+        s._chg = null; s._sel = null;
+        toast("确认同步已提交（任务 " + job_id + "）");
+        pollJob(job_id);
+      } catch (e) { toast(e.message); }
+    }
     onMounted(load);
     return { list, showForm, form, add, test, scan, analyze, adopt, del, toggle,
+             toggleDeep, changes, toggleSel, confirmCh,
              testing, probeResult, fmtSize, fmtTime };
   },
   template: `
@@ -374,6 +408,12 @@ const SourcesView = {
           <input type="checkbox" v-model="form.scan_auto">
           <input type="number" v-model="form.scan_interval_min" style="width:90px" min="5"> 分钟
         </div>
+        <label>深度分析</label>
+        <div class="row">
+          <input type="checkbox" v-model="form.deep"
+                 title="分析时按标题层级自动建条款级 chunk 行（标准/规范类）">
+          <span class="sub">建条款级分段（标准/规范类文档）</span>
+        </div>
         <label></label>
         <div class="row"><button type="submit">测试并注册</button>
         <button type="button" class="ghost" @click="showForm=false">取消</button></div>
@@ -395,7 +435,8 @@ const SourcesView = {
             <td class="sub" v-if="s.stats">
               文件 {{ s.stats.files }} · 最新 {{ s.stats.ok }} ·
               待更新 {{ s.stats.stale_source }} · 消失 {{ s.stats.missing_source }} ·
-              已分析 {{ s.stats.analyzed }}
+              已分析 {{ s.stats.analyzed }} ·
+              条款 <b>{{ s.stats.chunks ?? 0 }}</b>
             </td>
             <td v-else class="sub">—</td>
             <td class="sub">{{ fmtTime(s.last_scan_at) }}</td>
@@ -404,6 +445,8 @@ const SourcesView = {
                 <button class="small ghost" @click="test(s.source_id)">测试</button>
                 <button class="small ghost" @click="scan(s.source_id)">扫描</button>
                 <button class="small" @click="analyze(s.source_id)">AI 分析</button>
+                <button class="small ghost" @click="changes(s)" title="列出待确认变更（确认后同步分析）">变更</button>
+                <button class="small ghost" @click="toggleDeep(s)">{{ s.deep ? '深度开' : '深度关' }}</button>
                 <button class="small ghost" @click="adopt(s.source_id)" title="导入来源端已有的 .naskb 描述">收编</button>
                 <button class="small ghost" @click="toggle(s)">{{ s.enabled ? '停用' : '启用' }}</button>
                 <button class="small danger" @click="del(s)">删除</button>
@@ -413,6 +456,33 @@ const SourcesView = {
           <tr v-if="!list.length"><td colspan="6" class="hint">还没有注册任何来源。</td></tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="card" v-for="s in list" :key="'chg-' + s.source_id">
+      <template v-if="s._chg">
+        <h2>变更确认 — {{ s.alias }}
+          <span class="spacer"></span>
+          <button class="small ghost" @click="s._chg=null">关闭</button>
+        </h2>
+        <div v-if="(s._chg.added||[]).length || (s._chg.changed||[]).length">
+          <div v-for="p in (s._chg.added||[])" :key="'a'+p" class="hit">
+            <input type="checkbox" :checked="s._sel.has(p)" @change="toggleSel(s,p)">
+            <span class="kind">新增</span> {{ p }}
+          </div>
+          <div v-for="p in (s._chg.changed||[])" :key="'c'+p" class="hit">
+            <input type="checkbox" :checked="s._sel.has(p)" @change="toggleSel(s,p)">
+            <span class="kind">变更</span> {{ p }}
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button class="small" @click="confirmCh(s)">确认同步并分析</button>
+            <span class="hint">勾选项将触发对账 + AI 分析入库（幂等）</span>
+          </div>
+        </div>
+        <div v-else class="sub">没有新增/变更。</div>
+        <div v-if="(s._chg.missing||[]).length" class="sub" style="margin-top:6px">
+          消失（仅标记为缺失，不物理删除）：{{ (s._chg.missing||[]).join('、') }}
+        </div>
+      </template>
     </div>
   </div>`,
 };

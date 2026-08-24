@@ -18,12 +18,7 @@ from typing import Any, Optional
 
 from ..fs.base import FileSystemAdapter
 from ..sidecar import Metadata
-
-TEXT_EXTS = {
-    ".txt", ".md", ".markdown", ".rst", ".org", ".adoc", ".asciidoc",
-    ".csv", ".tsv", ".json", ".yaml", ".yml", ".toml", ".xml",
-    ".html", ".htm", ".css", ".js", ".ts", ".py", ".log", ".ini", ".cfg",
-}
+from ..exts import TEXT_EXTS  # 纯文本子集权威定义在 exts.py（B-05 统一，2026-08-24）
 
 _PDF_EXTS = {".pdf"}
 _DOCX_EXTS = {".docx"}

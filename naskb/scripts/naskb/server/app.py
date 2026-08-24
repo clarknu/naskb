@@ -7,7 +7,7 @@
   内容访问（下载代理/预览）、任务中心；
 - Web UI：静态包托管（naskb/web/dist，Vue3，构建产物随包分发）。
 
-认证：AuthPolicy 中间件（单管理员 token + 匿名只读开关，REQ-R7-11）。
+认证：AuthPolicy 中间件（单管理员 token；全部端点需身份，DD-009——仅引导/静态/直链例外）。
 """
 from __future__ import annotations
 
@@ -299,6 +299,103 @@ def create_app(config) -> FastAPI:
             "status": h.get("status") or "",
             "stale": bool(h.get("stale")),
         }
+
+    # ── 深度条款问答（REQ-R5-06）：PG 多源 chunk 检索 + 两级引用 ──
+    @app.post("/api/kb/ask")
+    async def kb_ask(request: Request):
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        question = str(body.get("question") or "").strip()
+        if not question:
+            raise HTTPException(400, detail="缺少 question 字段")
+        try:
+            top_k = max(1, min(int(body.get("top_k") or 5), 20))
+        except (TypeError, ValueError):
+            top_k = 5
+        wanted = [x.strip() for x in str(body.get("sources") or "")
+                  .split(",") if x.strip()]
+        direct_return = bool(body.get("direct_return"))
+
+        llm = core.get_llm()
+        if llm is None:
+            raise HTTPException(503, detail="LLM 未配置（config.toml [llm.text]）")
+
+        deep_cfg = (config.deep_doc_cfg()
+                    if hasattr(config, "deep_doc_cfg") else {})
+        # 平台默认不强制 deep 检索（无 deep.roots 时降级）；显式 direct_return 尊重配置
+        deep_flag = deep_cfg.get("enabled")
+        # A'（P-003 拍板 2026-08-24）：显式要求条款级（body.deep 或配置启用）却回退文档级时，
+        # 响应必须携带 level 提示——"回退要讲清楚"（诚实性设计）。
+        deep_requested = bool(body.get("deep", False)) or bool(deep_flag)
+        searcher = None
+        if pg is not None and deep_flag is not False:
+            records = []
+            for key in wanted or [None]:
+                rec = registry.get(key) if key else None
+                if key and rec is None:
+                    raise HTTPException(404, detail=f"来源不存在: {key}")
+                if rec is not None:
+                    records.append(rec)
+
+            def _chunk_search(q, top_k=top_k, *, level="chunk",
+                              records=records):
+                emb = get_embedder()
+                vec = emb.encode_one(q)
+                schemas: dict[str, dict] = {}
+                if records:
+                    for r in records:
+                        schemas.setdefault(r.schema_name, {
+                            "sids": [], "aliases": []})
+                        schemas[r.schema_name]["sids"].append(r.source_id)
+                        schemas[r.schema_name]["aliases"].append(r.alias)
+                else:
+                    for r in registry.list(include_disabled=False):
+                        schemas.setdefault(r.schema_name, {
+                            "sids": [], "aliases": []})
+                        schemas[r.schema_name]["sids"].append(r.source_id)
+                        schemas[r.schema_name]["aliases"].append(r.alias)
+                merged: list[dict] = []
+                for schema, info in schemas.items():
+                    try:
+                        hits = pg.search(schema, vec, top_k=top_k,
+                                         source_ids=info["sids"], level=level)
+                    except Exception:
+                        continue
+                    for h in hits:
+                        h["nas"] = info["aliases"][0]
+                        merged.append(h)
+                merged.sort(key=lambda x: -float(x.get("score") or 0))
+                return merged[:top_k]
+
+            searcher = _chunk_search
+
+        try:
+            if searcher is not None:
+                from ..common.retrieval import ask_deep
+                result = ask_deep(
+                    llm, searcher, question, top_k=top_k,
+                    context_chars=int(deep_cfg.get("max_context_chars", 5000)),
+                    direct_return=deep_cfg.get("direct_return", False) or direct_return,
+                    direct_return_similarity=float(
+                        deep_cfg.get("direct_return_similarity", 0.9)),
+                    no_hit_mode=str(deep_cfg.get("no_hit_mode", "designated")),
+                )
+                result["nas"] = None
+                result["level"] = "chunk"      # A'：条款级命中，显式标注层级
+                return result
+        except HTTPException:
+            raise
+        except Exception:
+            pass     # 深度检索失败 → 回退本地引擎（REQ-R4-13）
+
+        result = core.ask(question, top_k=top_k)
+        if deep_requested:
+            # A'（P-003）：显式要求条款级却回退 → 显式提示"已回退文档级"
+            result["level"] = "summary"
+            result["note"] = "已回退文档级（条款索引不可用或深析检索失败）"
+        return result
 
     # ── 路由模块 ──
     from .routes_sources import register_sources_routes

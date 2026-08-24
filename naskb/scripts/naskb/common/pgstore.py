@@ -23,6 +23,7 @@ from psycopg.types.json import Jsonb
 
 from .hashing import KNOWN_ALGORITHMS
 from .retrieval import Doc
+from .chunker import chunk_markdown
 
 REGISTRY_TABLE = "nas_registry"
 EMBEDDING_MODEL = "bge-small-zh-v1.5"
@@ -171,6 +172,34 @@ CREATE TABLE IF NOT EXISTS public.nas_registry (
 """
 
 
+# ═══════════════════════════════════════════════════════════════════
+# 条款级 chunk 增强（REQ-R5-06 / ADR-20260823-1）迁移：幂等
+#   - vectors 扩列：level('summary'|'chunk')、chunk_seq、title_path、search_vector
+#   - 唯一约束放宽：摘要行 (resource_id,model) 唯一；chunk 行按 seq 唯一
+#     （原 UNIQUE(resource_id,model) 与「一文件多 chunk」冲突，故拆分）
+#   - termbase：每 schema 术语表（jieba 自定义词典，关键词通道二期用）
+# ═══════════════════════════════════════════════════════════════════
+_MIGRATE_CHUNKS = """
+ALTER TABLE {schema}.vectors ADD COLUMN IF NOT EXISTS level text NOT NULL DEFAULT 'summary';
+ALTER TABLE {schema}.vectors ADD COLUMN IF NOT EXISTS chunk_seq int;
+ALTER TABLE {schema}.vectors ADD COLUMN IF NOT EXISTS title_path text[] NOT NULL DEFAULT '{{}}';
+ALTER TABLE {schema}.vectors ADD COLUMN IF NOT EXISTS search_vector tsvector;
+ALTER TABLE {schema}.vectors DROP CONSTRAINT IF EXISTS vectors_resource_id_model_key;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_vectors_summary_unique
+  ON {schema}.vectors (resource_id, model) WHERE level = 'summary';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_vectors_chunk_unique
+  ON {schema}.vectors (resource_id, model, chunk_seq) WHERE level = 'chunk';
+CREATE INDEX IF NOT EXISTS idx_vectors_chunk_hnsw
+  ON {schema}.vectors USING hnsw (embedding vector_cosine_ops) WHERE level = 'chunk';
+CREATE INDEX IF NOT EXISTS idx_vectors_chunk_tsv
+  ON {schema}.vectors USING gin (search_vector) WHERE level = 'chunk';
+CREATE TABLE IF NOT EXISTS {schema}.termbase (
+  term       text PRIMARY KEY,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+"""
+
+
 class PgStore:
     """PG 多 NAS 向量库存储层。连接参数来自 Config 的 [pg] 段。"""
 
@@ -247,6 +276,7 @@ class PgStore:
                     schema=ident, legacy=str(LEGACY_SOURCE)))
                 cur.execute(sql.SQL(_DDL_FOLDERS).format(
                     schema=ident, legacy=str(LEGACY_SOURCE)))
+                cur.execute(sql.SQL(_MIGRATE_CHUNKS).format(schema=ident))
 
     # ── sync（四操作）──
 
@@ -286,6 +316,7 @@ class PgStore:
                     "r.hash_algorithm, (v.resource_id IS NOT NULL) AS has_vec "
                     "FROM {r}.resources r LEFT JOIN {v}.vectors v "
                     "ON v.resource_id = r.resource_id AND v.model = %s "
+                    "AND v.level = 'summary' "
                     "WHERE r.source_id = %s").format(r=ident, v=ident),
                     (EMBEDDING_MODEL, sid))
                 for row in cur.fetchall():
@@ -449,7 +480,8 @@ class PgStore:
             cur.execute(sql.SQL(
                 "INSERT INTO {}.vectors (resource_id, model, dim, embedding, "
                 "summary_text, full_text, source_hash) "
-                "VALUES (%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (resource_id, model) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s) "
+                "ON CONFLICT (resource_id, model) WHERE level='summary' "
                 "DO UPDATE SET embedding=EXCLUDED.embedding, "
                 "summary_text=EXCLUDED.summary_text, "
                 "full_text=EXCLUDED.full_text, "
@@ -464,10 +496,12 @@ class PgStore:
 
     def search(self, schema_name: str, query_vector,
                top_k: int = 10, model: str = EMBEDDING_MODEL,
-               source_ids: list | None = None) -> list[dict]:
+               source_ids: list | None = None,
+               level: str = "summary") -> list[dict]:
         """余弦 top-k。query_vector: np.ndarray/list（已归一化）。
 
         source_ids: 来源过滤（v3）；None/空 = 全部来源。
+        level: 检索层级——'summary'（文档级，默认）/ 'chunk'（条款级，REQ-R5-06）。
         输出含 resource_id/source_id（str），供内容访问层凭 id 寻址。
         """
         ident = sql.Identifier(schema_name)
@@ -475,7 +509,7 @@ class PgStore:
         if source_ids:
             sids = [uuid.UUID(str(s)) for s in source_ids]
         where_extra = " AND r.source_id = ANY(%s)" if sids else ""
-        params: list = [query_vector, model]
+        params: list = [query_vector, model, level]
         if sids:
             params.append(sids)
         params.extend([query_vector, top_k])
@@ -486,11 +520,12 @@ class PgStore:
                     "r.category, r.tags, r.summary, r.status, "
                     "r.file_hash, r.hash_algorithm, r.size_bytes, "
                     "r.mtime, r.ctime, v.summary_text, v.full_text, "
-                    "v.source_hash, r.resource_id, r.source_id, "
+                    "v.source_hash, v.title_path, v.chunk_seq, v.level, "
+                    "r.resource_id, r.source_id, "
                     "1 - (v.embedding <=> %s::vector) AS score "
                     "FROM {v}.vectors v "
                     "JOIN {r}.resources r ON r.resource_id = v.resource_id "
-                    "WHERE v.model = %s" + where_extra + " "
+                    "WHERE v.model = %s AND v.level = %s" + where_extra + " "
                     "ORDER BY v.embedding <=> %s::vector LIMIT %s"
                     ).format(v=ident, r=ident),
                     tuple(params))
@@ -498,7 +533,8 @@ class PgStore:
         cols = ("path", "parent_dir", "name", "kind", "category", "tags",
                 "summary", "status", "file_hash", "hash_algorithm",
                 "size_bytes", "mtime", "ctime", "text", "context",
-                "source_hash", "resource_id", "source_id", "score")
+                "source_hash", "title_path", "chunk_seq", "level",
+                "resource_id", "source_id", "score")
         out = []
         for row in rows:
             item = dict(zip(cols, row))
@@ -509,6 +545,137 @@ class PgStore:
                 item["source_id"] = str(item["source_id"])
             out.append(item)
         return out
+
+    # ── 条款级 chunk 同步 + 术语表（REQ-R5-06）──
+
+    @staticmethod
+    def _is_deep(path: str, roots: list[str]) -> bool:
+        """path（绝对或 rel）是否命中某个深析根目录（前缀匹配，规范化）。"""
+        if not roots:
+            return False
+        p = (path or "").replace("\\", "/").rstrip("/")
+        for r in roots:
+            rn = r.replace("\\", "/").rstrip("/")
+            if not rn:
+                continue
+            if p == rn or p.startswith(rn + "/"):
+                return True
+        return False
+
+    def sync_chunks(self, schema_name: str, docs: list[Doc], *,
+                    deep_cfg: dict, embedder=None,
+                    source_id: uuid.UUID | str | None = None,
+                    read_md=None, batch: int = 100,
+                    match_all: bool = False) -> dict:
+        """为深析圈定目录/来源的文档写条款级 chunk 向量行（REQ-R5-06）。
+
+        deep_cfg: config `[deep]` 归一化 dict：enabled/roots/target_chars/
+                  limit_chars/overlap_ratio。
+        match_all: True 时忽略 roots 目录判定（来源级 deep 开关——整源都算深析）。
+        read_md:  callable(doc) -> str|None，返回该文档的 MinerU Markdown；
+                  缺省则尝试 doc.artifacts（仅路径，本层不读盘），取不到即计
+                  skipped_no_md。实际调用方需注入「读 .naskb/artifacts md」的
+                  fs 实现（本地/WebDAV）。
+        前提：sync_vectors 已先跑（resources 行存在）；本方法对每个深析文档
+              先删后建 chunk 行（幂等），不触碰摘要行。
+        """
+        stats = {"documents": 0, "chunks": 0,
+                 "skipped_not_deep": 0, "skipped_no_resource": 0,
+                 "skipped_no_md": 0, "empty_doc": 0, "errors": []}
+        if not deep_cfg.get("enabled"):
+            return stats
+        if embedder is None:
+            from .embeddings import Embedder
+            embedder = Embedder(self._cfg.work_path)
+        roots = list(deep_cfg.get("roots") or [])
+        target = int(deep_cfg.get("target_chars", 800))
+        limit = int(deep_cfg.get("limit_chars", 1200))
+        overlap = float(deep_cfg.get("overlap_ratio", 0.12))
+        sid = uuid.UUID(str(source_id)) if source_id else LEGACY_SOURCE
+
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                for doc in docs:
+                    if doc.kind and doc.kind != "file":
+                        continue
+                    rel = self._rel_of(doc.path)
+                    if not match_all and not self._is_deep(doc.path, roots) \
+                            and not self._is_deep(rel, roots):
+                        stats["skipped_not_deep"] += 1
+                        continue
+                    cur.execute(sql.SQL(
+                        "SELECT resource_id, file_hash FROM {}.resources "
+                        "WHERE source_id=%s AND rel_path=%s").format(
+                        sql.Identifier(schema_name)),
+                        (sid, rel))
+                    row = cur.fetchone()
+                    if row is None:
+                        stats["skipped_no_resource"] += 1
+                        continue
+                    resource_id, file_hash = row
+                    md = read_md(doc) if read_md else None
+                    if not md and (doc.artifacts or {}).get("md_path"):
+                        # 仅已知路径，无内容：交给调用方（read_md）补齐
+                        md = None
+                    if not md:
+                        stats["skipped_no_md"] += 1
+                        continue
+                    chunks = chunk_markdown(
+                        md, target_chars=target, limit_chars=limit,
+                        overlap_ratio=overlap)
+                    if not chunks:
+                        stats["empty_doc"] += 1
+                        continue
+                    vecs = embedder.encode([c.emb_text for c in chunks])
+                    cur.execute(sql.SQL(
+                        "DELETE FROM {}.vectors WHERE resource_id=%s "
+                        "AND level='chunk'").format(sql.Identifier(schema_name)),
+                        (resource_id,))
+                    for c, vec in zip(chunks, vecs):
+                        cur.execute(sql.SQL(
+                            "INSERT INTO {}.vectors (resource_id, model, dim, "
+                            "embedding, summary_text, full_text, source_hash, "
+                            "level, chunk_seq, title_path) "
+                            "VALUES (%s,%s,%s,%s,%s,%s,%s,'chunk',%s,%s) "
+                            "ON CONFLICT (resource_id, model, chunk_seq) "
+                            "WHERE level='chunk' "
+                            "DO UPDATE SET embedding=EXCLUDED.embedding, "
+                            "summary_text=EXCLUDED.summary_text, "
+                            "full_text=EXCLUDED.full_text, "
+                            "source_hash=EXCLUDED.source_hash, "
+                            "title_path=EXCLUDED.title_path, "
+                            "updated_at=now()").format(
+                            sql.Identifier(schema_name)),
+                            (resource_id, EMBEDDING_MODEL, EMBEDDING_DIM,
+                             vec, c.emb_text, c.text, file_hash,
+                             c.seq, c.title_path))
+                    stats["documents"] += 1
+                    stats["chunks"] += len(chunks)
+        return stats
+
+    def add_termbase(self, schema_name: str, terms) -> int:
+        """写入术语表（jieba 自定义词典，关键词通道二期用）。返回新增数。"""
+        terms = [t for t in (terms or []) if t and str(t).strip()]
+        if not terms:
+            return 0
+        ident = sql.Identifier(schema_name)
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.executemany(
+                    sql.SQL(
+                        "INSERT INTO {}.termbase (term) VALUES (%s) "
+                        "ON CONFLICT (term) DO NOTHING").format(ident),
+                    [(str(t).strip(),) for t in terms])
+                return cur.rowcount or 0
+
+    def list_termbase(self, schema_name: str) -> list[str]:
+        ident = sql.Identifier(schema_name)
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql.SQL(
+                    "SELECT term FROM {}.termbase ORDER BY term"
+                    ).format(ident))
+                return [r[0] for r in cur.fetchall()]
 
     def resource_rows(self, schema_name: str) -> dict[str, dict]:
         """schema 内 resources 的 rel_path → 指纹映射（只读，sync-status 用）。"""
@@ -714,6 +881,27 @@ class PgStore:
                         if "." in r[1] else ""})
         return dirs, files
 
+    def get_folder(self, schema_name: str, source_id, rel_path: str) -> Optional[dict]:
+        """按来源与目录路径取 folders 目录条目（一致性 report /api/folder 端点用）。
+
+        返回 {rel_path, name, summary, description, tags, file_count}；
+        该 (source_id, rel_path) 未被登记或已不存在时返回 None。
+        """
+        sid = uuid.UUID(str(source_id)) if source_id else LEGACY_SOURCE
+        ident = sql.Identifier(schema_name)
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql.SQL(
+                    "SELECT rel_path, name, summary, description, tags, "
+                    "file_count FROM {}.folders WHERE source_id=%s "
+                    "AND rel_path=%s").format(ident), (sid, rel_path))
+                row = cur.fetchone()
+        if row is None:
+            return None
+        return {"rel_path": row[0], "name": row[1], "summary": row[2],
+                "description": row[3], "tags": list(row[4] or []),
+                "file_count": row[5]}
+
     def get_resource(self, schema_name: str, resource_id) -> Optional[dict]:
         """按 resource_id 取资源行（内容访问层凭 id 寻址，REQ-R7-03）。"""
         ident = sql.Identifier(schema_name)
@@ -849,6 +1037,23 @@ class PgStore:
                     .format(ident), (sid,))
         return n
 
+    def delete_chunk_rows(self, schema_name: str, source_id) -> int:
+        """删除来源所有 level='chunk' 的向量行（deep 关闭语义）。
+
+        vectors 表无 source_id 列，须经 resources JOIN 定位该来源的 chunk 行；
+        仅删条款级，保留文档级 summary 行与其他来源数据。返回删除行数。
+        """
+        sid = uuid.UUID(str(source_id)) if source_id else LEGACY_SOURCE
+        ident = sql.Identifier(schema_name)
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql.SQL(
+                    "DELETE FROM {v}.vectors USING {r}.resources "
+                    "WHERE vectors.resource_id = resources.resource_id "
+                    "AND resources.source_id = %s AND vectors.level = 'chunk'")
+                    .format(v=ident, r=ident), (sid,))
+                return cur.rowcount or 0
+
     def source_stats(self, schema_name: str, source_id) -> dict:
         """单来源状态分布（一致性报告用）。"""
         sid = uuid.UUID(str(source_id)) if source_id else LEGACY_SOURCE
@@ -864,8 +1069,66 @@ class PgStore:
                     "FROM {}.resources WHERE source_id=%s").format(ident),
                     (sid,))
                 r = cur.fetchone()
+                cur.execute(sql.SQL(
+                    "SELECT count(*) FROM {}.vectors v "
+                    "JOIN {}.resources r ON r.resource_id=v.resource_id "
+                    "WHERE r.source_id=%s AND v.level='chunk'")
+                    .format(ident, ident),
+                    (sid,))
+                chunks = cur.fetchone()[0]
         return {"files": r[0], "ok": r[1], "stale_source": r[2],
-                "missing_source": r[3], "analyzed": r[4]}
+                "missing_source": r[3], "analyzed": r[4], "chunks": chunks}
+
+    def source_changes(self, schema_name: str, source_id, items) -> dict:
+        """dry-run 差异报告（确认清单用，只读不应用，REQ-R5-06/系统流程）。
+
+        items: [{rel_path, file_hash, hash_algorithm, mtime, size_bytes, ...}]。
+        返回 {added, changed, missing, unchanged} —— 均为 rel_path 列表。
+        changed 判定：指纹（hash 双方皆提供且不同）或 stat（mtime/size 不同）
+        之一变化；其余为 unchanged。missing = 来源已无但 resources 仍在。
+        """
+        sid = uuid.UUID(str(source_id)) if source_id else LEGACY_SOURCE
+        ident = sql.Identifier(schema_name)
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql.SQL(
+                    "SELECT rel_path, file_hash, hash_algorithm, mtime, "
+                    "size_bytes, ctime, status FROM {}.resources "
+                    "WHERE source_id = %s").format(ident), (sid,))
+                existing = {r[0]: {"file_hash": r[1], "hash_algorithm": r[2],
+                                   "mtime": r[3], "size_bytes": r[4],
+                                   "ctime": r[5], "status": r[6]}
+                            for r in cur.fetchall()}
+
+        def _close(a, b) -> bool:
+            if not a and not b:
+                return True
+            try:
+                return abs(float(a) - float(b or 0)) < 1e-6
+            except (TypeError, ValueError):
+                return False
+
+        added, changed, unchanged = [], [], []
+        seen = set()
+        for it in items:
+            rp = it["rel_path"]
+            seen.add(rp)
+            row = existing.get(rp)
+            if row is None:
+                added.append(rp)
+                continue
+            h1, h2 = row.get("file_hash") or "", it.get("file_hash") or ""
+            hash_diff = bool(h1 and h2 and h1 != h2)
+            stat_diff = (not _close(row.get("mtime"), it.get("mtime"))
+                         or not _close(row.get("size_bytes"),
+                                       it.get("size_bytes")))
+            if hash_diff or stat_diff or row.get("status") == "stale_source":
+                changed.append(rp)
+            else:
+                unchanged.append(rp)
+        missing = [rp for rp in existing if rp not in seen]
+        return {"added": added, "changed": changed,
+                "missing": missing, "unchanged": unchanged}
 
     def upsert_folder_meta(self, schema_name: str, source_id, rel_path: str,
                            summary: str = "", description: str = "",

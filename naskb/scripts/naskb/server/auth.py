@@ -1,9 +1,9 @@
-"""认证（REQ-R7-11）：单管理员 Bearer token + 匿名只读开关。
+"""认证策略：单管理员 Bearer —— 全部端点需身份（DD-009 匿名移除）。
 
-- config [server] tokens = ["..."]：配置了 token 即进入认证模式；
-  未配置 → 局域网信任开放模式（与旧 desc serve 行为一致，启动时打印提示）。
-- anonymous_read = true 时，只读 GET 端点免 token；写操作与管理端点
-  永远需要 token。
+2026-08-24 拍板（DD-009）：移除匿名只读白名单。例外（匿名放行）仅：
+  /、静态资源（非 /api 前缀）、/api/config/public、/api/docs、/api/openapi.json、
+  /api/files/{rid}/download（MCP 直链契约——安全边界=外围网关 IP 约束，见 release/policy.md §四b）。
+未配置 tokens = 本机开放模式（enabled=False 时全部放行，仅适合 local）。
 """
 from __future__ import annotations
 
@@ -12,21 +12,17 @@ from typing import Optional
 
 from fastapi import Request
 
-# 匿名可访问的只读路径前缀（精确匹配或前缀）
-_READ_PREFIXES = (
-    "/api/search", "/api/ask", "/api/stats", "/api/reload",
-    "/api/kb/search", "/api/tree", "/api/folder",
-    "/api/files/", "/api/config/public", "/api/jobs/",
-)
-_ADMIN_EXACT = {"/api/reload"}     # 虽是 GET/POST 混合，但属于管理动作
+_ANON_EXACT = {"/api/config/public", "/api/docs", "/api/openapi.json"}
 
 
 class AuthPolicy:
     """认证判定器。app.state.auth 持有。"""
 
-    def __init__(self, tokens: list[str], anonymous_read: bool):
+    def __init__(self, tokens: list[str], anonymous_read: bool = False):
         self.tokens = [t for t in (tokens or []) if t]
-        self.anonymous_read = bool(anonymous_read)
+        # ⚠️ 保留参数仅为兼容旧 fixture（getattr(cfg, "anonymous_read")），
+        # 认证逻辑不再使用匿名通道（DD-009）——恒为 False。
+        self.anonymous_read = False
 
     @property
     def enabled(self) -> bool:
@@ -35,24 +31,23 @@ class AuthPolicy:
     @classmethod
     def from_config(cls, config) -> "AuthPolicy":
         tokens = list(getattr(config, "server_tokens", []) or [])
-        anon = bool(getattr(config, "anonymous_read", True))
-        return cls(tokens, anon)
+        # anonymous_read 配置键已废弃（config.py 保留兼容属性，默认 False），不再读取
+        return cls(tokens, False)
 
     def check(self, request: Request) -> bool:
-        """是否放行该请求。"""
+        """是否放行该请求（全部端点需身份，仅引导/直链例外）。"""
         if not self.enabled:
             return True
         supplied = self._bearer(request)
         if supplied and secrets.compare_digest(supplied, self.tokens[0]):
             return True
-        # 匿名只读通道
-        if self.anonymous_read and request.method in ("GET", "HEAD"):
-            path = request.url.path
-            if path not in _ADMIN_EXACT and any(
-                    path == p or path.startswith(p) for p in _READ_PREFIXES):
-                return True
-            if path.startswith("/") and not path.startswith("/api"):
-                return True      # 静态页面资源放行
+        path = request.url.path
+        if path in _ANON_EXACT:
+            return True                      # 启动引导 / OpenAPI 文档
+        if not path.startswith("/api"):
+            return True                      # 静态资源（前端 UI/脚本/样式）
+        if path.startswith("/api/files/") and path.endswith("/download"):
+            return True                      # 直链契约（网关 IP 约束为边界，DD-009）
         return False
 
     @staticmethod

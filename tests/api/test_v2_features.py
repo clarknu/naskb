@@ -243,12 +243,16 @@ class TestOfficeAndThumb:
         # 旧 schema 已改名，新 schema 可用
         from naskb.common.pgstore import LEGACY_SOURCE
         pg.reconcile_resources(res["new_schema"], LEGACY_SOURCE, [])
-        # 清理
+        # 清理（2026-08-24 补：nas_registry 行一并删除，防二次运行唯一键冲突——测试隔离修复）
         import psycopg
         with pg.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute("DROP SCHEMA IF EXISTS %s CASCADE"
                             % schema_name_for("webdav", host, 6006, "u1"))
+                cur.execute("DROP SCHEMA IF EXISTS %s CASCADE"
+                            % schema_name_for("webdav", host, 5006, "u1"))
+                cur.execute("DELETE FROM public.nas_registry "
+                            "WHERE host=%s AND username=%s", (host, "u1"))
 
 
 def _rid(pg, schema, sid, rel):

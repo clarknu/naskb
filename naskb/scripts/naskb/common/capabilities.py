@@ -73,4 +73,17 @@ CAPABILITIES: list[Capability] = [
     Capability("kb_stats",
                "全局状态：引擎/文档数/向量索引状态/PG 注册 NAS。",
                "read", "read"),
+    # ── E 组：来源与内容访问（read，同步；来源化寻址 REQ-R7-03）──
+    Capability("kb_list_sources",
+               "列出已注册的知识来源清单（协议/访问模式/启用状态/深度，"
+               "密码字段已脱敏）。",
+               "read", "read"),
+    Capability("kb_list_tree",
+               "罗列指定来源的目录树：子目录与文件（凭 source + dir 浏览，"
+               "资源用 resource_id 定位，REQ-R7-09）。",
+               "read", "read"),
+    Capability("kb_get_file_url",
+               "生成原始资源的下载直链（server_base_url + "
+               "/api/files/{resource_id}/download?src=…；未配 base 时为相对路径）。",
+               "read", "read"),
 ]

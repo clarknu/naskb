@@ -1,6 +1,6 @@
 """NASKB MCP Server — 智能 NAS 知识库的标准 Agent 接口（阶段 A）。
 
-工具面（kb_*，14 个）由 common/capabilities.py 注册表驱动注册；
+工具面（kb_*，17 个）由 common/capabilities.py 注册表驱动注册；
 handler 全部落在 NasKbService 上，复用 common/ 既有实现
 （retrieval / serve.KnowledgeCore / batch.analyze_tree / pgstore /
 reorganizer / plan_store / vector_index），不 shell 到 CLI。
@@ -191,19 +191,69 @@ class NasKbService:
     # ═══════════════════════════════════════════════════════════
 
     def kb_search(self, query: str, top_k: int = 10,
-                  nas: Optional[str] = None) -> dict:
-        """语义检索知识库。query 必填；nas 指定时走 PG（失败自动回退本地）。"""
+                  nas: Optional[str] = None,
+                  level: str = "summary") -> dict:
+        """语义检索知识库。query 必填；nas 指定时走 PG（失败自动回退本地）。
+
+        level: 'summary'（文档级，默认）/ 'chunk'（条款级，REQ-R5-06）。
+        """
+        if level not in ("summary", "chunk"):
+            level = "summary"
         engine, hits = self._core.search(
             query, top_k=max(1, min(int(top_k), 100)), nas_schema=nas)
+        if level == "chunk" and self._pg_engine is not None:
+            # 条款级：走 chunk 检索并暴露两级引用字段
+            chunk_hits = self._pg_engine.search_chunks(
+                query, top_k=max(1, min(int(top_k), 100)), schema=nas)
+            hits = chunk_hits
+            engine = "pg-chunk"
         return {"engine": engine, "hits": hits, "nas": nas,
-                "total_docs": self._core.stats()["docs"]}
+                "level": level, "total_docs": self._core.stats()["docs"]}
 
     def kb_ask(self, question: str, top_k: int = 5,
-               nas: Optional[str] = None) -> dict:
-        """RAG 问答（DeepSeek 生成，带来源路径）。"""
-        return self._core.ask(question,
-                              top_k=max(1, min(int(top_k), 20)),
-                              nas_schema=nas)
+               nas: Optional[str] = None, deep: bool = False) -> dict:
+        """RAG 问答（DeepSeek 生成，带来源路径）。
+
+        deep=True 走条款级（两级引用 citations + 保真直返 + 无命中兜底），
+        需要 PG + 该来源已建 chunk 行（REQ-R5-06）。
+        """
+        if deep and self._pg_engine is not None and self._llm is not None:
+            try:
+                from ..common.retrieval import ask_deep
+                schema = nas or getattr(self._pg_engine, "_default_schema", None)
+                if schema:
+                    deep_cfg = self.config.deep_doc_cfg()
+                    deep_cfg["enabled"] = True
+
+                    class _ChunkBound:
+                        def __init__(self, eng, sch):
+                            self._eng, self._sch = eng, sch
+
+                        def search_chunks(self, q, top_k=None):
+                            return self._eng.search_chunks(
+                                q, top_k=top_k, schema=self._sch)
+
+                    res = ask_deep(
+                        self._llm, _ChunkBound(self._pg_engine, schema),
+                        question, top_k=max(1, min(int(top_k), 20)),
+                        direct_return=deep_cfg.get("direct_return", False),
+                        direct_return_similarity=float(
+                            deep_cfg.get("direct_return_similarity", 0.9)),
+                        no_hit_mode=str(deep_cfg.get("no_hit_mode", "designated")),
+                    )
+                    res["nas"] = nas
+                    res["level"] = "chunk"      # A'（P-003）：条款级命中，显式标注层级
+                    return res
+            except Exception:
+                pass        # 深析失败 → 回退文档级
+        result = self._core.ask(question,
+                                top_k=max(1, min(int(top_k), 20)),
+                                nas_schema=nas)
+        if deep:
+            # A'（P-003）：显式要求条款级却回退 → 显式提示"已回退文档级"
+            result["level"] = "summary"
+            result["note"] = "已回退文档级（条款索引不可用或深析检索失败）"
+        return result
 
     def kb_get_doc(self, path: str, include_fulltext: bool = False) -> dict:
         """取单文件完整元数据（摘要/分类/标签/EXIF/转录/OCR）。"""
@@ -528,26 +578,48 @@ class NasKbService:
     # ── v3 来源化工具（V2 扩展）──
 
     def kb_list_sources(self) -> dict:
-        """已注册的知识来源清单（平台 v0.1 来源注册表）。"""
+        """已注册的知识来源清单（平台 v0.1 来源注册表）。
+
+        复用 registry.list() 并取每条 to_api()（默认对密码脱敏），
+        与同文件 kb_status/kb_stats 一致只在服务对象上取数、不重复造轮子。
+        """
         return {"sources": [r.to_api() for r in self.registry.list()]}
 
     def kb_list_tree(self, source: str, dir: str = "") -> dict:
-        """罗列指定来源的目录树（来源/目录浏览，REQ-R7-09）。"""
+        """罗列指定来源的目录树（来源/目录浏览，REQ-R7-09）。
+
+        底层复用 pgstore.PgStore.list_dir（与 REST /api/tree 同一取数函数），
+        输出收敛为规范结构：dirs[{rel_path,name,file_count,summary}]、
+        files[{resource_id,name,size_bytes,summary,category,status}]，
+        资源一律用 resource_id 定位（安全边界，REQ-R7-03）。
+        """
         rec = self.registry.get(source)
         if rec is None:
             raise ValueError(f"来源不存在: {source}")
+        rel = (dir or "").strip().strip("/")
+        if not self.config.pg_enabled:
+            return {"source": rec.alias, "dir": rel, "dirs": [], "files": [],
+                    "error": "目录浏览需要配置 [pg] 知识主库"}
         pg = self._pg()
-        dirs, files = pg.list_dir(rec.schema_name, rec.source_id,
-                                  (dir or "").strip().strip("/"))
-        return {"source": rec.alias, "dir": (dir or "").strip("/"),
-                "dirs": dirs,
-                "files": [{"resource_id": f["resource_id"],
-                           "name": f["name"], "size_bytes": f["size_bytes"],
-                           "status": f["status"], "category": f["category"],
-                           "rel_path": f["rel_path"]} for f in files]}
+        dirs, files = pg.list_dir(rec.schema_name, rec.source_id, rel)
+        return {
+            "source": rec.alias,
+            "dir": rel,
+            "dirs": [{"rel_path": d["rel_path"], "name": d["name"],
+                      "file_count": d["file_count"],
+                      "summary": d["summary"]} for d in dirs],
+            "files": [{"resource_id": f["resource_id"], "name": f["name"],
+                       "size_bytes": f["size_bytes"], "summary": f["summary"],
+                       "category": f["category"],
+                       "status": f["status"]} for f in files],
+        }
 
     def kb_get_file_url(self, resource_id: str, source: str) -> dict:
-        """取原始资源直链（下载代理路径或协议级 canonical uri）。"""
+        """取原始资源直链（下载代理路径或协议级 canonical uri）。
+
+        server_base_url 从配置读（getattr 兜底），缺失时输出相对路径；
+        下载直链本身不依赖 PG，canonical 仅在 [pg] 就绪时给出。
+        """
         rec = self.registry.get(source)
         if rec is None:
             raise ValueError(f"来源不存在: {source}")
@@ -561,6 +633,8 @@ class NasKbService:
 
     def _canonical_uri(self, rec, resource_id: str) -> str:
         """生成协议级直链（无认证；仅供展示/告知，实际下载走代理）。"""
+        if not self.config.pg_enabled:
+            return ""
         row = None
         try:
             row = self._pg().get_resource(rec.schema_name, resource_id)

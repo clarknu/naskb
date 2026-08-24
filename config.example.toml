@@ -50,8 +50,6 @@ port = 25432
 user = "postgres"
 password = ""           # ← 填 PG 密码
 database = "naskb"
-vector_table = "naskb_vectors"
-vector_dim = 512        # bge-small-zh 输出维度
 
 [analyzer.mineru]
 enabled = true
@@ -68,8 +66,7 @@ max_chars = 100000      # 单文件提取文本上限（字符）
 max_file_mb = 100       # 超过此大小的文件跳过下载分析
 
 # ── [server] 平台服务（v3：naskb desc serve-platform）──
-# tokens 配置任一值即启用认证（单管理员 Bearer）；留空 = 局域网开放
-# anonymous_read：认证开启时，检索/浏览/预览/下载等只读操作是否免 token
+# tokens 配置任一值即启用认证（单管理员 Bearer，全部端点需身份——DD-009 匿名移除，
+# 例外仅 /api/config/public、/api/docs、/api/openapi.json、静态资源与文件下载直链）；留空 = 本机开放
 [server]
 tokens = []
-anonymous_read = true

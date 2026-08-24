@@ -39,6 +39,16 @@ def test_alias_conflict_rejected(reg):
         reg.create(_local(root_path="C:/other"))
 
 
+def test_deep_field_roundtrip_and_update(reg):
+    rec = reg.create(_local(deep=True))
+    got = reg.get(rec.source_id)
+    assert got.deep is True
+    assert got.to_api()["deep"] is True    # API 输出带 deep
+    upd = reg.update(rec.source_id, deep=False)
+    assert upd.deep is False
+    assert reg.get(rec.source_id).deep is False
+
+
 @pytest.mark.parametrize("bad", [
     {"alias": "非法 别名"},
     {"protocol": "ftp"},
