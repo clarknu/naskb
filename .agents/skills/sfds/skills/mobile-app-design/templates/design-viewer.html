@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<!--
+  ⚠️ 单一渲染器共享副本：本文件与 desktop-ui-design/templates/design-viewer.html 完全相同，
+  由 mobile-app-design 与 desktop-ui-design 共用。修改任何一处必须同步另一处（或改为共享引用）。
+  唯一差异是标题文案（见 <title>）。
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小程序 · 设计总览</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif; background: #f5f5f5; color: #1f2937; font-size: 14px; line-height: 1.6; }
+
+  /* ── 顶栏 ── */
+  .header { background: #1a1a2e; color: #fff; padding: 16px 32px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .header h1 { font-size: 18px; font-weight: 700; }
+  .header .sub { font-size: 12px; color: #9ca3af; }
+  .header .ver { font-size: 11px; background: #374151; color: #d1d5db; padding: 2px 8px; border-radius: 4px; }
+
+  /* ── Tab 导航 ── */
+  .tab-bar { display: flex; background: #fff; border-bottom: 2px solid #e5e7eb; padding: 0 32px; overflow-x: auto; }
+  .tab-item { padding: 12px 20px; cursor: pointer; font-size: 13px; color: #6b7280; border-bottom: 2px solid transparent; margin-bottom: -2px; white-space: nowrap; transition: all 0.15s; }
+  .tab-item:hover { color: #e61e2a; }
+  .tab-item.active { color: #e61e2a; font-weight: 600; border-bottom-color: #e61e2a; }
+
+  /* ── 主内容区 ── */
+  .main { max-width: 1100px; margin: 0 auto; padding: 24px 32px; }
+
+  /* ── 树（递归折叠） ── */
+  .tree-node { }
+  .tree-row { display: flex; align-items: flex-start; gap: 4px; padding: 3px 8px; border-radius: 4px; cursor: default; }
+  .tree-row:hover { background: #f3f4f6; }
+  .tree-row .toggle { width: 16px; height: 20px; flex-shrink: 0; cursor: pointer; text-align: center; font-size: 10px; color: #9ca3af; line-height: 20px; -webkit-user-select: none; user-select: none; transition: transform 0.15s; }
+  .tree-row .toggle.open { transform: rotate(90deg); }
+  .tree-row .toggle.leaf { visibility: hidden; }
+  .tree-row .tag { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 3px; flex-shrink: 0; margin-top: 2px; }
+  .tree-row .tag.tab  { background: #3b82f6; color: #fff; }
+  .tree-row .tag.page { background: #8b5cf6; color: #fff; }
+  .tree-row .tag.zone { background: #f59e0b; color: #fff; }
+  .tree-row .tag.func { background: #10b981; color: #fff; }
+  .tree-row .tag.component { background: #10b981; color: #fff; }
+  .tree-row .tag.button { background: #10b981; color: #fff; }
+  .tree-row .name { font-weight: 500; font-size: 13px; padding-top: 2px; }
+  .tree-row .desc { font-size: 12px; color: #6b7280; padding-top: 2px; }
+  .tree-row .badge { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: #e5e7eb; color: #4b5563; margin-left: 4px; margin-top: 3px; }
+  .tree-row .badge.perm { background: #fef3c7; color: #92400e; cursor: help; }
+  .tree-row .badge.perm-public { background: #d1fae5; color: #065f46; }
+  .tree-row .badge.txt { background: #e0e7ff; color: #3730a3; font-style: italic; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tree-row .badge.lbl { background: #dbeafe; color: #1e40af; }
+  .tree-row .badge.cond { background: #fce7f3; color: #9d174d; font-family: monospace; font-size: 9px; }
+  .tree-row .badge.val { background: #fef3c7; color: #92400e; font-size: 9px; }
+  .tree-row .badge.fb { background: #d1fae5; color: #065f46; font-size: 9px; }
+  .tree-row .badge.i18n { background: #f3e8ff; color: #6b21a8; font-size: 9px; font-family: monospace; cursor: help; }
+  .tree-children { margin-left: 20px; display: none; }
+  .tree-children.open { display: block; }
+
+  /* ── 区块卡片 ── */
+  .section-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px 24px; margin-bottom: 16px; }
+  .section-card.highlight { border-left: 4px solid #e61e2a; }
+  .section-title-text { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+
+  /* ── 正文块渲染 ── */
+  .block-p { font-size: 14px; margin-bottom: 12px; line-height: 1.8; }
+  .block-h2 { font-size: 15px; font-weight: 700; margin: 20px 0 10px; }
+  .block-h3 { font-size: 14px; font-weight: 600; margin: 16px 0 8px; color: #374151; }
+  .block-h4 { font-size: 13px; font-weight: 600; margin: 12px 0 6px; color: #4b5563; }
+  .block-ul { margin: 0 0 12px 20px; }
+  .block-ul li { font-size: 13px; margin-bottom: 4px; line-height: 1.7; }
+  .block-ol { margin: 0 0 12px 20px; }
+  .block-ol li { font-size: 13px; margin-bottom: 6px; line-height: 1.7; }
+  .block-note { padding: 12px 16px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; border-left: 4px solid; }
+  .block-note.info { background: #eff6ff; border-color: #3b82f6; color: #1e40af; }
+  .block-note.warning { background: #fffbeb; border-color: #f59e0b; color: #92400e; }
+  .block-note.danger { background: #fef2f2; border-color: #ef4444; color: #991b1b; }
+  .block-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 13px; }
+  .block-table th { background: #f9fafb; padding: 8px 12px; text-align: left; font-weight: 600; border: 1px solid #e5e7eb; }
+  .block-table td { padding: 8px 12px; border: 1px solid #e5e7eb; }
+  .block-table tr:hover td { background: #f9fafb; }
+  .block-hr { border: none; border-top: 1px solid #e5e7eb; margin: 16px 0; }
+
+  /* ── SVG 流程图 ── */
+  .flowchart-wrap { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 12px; overflow-x: auto; }
+  .flowchart-wrap svg { display: block; margin: 0 auto; }
+
+  /* ── 组件卡片 ── */
+  .comp-card { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 12px; margin-bottom: 4px; }
+  .comp-card .tag { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 3px; background: #10b981; color: #fff; flex-shrink: 0; }
+  .comp-card .cname { font-weight: 500; font-size: 13px; }
+  .comp-card .cdesc { font-size: 12px; color: #6b7280; }
+  .comp-card .crefs { font-size: 11px; color: #3b82f6; }
+
+  /* ── 流程步骤框 ── */
+  .flow-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 18px; margin-bottom: 12px; }
+  .flow-card .fname { font-weight: 600; font-size: 14px; margin-bottom: 8px; }
+  .flow-card .fsteps { font-size: 13px; color: #374151; line-height: 1.8; padding-left: 20px; }
+  .flow-card .fsteps li { margin-bottom: 4px; }
+
+  /* ── 引用线 ── */
+  .ref-line { font-size: 12px; color: #6b7280; padding: 2px 8px 6px 32px; }
+  .ref-line b { color: #3b82f6; }
+  .ref-info { font-size: 11px; color: #f59e0b; padding: 2px 8px 6px 32px; }
+
+  /* ── 空状态 ── */
+  .empty { text-align: center; padding: 60px 20px; color: #9ca3af; }
+
+  /* ── loading ── */
+  .loading { text-align: center; padding: 80px 20px; color: #9ca3af; font-size: 15px; }
+  .loading .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #e5e7eb; border-top-color: #e61e2a; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="appTitle">设计总览</h1>
+  <span class="ver" id="appVer"></span>
+  <span class="sub" id="appDesc"></span>
+</div>
+
+<div class="tab-bar" id="tabBar"></div>
+
+<div class="main" id="mainContent">
+  <div class="loading">
+    <span class="spinner"></span>加载设计数据…
+  </div>
+</div>
+
+<script src="data/loader.js"></script>
+<script>
+(function() {
+  /* ── 自动检测命名空间 ── */
+  function findPSData() {
+    if (!window.PS_DATA) return null;
+    for (var k in window.PS_DATA) {
+      if (window.PS_DATA[k] && window.PS_DATA[k].tree) return window.PS_DATA[k];
+    }
+    return null;
+  }
+
+  /* ── 等待数据就绪（loader 异步加载子模块，完成后触发 PSDataReady） ── */
+  function init() {
+    var D = findPSData();
+    if (!D) {
+      document.addEventListener('PSDataReady', init);
+      return;
+    }
+
+  document.getElementById('appTitle').textContent = (D.identity && D.identity.app_name) || '小程序设计总览';
+  document.getElementById('appDesc').textContent = (D.identity && D.identity.description) || '';
+  document.getElementById('appVer').textContent = (D.identity && D.identity.version) || '';
+
+  /* ================================================================
+     标签页定义
+     ================================================================ */
+  var tabs = [
+    { id: 'tree',    label: '📁 功能结构树' },
+    { id: 'shared',  label: '🔁 公共页面与组件' },
+    { id: 'process', label: '🔀 业务流程' },
+    { id: 'style',   label: '🎨 设计风格' },
+    { id: 'i18n',    label: '🌐 多语言方案' }
+  ];
+
+  var tabBar = document.getElementById('tabBar');
+  var main   = document.getElementById('mainContent');
+
+  tabs.forEach(function(t) {
+    var el = document.createElement('div');
+    el.className = 'tab-item';
+    el.textContent = t.label;
+    el.addEventListener('click', function() {
+      document.querySelectorAll('.tab-item').forEach(function(x) { x.classList.remove('active'); });
+      el.classList.add('active');
+      renderTab(t.id);
+    });
+    tabBar.appendChild(el);
+  });
+
+  function renderTab(id) {
+    main.innerHTML = '';
+    if (id === 'tree')       renderTree();
+    else if (id === 'shared')  renderShared();
+    else if (id === 'process') renderSections(D.processes, '业务流程文档');
+    else if (id === 'style')   renderSections(D.style, '设计风格结论');
+    else if (id === 'i18n')    renderSections(D.i18n, '多语言方案结论');
+  }
+
+  /* ================================================================
+     树渲染（递归）
+     ================================================================ */
+  function renderTreeRec(node, tag) {
+    var wrap = document.createElement('div');
+    wrap.className = 'tree-node';
+
+    var row = document.createElement('div');
+    row.className = 'tree-row';
+    wrap.appendChild(row);
+
+    var hasKids = node.children && node.children.length > 0;
+
+    var tog = document.createElement('span');
+    tog.className = 'toggle';
+    if (hasKids) { tog.textContent = '▶'; tog.classList.add('open'); }
+    else { tog.classList.add('leaf'); }
+    row.appendChild(tog);
+
+    var tg = document.createElement('span');
+    tg.className = 'tag ' + tag;
+    tg.textContent = ({tab:'标签',page:'页面',zone:'功能区',component:'组件',func:'功能'})[tag] || tag;
+    row.appendChild(tg);
+
+    var nm = document.createElement('span');
+    nm.className = 'name';
+    nm.textContent = node.name;
+    row.appendChild(nm);
+
+    /* show componentType badge */
+    if (node.componentType) {
+      var ct = document.createElement('span');
+      ct.className = 'badge';
+      ct.textContent = '[' + node.componentType + ']';
+      row.appendChild(ct);
+    }
+
+    if (node.desc) {
+      var dc = document.createElement('span');
+      dc.className = 'desc';
+      dc.textContent = '— ' + node.desc;
+      row.appendChild(dc);
+    }
+    if (node.remark) {
+      var bd = document.createElement('span');
+      bd.className = 'badge';
+      bd.textContent = node.remark;
+      row.appendChild(bd);
+    }
+
+    /* show permission reference */
+    if (node.perm_ref) {
+      var pr = document.createElement('span');
+      var isPublic = node.perm_ref === 'public';
+      pr.className = 'badge ' + (isPublic ? 'perm-public' : 'perm');
+      pr.textContent = (isPublic ? '🌐 公开' : '🔒 ' + node.perm_ref);
+      pr.title = isPublic ? '无需权限控制' : '权限控制点: ' + node.perm_ref;
+      row.appendChild(pr);
+    }
+
+    /* show refs as inline navigation label */
+    if (node.refs && node.refs.length) {
+      var rl = document.createElement('span');
+      rl.style.cssText = 'font-size:11px;color:#3b82f6;margin-left:8px;';
+      rl.textContent = '→ ' + node.refs.join(', ');
+      row.appendChild(rl);
+    }
+
+    /* ── 原则七：文本精确化字段渲染 ── */
+
+    /* text（display / rich_text 组件的显示文本） */
+    if (node.text) {
+      var txt = document.createElement('span');
+      txt.className = 'badge txt';
+      txt.title = 'i18n: ' + (node.text.key || '(missing key)');
+      txt.textContent = '💬 "' + (node.text.zh || (node.text.variants ? '(有' + node.text.variants.length + '个状态变体)' : '(空)')) + '"';
+      row.appendChild(txt);
+      if (node.text.key) {
+        var i18n = document.createElement('span');
+        i18n.className = 'badge i18n';
+        i18n.textContent = node.text.key;
+        row.appendChild(i18n);
+      }
+    }
+
+    /* label（button / link 组件的标签文字） */
+    if (node.label) {
+      var lbl = document.createElement('span');
+      lbl.className = 'badge lbl';
+      lbl.title = 'i18n: ' + (node.label.key || '(missing key)');
+      lbl.textContent = '🔘 "' + (node.label.zh || '(空)') + '"';
+      row.appendChild(lbl);
+      if (node.label.key) {
+        var i18n2 = document.createElement('span');
+        i18n2.className = 'badge i18n';
+        i18n2.textContent = node.label.key;
+        row.appendChild(i18n2);
+      }
+    }
+
+    /* placeholder（input 组件的占位文字） */
+    if (node.placeholder) {
+      var ph = document.createElement('span');
+      ph.className = 'badge txt';
+      ph.style.cssText = 'background:#f1f5f9;color:#64748b;';
+      ph.title = 'i18n: ' + (node.placeholder.key || '(missing key)');
+      ph.textContent = '📝 placeholder: "' + (node.placeholder.zh || '(空)') + '"';
+      row.appendChild(ph);
+    }
+
+    /* hint（input 组件的辅助说明） */
+    if (node.hint) {
+      var ht = document.createElement('span');
+      ht.className = 'badge txt';
+      ht.style.cssText = 'background:#f8fafc;color:#94a3b8;font-size:9px;';
+      ht.title = 'i18n: ' + (node.hint.key || '(missing key)');
+      ht.textContent = 'ℹ️ ' + (node.hint.zh || '(空)');
+      row.appendChild(ht);
+    }
+
+    /* feedback（操作反馈文本） */
+    if (node.feedback) {
+      var fb = document.createElement('span');
+      fb.className = 'badge fb';
+      var fbParts = [];
+      if (node.feedback.success) fbParts.push('✓' + (node.feedback.success.zh || ''));
+      if (node.feedback.error) fbParts.push('✗' + (node.feedback.error.zh || ''));
+      fb.textContent = '反馈: ' + (fbParts.join(' | ') || '(已定义)');
+      row.appendChild(fb);
+    }
+
+    /* show_when（精确显示条件） */
+    if (node.show_when) {
+      var sw = document.createElement('span');
+      sw.className = 'badge cond';
+      sw.textContent = '⚡ ' + node.show_when;
+      row.appendChild(sw);
+    }
+
+    /* validation（输入校验规则） */
+    if (node.validation && node.validation.length) {
+      var val = document.createElement('span');
+      val.className = 'badge val';
+      val.textContent = '✓ 校验×' + node.validation.length + ': ' +
+        node.validation.map(function(v) { return v.rule + (v.value !== undefined ? ':' + v.value : ''); }).join(', ');
+      row.appendChild(val);
+    }
+
+    if (hasKids) {
+      var kids = document.createElement('div');
+      kids.className = 'tree-children open';
+      node.children.forEach(function(c) {
+        kids.appendChild(renderTreeRec(c, c.type || 'component'));
+      });
+      wrap.appendChild(kids);
+      tog.addEventListener('click', function(e) {
+        e.stopPropagation();
+        kids.classList.toggle('open');
+        tog.classList.toggle('open');
+      });
+    }
+    return wrap;
+  }
+
+  /* ================================================================
+     Tab: 功能结构树
+     ================================================================ */
+  function renderTree() {
+    var card = document.createElement('div');
+    card.className = 'section-card highlight';
+    card.innerHTML = '<div class="section-title-text">📁 业务功能结构（2.1）</div>' +
+      '<p style="font-size:13px;color:#6b7280;">递归树状展开，点击 ▶ 展开/收起。移动端以 TabBar 标签组为根，桌面端以页面集合为根。</p>';
+    main.appendChild(card);
+
+    var tree = document.createElement('div');
+    tree.className = 'tree';
+
+    /* 移动端模式：tree.tabs — 导航标签组 → 标签 → 页面 → ... */
+    if (D.tree.tabs && D.tree.tabs.length) {
+      var root = { name: '导航标签组（' + D.tree.tabs.length + ' 个标签）', type: 'tab', children: [] };
+      D.tree.tabs.forEach(function(tab) {
+        root.children.push({ name: tab.name, desc: tab.desc, type: 'tab', children: tab.children || [] });
+      });
+      tree.appendChild(renderTreeRec(root, 'tab'));
+
+    /* 桌面端模式：tree.pages — 页面集合 → 页面 → ... */
+    } else if (D.tree.pages && D.tree.pages.length) {
+      var root = { name: '页面集合（' + D.tree.pages.length + ' 个页面）', type: 'page', children: [] };
+      D.tree.pages.forEach(function(page) {
+        root.children.push({ name: page.name, desc: page.desc, type: 'page', children: page.children || [] });
+      });
+      tree.appendChild(renderTreeRec(root, 'page'));
+
+    } else {
+      main.innerHTML += '<div class="empty">暂无功能结构数据（请确认 data/tree.js 中定义了 tree.tabs 或 tree.pages）</div>';
+      return;
+    }
+
+    main.appendChild(tree);
+  }
+
+  /* ================================================================
+     Tab: 公共页面与组件
+     ================================================================ */
+  /* collect all refs from the tree into a reverse map: "target page name" -> ["source component names"] */
+  function buildRefMap() {
+    var map = {};
+    function walk(nodes) {
+      if (!nodes) return;
+      nodes.forEach(function walkNode(n) {
+        if (n.refs) {
+          n.refs.forEach(function(t) {
+            if (!map[t]) map[t] = [];
+            map[t].push(n.name || '(unnamed)');
+          });
+        }
+        if (n.children) n.children.forEach(walkNode);
+      });
+    }
+    walk(D.tree ? (D.tree.tabs || D.tree.pages || []) : []);
+    if (D.tree) walk(D.tree.shared_pages || []);
+    return map;
+  }
+  var REF_MAP = buildRefMap();
+
+  function renderShared() {
+    var card = document.createElement('div');
+    card.className = 'section-card highlight';
+    card.innerHTML = '<div class="section-title-text">🔁 公共页面与公共组件（2.2）</div>';
+    main.appendChild(card);
+
+    var pCount = (D.tree.shared_pages || []).length;
+    var cCount = (D.tree.shared_components || []).length;
+    var info = document.createElement('p');
+    info.style.cssText = 'font-size:13px;color:#6b7280;margin-bottom:16px;';
+    info.textContent = '公共页面 ' + pCount + ' 个，公共组件 ' + cCount + ' 个。';
+    main.appendChild(info);
+
+    (D.tree.shared_pages || []).forEach(function(sp) {
+      var tree = document.createElement('div');
+      tree.className = 'tree';
+      tree.appendChild(renderTreeRec({ name: sp.name, desc: sp.desc, type: 'page', children: sp.children || [] }, 'page'));
+      main.appendChild(tree);
+      if (sp.biz_ref) {
+        var ref = document.createElement('div');
+        ref.className = 'ref-info';
+        ref.innerHTML = '🔗 功能逻辑 → <b>' + sp.biz_ref + '</b>';
+        main.appendChild(ref);
+      }
+      if (sp.refs && sp.refs.length) {
+        var rl = document.createElement('div');
+        rl.className = 'ref-line';
+        rl.innerHTML = '📎 引用来源：' + sp.refs.map(function(r) { return '<b>' + r + '</b>'; }).join('、');
+        main.appendChild(rl);
+      }
+      /* show reverse refs from REF_MAP */
+      var refsFrom = REF_MAP[sp.name] || REF_MAP[sp.name.replace('页面：', '')];
+      if (refsFrom && refsFrom.length) {
+        var rl2 = document.createElement('div');
+        rl2.className = 'ref-line';
+        rl2.innerHTML = '🔙 被引用：' + refsFrom.map(function(r) { return '<b>' + r + '</b>'; }).join('、');
+        main.appendChild(rl2);
+      }
+    });
+
+    if (cCount > 0) {
+      var sub = document.createElement('h3');
+      sub.style.cssText = 'font-size:14px;font-weight:600;margin:20px 0 8px;color:#374151;';
+      sub.textContent = '公共组件（仅列出跨页面引用的组件）';
+      main.appendChild(sub);
+      D.tree.shared_components.forEach(function(sc) {
+        var card = document.createElement('div');
+        card.className = 'comp-card';
+        card.innerHTML = '<span class="tag">组件</span><span class="cname">' + sc.name + '</span>' +
+          (sc.desc ? '<span class="cdesc">— ' + sc.desc + '</span>' : '') +
+          (sc.refs ? '<span class="crefs">📎 ' + sc.refs.join('、') + '</span>' : '');
+        main.appendChild(card);
+      });
+    }
+
+    /* 前端流程概要 */
+    if (D.tree.flows && D.tree.flows.length) {
+      var fTitle = document.createElement('h3');
+      fTitle.style.cssText = 'font-size:14px;font-weight:600;margin:24px 0 8px;color:#374151;';
+      fTitle.textContent = '前端流程概要（2.3）';
+      main.appendChild(fTitle);
+      D.tree.flows.forEach(function(f) {
+        var card = document.createElement('div');
+        card.className = 'flow-card';
+        var html = '<div class="fname">' + f.name + '</div><ol class="fsteps">';
+        f.steps.forEach(function(s) { html += '<li>' + s + '</li>'; });
+        html += '</ol></div>';
+        card.innerHTML = html;
+        main.appendChild(card);
+      });
+    }
+  }
+
+  /* ================================================================
+     Tab: 区块渲染（通用——业务流程/设计风格/多语言）
+     ================================================================ */
+  function renderSections(sections, title) {
+    if (!sections || !sections.length) {
+      main.innerHTML = '<div class="empty">暂无数据</div>';
+      return;
+    }
+    var card = document.createElement('div');
+    card.className = 'section-card highlight';
+    card.innerHTML = '<div class="section-title-text">' + title + '</div>';
+    main.appendChild(card);
+    sections.forEach(function(sec) { renderSection(sec); });
+  }
+
+  function renderSection(sec) {
+    /* Handle nested sections (operation format: {title, sections: [{title, blocks, flowchart}]}) */
+    if (sec.sections) {
+      /* Render the parent title as an h2, then recurse into sub-sections */
+      var h2 = document.createElement('h2');
+      h2.style.cssText = 'font-size:18px;font-weight:700;color:#1f2937;margin:24px 0 12px;padding-left:4px;';
+      h2.textContent = sec.title;
+      main.appendChild(h2);
+      sec.sections.forEach(function(sub) { renderSection(sub); });
+      return;
+    }
+    /* Flat format (customer/fighter): {title, blocks, flowchart} */
+    var wrap = document.createElement('div');
+    wrap.className = 'section-card';
+    wrap.innerHTML = '<div class="section-title-text" style="font-size:15px;">' + (sec.title || '') + '</div>';
+    main.appendChild(wrap);
+    if (sec.blocks) sec.blocks.forEach(function(b) { renderBlock(b); });
+    if (sec.flowchart) renderFlowchart(sec.flowchart);
+  }
+
+  function renderBlock(b) {
+    var el;
+    switch (b.type) {
+      case 'p':
+        el = document.createElement('p'); el.className = 'block-p'; el.textContent = b.text; break;
+      case 'h2':
+        el = document.createElement('h2'); el.className = 'block-h2'; el.textContent = b.text; break;
+      case 'h3':
+        el = document.createElement('h3'); el.className = 'block-h3'; el.textContent = b.text; break;
+      case 'h4':
+        el = document.createElement('h4'); el.className = 'block-h4'; el.textContent = b.text; break;
+      case 'ul':
+        el = document.createElement('ul'); el.className = 'block-ul';
+        b.items.forEach(function(i) { var li = document.createElement('li'); li.textContent = i; el.appendChild(li); });
+        break;
+      case 'ol':
+        el = document.createElement('ol'); el.className = 'block-ol';
+        b.items.forEach(function(i) { var li = document.createElement('li'); li.textContent = i; el.appendChild(li); });
+        break;
+      case 'note':
+        el = document.createElement('div'); el.className = 'block-note ' + (b.level || 'info');
+        el.innerHTML = '<strong>' + ({info:'💡',warning:'⚠️',danger:'🚫'}[b.level]||'💡') + ' </strong>' + b.text;
+        break;
+      case 'table':
+        el = document.createElement('table'); el.className = 'block-table';
+        if (b.headers) {
+          var thead = document.createElement('thead'), tr = document.createElement('tr');
+          b.headers.forEach(function(h) { var th = document.createElement('th'); th.textContent = h; tr.appendChild(th); });
+          thead.appendChild(tr); el.appendChild(thead);
+        }
+        if (b.rows) {
+          var tbody = document.createElement('tbody');
+          b.rows.forEach(function(r) {
+            var tr = document.createElement('tr');
+            r.forEach(function(c) { var td = document.createElement('td'); td.textContent = c; tr.appendChild(td); });
+            tbody.appendChild(tr);
+          });
+          el.appendChild(tbody);
+        }
+        break;
+      case 'hr':
+        el = document.createElement('hr'); el.className = 'block-hr'; break;
+      default: return;
+    }
+    main.appendChild(el);
+  }
+
+  /* ================================================================
+     流程图渲染 — Sugiyama 分层布局算法
+     ================================================================ */
+  function layoutFlowchart(fc) {
+    var nodes = fc.nodes, edges = fc.edges;
+    if (!nodes || !nodes.length) return null;
+
+    var GEOM = {
+      start:  { w: 124, h: 32, rx: 16 },
+      end:    { w: 124, h: 32, rx: 16 },
+      action: { w: 140, h: 40, rx: 8 },
+      decision: { w: 112, h: 52 },
+      subprocess: { w: 140, h: 40, rx: 8 }
+    };
+    function measLabel(label, type) {
+      var lines = label.split('\n');
+      var maxLen = Math.max.apply(null, lines.map(function(l) { return l.length; }));
+      var charW = /[一-鿿]/.test(label) ? 11 : 6.5;
+      var textW = maxLen * charW + 12;
+      var base = GEOM[type] || GEOM.action;
+      return { w: Math.max(base.w, textW), h: Math.max(base.h, lines.length * 15 + 18), lines: lines, lineH: 15 };
+    }
+
+    var nm = {};
+    nodes.forEach(function(n) {
+      var g = measLabel(n.label, n.type);
+      nm[n.id] = { id: n.id, type: n.type, label: n.label, w: g.w, h: g.h, lines: g.lines, lineH: g.lineH, layer: -1, x: 0, y: 0, outEdges: [], inEdges: [] };
+    });
+    edges.forEach(function(e) {
+      var s = nm[e.from], t = nm[e.to];
+      if (s && t) { s.outEdges.push(e.to); t.inEdges.push(e.from); }
+    });
+    var nl = Object.keys(nm).map(function(k) { return nm[k]; });
+    if (!nl.length) return null;
+
+    /* Phase 1: 最长路径分层 */
+    nl.forEach(function(n) { n.layer = -1; });
+    nl.forEach(function(n) { if (n.inEdges.length === 0) n.layer = 0; });
+    var remain = nl.filter(function(n) { return n.layer < 0; }).length;
+    var stall = 0;
+    while (remain > 0 && stall < remain + 2) {
+      var adv = false;
+      nl.forEach(function(n) {
+        if (n.layer >= 0) return;
+        var maxPred = -1, unk = 0;
+        n.inEdges.forEach(function(pid) { var p = nm[pid]; if (p && p.layer >= 0) maxPred = Math.max(maxPred, p.layer); else unk++; });
+        if (maxPred >= 0) { n.layer = maxPred + 1; remain--; adv = true; }
+      });
+      if (!adv) {
+        stall++;
+        var best = null, bestU = Infinity;
+        nl.forEach(function(n) { if (n.layer >= 0) return; var u = 0; n.inEdges.forEach(function(pid) { if (!nm[pid] || nm[pid].layer < 0) u++; }); if (u < bestU) { bestU = u; best = n; } });
+        if (best) { best.layer = 0; remain--; adv = true; }
+      }
+      if (!adv) break;
+    }
+    nl.forEach(function(n) { if (n.layer < 0) n.layer = 0; });
+
+    var layers = {}, maxLayer = 0;
+    nl.forEach(function(n) { if (!layers[n.layer]) layers[n.layer] = []; layers[n.layer].push(n); maxLayer = Math.max(maxLayer, n.layer); });
+
+    /* Phase 2: Barycenter 排序（3 遍） */
+    for (var l = 0; l <= maxLayer; l++) (layers[l] || []).forEach(function(n, i) { n._pos = i; });
+    for (var pass = 0; pass < 3; pass++) {
+      for (var l = 1; l <= maxLayer; l++) {
+        var layer = layers[l] || [];
+        layer.forEach(function(n) { var nb = n.inEdges.map(function(pid) { return nm[pid]; }).filter(function(p) { return p && p._pos != null; }); n._bary = nb.length ? nb.reduce(function(s, p) { return s + p._pos; }, 0) / nb.length : n._pos; });
+        layer.sort(function(a, b) { return a._bary - b._bary; });
+        layer.forEach(function(n, i) { n._pos = i; });
+      }
+      for (var l = maxLayer - 1; l >= 0; l--) {
+        var layer = layers[l] || [];
+        layer.forEach(function(n) { var nb = n.outEdges.map(function(cid) { return nm[cid]; }).filter(function(c) { return c && c._pos != null; }); n._bary = nb.length ? nb.reduce(function(s, c) { return s + c._pos; }, 0) / nb.length : n._pos; });
+        layer.sort(function(a, b) { return a._bary - b._bary; });
+        layer.forEach(function(n, i) { n._pos = i; });
+      }
+    }
+
+    /* Phase 3: 坐标分配（topdown 垂直布局） */
+    var LAYER_GAP = 75, NODE_PAD = 18, MARGIN = 24;
+    var maxNodeW = 0, maxNodeH = 0;
+    nl.forEach(function(n) { maxNodeW = Math.max(maxNodeW, n.w); maxNodeH = Math.max(maxNodeH, n.h); });
+    var layerWidths = {}, maxCrossExtent = 0;
+    for (var l = 0; l <= maxLayer; l++) {
+      var layer = layers[l] || [];
+      var w = 0; layer.forEach(function(n) { w += n.w; }); w += Math.max(0, (layer.length - 1)) * NODE_PAD;
+      layerWidths[l] = w; maxCrossExtent = Math.max(maxCrossExtent, w);
+    }
+    var svgW = maxCrossExtent + MARGIN * 2, svgH = (maxLayer + 1) * (maxNodeH + LAYER_GAP) + MARGIN;
+    for (var l = 0; l <= maxLayer; l++) {
+      var layer = layers[l] || [];
+      var y = MARGIN + l * (maxNodeH + LAYER_GAP);
+      var x = MARGIN + (maxCrossExtent - (layerWidths[l] || 0)) / 2;
+      layer.forEach(function(n) { n.x = x; n.y = y + (maxNodeH - n.h) / 2; x += n.w + NODE_PAD; });
+    }
+
+    var edgeData = edges.map(function(e) {
+      var s = nm[e.from], t = nm[e.to];
+      if (!s || !t) return null;
+      return { from: e.from, to: e.to, label: e.label || '', x1: s.x + s.w / 2, y1: s.y + s.h, x2: t.x + t.w / 2, y2: t.y };
+    }).filter(Boolean);
+
+    return { nodes: nl, edges: edgeData, svgW: Math.max(svgW, 500), svgH: Math.max(svgH + 30, 200) };
+  }
+
+  function renderFlowchart(fc) {
+    if (!fc || !fc.nodes || !fc.nodes.length) return;
+    var layout = layoutFlowchart(fc);
+    if (!layout) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'flowchart-wrap';
+
+    var colors = {
+      start:  { fill: '#ecfdf5', stroke: '#10b981', text: '#065f46' },
+      end:    { fill: '#ecfdf5', stroke: '#10b981', text: '#065f46' },
+      action: { fill: '#eff6ff', stroke: '#3b82f6', text: '#1e40af' },
+      decision: { fill: '#fffbeb', stroke: '#f59e0b', text: '#92400e' },
+      subprocess: { fill: '#faf5ff', stroke: '#8b5cf6', text: '#5b21b6' }
+    };
+
+    var svg = '<svg width="' + layout.svgW + '" height="' + layout.svgH + '" xmlns="http://www.w3.org/2000/svg">';
+    svg += '<defs><marker id="ah" markerWidth="8" markerHeight="5.6" refX="8" refY="2.8" orient="auto">' +
+      '<polygon points="0 0, 8 2.8, 0 5.6" fill="#94a3b8"/></marker></defs>';
+
+    /* 贝塞尔曲线边（topdown：底部出→顶部入） */
+    layout.edges.forEach(function(e) {
+      var sx = e.x1, sy = e.y1, tx = e.x2, ty = e.y2;
+      var cp1y = sy + (ty - sy) * 0.4, cp2y = sy + (ty - sy) * 0.6;
+      svg += '<path d="M' + sx + ',' + sy + ' C' + sx + ',' + cp1y + ' ' + tx + ',' + cp2y + ' ' + tx + ',' + ty + '" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ah)"/>';
+      if (e.label) { var lx = (sx + tx) / 2, ly = (sy + ty) / 2 - 6; svg += '<text x="' + lx + '" y="' + ly + '" text-anchor="middle" font-size="11" fill="#64748b">' + e.label + '</text>'; }
+    });
+
+    /* 节点 */
+    layout.nodes.forEach(function(n) {
+      var c = colors[n.type] || colors.action;
+      var x = n.x, y = n.y, w = n.w, h = n.h;
+      if (n.type === 'decision') {
+        svg += '<polygon points="' + (x + w/2) + ',' + y + ' ' + (x + w) + ',' + (y + h/2) + ' ' + (x + w/2) + ',' + (y + h) + ' ' + x + ',' + (y + h/2) + '" fill="' + c.fill + '" stroke="' + c.stroke + '" stroke-width="1.5"/>';
+      } else {
+        var rx = (n.type === 'start' || n.type === 'end') ? 16 : 8;
+        svg += '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + rx + '" ry="' + rx + '" fill="' + c.fill + '" stroke="' + c.stroke + '" stroke-width="1.5"/>';
+      }
+      var startY = y + (h - n.lines.length * n.lineH) / 2 + 12;
+      n.lines.forEach(function(line, i) { svg += '<text x="' + (x + w/2) + '" y="' + (startY + i * n.lineH) + '" text-anchor="middle" font-size="11" fill="' + c.text + '" font-weight="500">' + line.replace(/</g, '&lt;') + '</text>'; });
+    });
+
+    svg += '</svg>';
+    wrap.innerHTML = svg;
+    main.appendChild(wrap);
+  }
+
+  /* ================================================================
+     默认打开第一个标签页
+     ================================================================ */
+  var firstTab = document.querySelector('.tab-item');
+  if (firstTab) { firstTab.classList.add('active'); renderTab('tree'); }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ER 实体关系图 — 拳击赛事运营平台</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif; background: #eef4fb; color: #0f172a; line-height: 1.6; }
+  .toolbar { background: linear-gradient(90deg,#0f172a,#1e3a5f); color: #fff; border-bottom: 1px solid #dbeafe; padding: 10px 22px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; box-shadow: 0 3px 16px rgba(15,23,42,.12); }
+  .toolbar a { color: #bfdbfe; text-decoration: none; font-size: .9rem; font-weight: 800; }
+  .toolbar label { font-size: .88rem; font-weight: 800; color: #e2e8f0; }
+  .toolbar select { padding: 6px 12px; border: 1px solid #93c5fd; border-radius: 8px; font-size: .92rem; background: #fff; color: #0f172a; cursor: pointer; }
+  .toolbar .stats { font-size: .82rem; color: #cbd5e1; margin-left: auto; font-weight: 700; }
+  .main { display: flex; height: calc(100vh - 52px); }
+  #svg-container { flex: 1; overflow: auto; background: radial-gradient(circle at 18% 14%,rgba(14,165,233,.12),transparent 28%),radial-gradient(circle at 82% 18%,rgba(16,185,129,.1),transparent 30%),linear-gradient(180deg,#f8fbff,#eaf1f8); position: relative; cursor: default; padding: 24px; }
+  #svg-container:active { cursor: move; }
+  #svg-container svg { display: block; width: auto; height: auto; min-width: 100%; min-height: 100%; transform-origin: 0 0; }
+  #detail-panel { width: 480px; min-width: 320px; background: #fff; border-left: 1px solid #cbd5e1; overflow-y: auto; padding: 22px; display: none; box-shadow: -8px 0 22px rgba(15,23,42,.08); position: relative; }
+  #detail-panel.visible { display: block; }
+  #detail-panel h2 { font-size: 1.22rem; margin-bottom: 4px; }
+  #detail-panel .table-name { color: #2563eb; font-family: Consolas, "Cascadia Mono", monospace; font-size: .9rem; margin-bottom: 12px; font-weight: 700; }
+  #detail-panel .entity-desc { color: #475569; font-size: .9rem; margin-bottom: 14px; }
+  #detail-panel table { width: 100%; border-collapse: collapse; font-size: .82rem; table-layout: fixed; }
+  #detail-panel th, #detail-panel td { padding: 4px 6px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: top; overflow-wrap: break-word; word-break: break-word; }
+  #detail-panel th { background: #f1f5f9; color: #475569; font-size: .7rem; text-transform: uppercase; }
+  #detail-panel .col-name { width: 22%; }
+  #detail-panel .col-type { width: 26%; }
+  #detail-panel .col-badge { width: 20%; }
+  #detail-panel .col-desc { width: 32%; }
+  #detail-panel .field-comment { font-size: .66rem; color: #94a3b8; line-height: 1.35; padding: 2px 0 2px 0; display: block; }
+  #detail-panel .close-btn { float: right; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #94a3b8; }
+  /* resize handle */
+  #detail-panel .resize-handle { position: absolute; left: 0; top: 0; bottom: 0; width: 8px; cursor: e-resize; z-index: 10; transition: background .15s; }
+  #detail-panel .resize-handle:hover { background: rgba(37,99,235,.25); }
+  #detail-panel .close-btn { float: right; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #94a3b8; }
+  .badge { display: inline-block; font-size: .65rem; font-weight: 600; padding: 1px 5px; border-radius: 3px; margin: 0 1px; }
+  .badge.pk { background: #fef3c7; color: #92400e; }
+  .badge.nn { background: #fee2e2; color: #991b1b; }
+  .badge.uq { background: #dbeafe; color: #1e40af; }
+  .badge.fk { background: #ede9fe; color: #6d28d9; }
+  .legend { position: fixed; left: 24px; bottom: 18px; z-index: 5; display: flex; align-items: center; gap: 14px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 10px; background: rgba(255,255,255,.94); color: #475569; font-size: .78rem; font-weight: 800; box-shadow: 0 8px 22px rgba(15,23,42,.1); }
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .swatch.domain { background: linear-gradient(135deg,#2563eb,#059669,#d97706); }
+  .swatch.ghost { background: #fff7ed; border: 1px dashed #ea580c; }
+  .rel-domain { color: #334155; }
+  .rel-cross { color: #ea580c; }
+  .empty-state { padding: 56px; text-align: center; color: #475569; }
+  .empty-state p:first-child { font-size: 1.16rem; margin-bottom: 8px; font-weight: 800; color: #0f172a; }
+  .empty-state a { color: #2563eb; font-weight: 800; text-decoration: none; }
+  .field-name { font-family: Consolas, "Cascadia Mono", monospace; font-weight: 700; }
+  .field-type, .field-desc, .relation-row { font-size: .82rem; color: #64748b; }
+  .index-summary { margin-top: 12px; font-size: .84rem; color: #64748b; }
+  .relation-list { margin-top: 14px; }
+  .relation-list strong { font-size: .88rem; }
+  .relation-row { padding: 4px 0; color: #2563eb; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <a href="?domain=all">← 总 ER 全景</a>
+  <label for="domain-select">域：</label>
+  <select id="domain-select" title="选择 ER 领域" onchange="switchDomain()"></select>
+  <span class="stats" id="stats"></span>
+</div>
+
+<div class="main">
+  <div id="svg-container"></div>
+  <div id="detail-panel"></div>
+</div>
+
+<div class="legend" id="legend">
+  <span><span class="swatch domain"></span> 域内实体自动配色</span>
+  <span><span class="swatch ghost"></span> 跨域引用</span>
+  <span class="rel-domain">━━ 两端实体混色关系</span>
+  <span class="rel-cross">┅┅ 跨域关系</span>
+</div>
+
+  <!-- ═══ 数据加载：loader.js 按项目配置自动加载子域文件 ═══ -->
+  <script src="data/loader.js"></script>
+
+  <script>
+const ALL_DATA = { domains: {}, core: {} };
+if (window.ER_DATA) {
+  ALL_DATA.core = window.ER_DATA["core-er"] || { domains: [], core_relations: [] };
+  // 用域号("01")做键名，因为渲染代码通过域号查找
+  Object.keys(window.ER_DATA).forEach(function(k) {
+    if (k !== "core-er" && window.ER_DATA[k].domain) {
+      ALL_DATA.domains[window.ER_DATA[k].domain] = window.ER_DATA[k];
+    }
+  });
+}
+
+// 构建全局实体→域映射
+const ENTITY_DOMAIN = {};
+Object.values(ALL_DATA.domains).forEach(d => {
+  (d.entities||[]).forEach(e => { ENTITY_DOMAIN[e.id] = d.domain; });
+});
+
+// ====== 单域自适应网格布局引擎 ======
+const BOX_W = 240;
+const EHDR = 54;
+const EFLD = 21;
+// 与渲染函数中 wrapType 保持一致的折行算法，确保高度计算与渲染一致
+function calcTypeLines(t) {
+  if (!t || t.length <= 30) return 1;
+  var n = 1, remaining = t;
+  while (remaining.length > 30) {
+    var cut = remaining.lastIndexOf(',', 30);
+    if (cut < 0) cut = 30;
+    remaining = remaining.slice(cut + 1).trim();
+    n++;
+  }
+  return n;
+}
+function eH(e) {
+  var fl = e.fields||[];
+  var h = EHDR;
+  fl.forEach(function(f) {
+    h += EFLD * Math.max(1, calcTypeLines(f.t||f.type||''));
+  });
+  return h + 18;
+}
+const PAD = 56;
+const GAP_X = 96;
+const GAP_Y = 76;
+const GHOST_GAP = 120;
+const LANE = 16;        // 相邻连线之间的车道间距，避免折线段重叠
+const GHOST_COLOR = '#ea580c';
+const ENTITY_PALETTE = [
+  '#2563eb', '#059669', '#d97706', '#7c3aed', '#db2777',
+  '#0891b2', '#dc2626', '#4f46e5', '#16a34a', '#9333ea',
+  '#ca8a04', '#0284c7'
+];
+const DOMAIN_COLORS = {
+  "01":"#2563eb", "02":"#059669", "03":"#7c3aed", "04":"#d97706",
+  "05":"#db2777", "06":"#0891b2", "07":"#dc2626", "08":"#4f46e5"
+};
+
+function parseRel(rel) {
+  const [fe, ff] = rel.from.split('.');
+  const [te, tf] = rel.to.split('.');
+  return { fromEntity: fe, fromField: ff, toEntity: te, toField: tf };
+}
+
+function domainColor(domainId) { return DOMAIN_COLORS[domainId] || '#2563eb'; }
+
+function hexToRgb(hex) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+function rgbToHex({r, g, b}) {
+  return '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+}
+
+function mixColor(a, b, ratio = 0.5) {
+  const ca = hexToRgb(a), cb = hexToRgb(b);
+  return rgbToHex({
+    r: ca.r * (1 - ratio) + cb.r * ratio,
+    g: ca.g * (1 - ratio) + cb.g * ratio,
+    b: ca.b * (1 - ratio) + cb.b * ratio
+  });
+}
+
+function forceDomainLayout(entities, relations, domainId) {
+  const ghostMap = {};
+  relations.forEach(r => {
+    if (!r.cross_domain) return;
+    const p = parseRel(r);
+    const fromIn = entities.some(e => e.id === p.fromEntity);
+    const toIn = entities.some(e => e.id === p.toEntity);
+    let ghostId;
+    if (fromIn && !toIn) ghostId = p.toEntity;
+    else if (!fromIn && toIn) ghostId = p.fromEntity;
+    else return;
+
+    if (!ghostMap[ghostId]) {
+      const gd = ALL_DATA.domains[r.cross_domain];
+      const ge = (gd?.entities||[]).find(e => e.id === ghostId);
+      ghostMap[ghostId] = {
+        id: ghostId, name: ge?.name||ghostId, table: ge?.table||'?',
+        domain: r.cross_domain, domainTitle: gd?.title||'', slug: gd?.slug||''
+      };
+    }
+  });
+
+  const ghostList = Object.values(ghostMap);
+  const allNodes = [...entities, ...ghostList.map(g => ({...g, _ghost:true}))];
+  const boxHeights = {};
+  allNodes.forEach(e => { boxHeights[e.id] = eH(e); });
+
+  const ids = entities.map(e => e.id);
+  const entityById = Object.fromEntries(entities.map(e => [e.id, e]));
+  const degree = Object.fromEntries(ids.map(id => [id, 0]));
+  const linked = Object.fromEntries(ids.map(id => [id, new Set()]));
+  relations.forEach(r => {
+    const p = parseRel(r);
+    if (!(p.fromEntity in degree)) return;
+    degree[p.fromEntity]++;
+    if (p.toEntity in degree) {
+      degree[p.toEntity]++;
+      linked[p.fromEntity].add(p.toEntity);
+      linked[p.toEntity].add(p.fromEntity);
+    }
+  });
+
+  const orderedIds = [];
+  const remaining = new Set(ids);
+  while (remaining.size) {
+    let best = null, bestScore = -1;
+    remaining.forEach(id => {
+      const placedLinks = orderedIds.reduce((sum, placed) => sum + (linked[id]?.has(placed) ? 1 : 0), 0);
+      const score = placedLinks * 10 + (degree[id] || 0);
+      if (score > bestScore) { best = id; bestScore = score; }
+    });
+    orderedIds.push(best);
+    remaining.delete(best);
+  }
+
+  function slotOrder(cols, rows) {
+    const slots = [];
+    const cx = (cols - 1) / 2, cy = (rows - 1) / 2;
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        slots.push({ row, col, score: Math.abs(col - cx) + Math.abs(row - cy) * 1.18 });
+      }
+    }
+    return slots.sort((a, b) => a.score - b.score || a.row - b.row || a.col - b.col);
+  }
+
+  function scoreColumns(cols) {
+    const rows = Math.ceil(Math.max(ids.length, 1) / cols);
+    const slots = slotOrder(cols, rows);
+    const cell = {};
+    orderedIds.forEach((id, i) => { cell[id] = slots[i]; });
+    let edgeScore = 0;
+    relations.forEach(r => {
+      const p = parseRel(r);
+      if (!cell[p.fromEntity] || !cell[p.toEntity]) return;
+      const a = cell[p.fromEntity], b = cell[p.toEntity];
+      edgeScore += Math.abs(a.col - b.col) * 1.4 + Math.abs(a.row - b.row);
+    });
+    const aspect = cols / Math.max(rows, 1);
+    const preferredCols = Math.max(1, Math.ceil(Math.sqrt(mainCount * 1.35)));
+    const widthPenalty = Math.pow(Math.max(0, cols - preferredCols), 2) * 7;
+    return edgeScore + Math.abs(aspect - 1.55) * 1.8 + rows * 0.15 + widthPenalty;
+  }
+
+  const entityPos = {};
+  const mainCount = Math.max(entities.length, 1);
+  const maxCols = mainCount;
+  let mainCols = 1, bestScore = Infinity;
+  for (let cols = 1; cols <= maxCols; cols++) {
+    const score = scoreColumns(cols);
+    if (score < bestScore) { mainCols = cols; bestScore = score; }
+  }
+  const mainRows = Math.ceil(mainCount / mainCols);
+  const slots = slotOrder(mainCols, mainRows);
+  const rowHeights = Array(mainRows).fill(0);
+  orderedIds.forEach((id, i) => {
+    const e = entityById[id];
+    const row = slots[i].row;
+    rowHeights[row] = Math.max(rowHeights[row], boxHeights[e.id]);
+  });
+
+  orderedIds.forEach((id, i) => {
+    const e = entityById[id];
+    const { col, row } = slots[i];
+    let y = PAD;
+    for (let r = 0; r < row; r++) y += rowHeights[r] + GAP_Y;
+    entityPos[e.id] = { x: PAD + col * (BOX_W + GAP_X), y, ghost: false, domain: domainId };
+  });
+
+  const mainW = mainCols * BOX_W + (mainCols - 1) * GAP_X;
+  const mainH = rowHeights.reduce((s, h) => s + h, 0) + Math.max(0, mainRows - 1) * GAP_Y;
+  const ghostX = PAD + mainW + (ghostList.length ? GHOST_GAP : 0);
+  let ghostY = PAD + Math.max(0, (mainH - ghostList.reduce((s, g) => s + boxHeights[g.id], 0) - Math.max(0, ghostList.length - 1) * GAP_Y) / 2);
+
+  ghostList.forEach(g => {
+    entityPos[g.id] = { x: ghostX, y: ghostY, ghost: true, domain: g.domain };
+    ghostY += boxHeights[g.id] + GAP_Y;
+  });
+
+  // 长距离横向连线需要外侧通道。这里只计算需要的额外下方空间，不预设走上还是走下。
+  const colXs0 = [...new Set(Object.values(entityPos).map(p => p.x))].sort((a, b) => a - b);
+  const colIdx0 = x => colXs0.indexOf(x);
+  let longCount = 0;
+  relations.forEach(r => {
+    const p = parseRel(r);
+    const pf = entityPos[p.fromEntity], pt = entityPos[p.toEntity];
+    if (!pf || !pt) return;
+    const hf = boxHeights[p.fromEntity], ht = boxHeights[p.toEntity];
+    const dx = (pt.x + BOX_W / 2) - (pf.x + BOX_W / 2);
+    const dy = (pt.y + ht / 2) - (pf.y + hf / 2);
+    if (Math.abs(dx) >= Math.abs(dy) && Math.abs(colIdx0(pt.x) - colIdx0(pf.x)) > 1) longCount++;
+  });
+
+  let maxX = PAD + mainW;
+  let maxY = PAD + mainH;
+  allNodes.forEach(n => {
+    const p = entityPos[n.id];
+    if (!p) return;
+    maxX = Math.max(maxX, p.x + BOX_W);
+    maxY = Math.max(maxY, p.y + boxHeights[n.id]);
+  });
+
+  const finalW = maxX + PAD;
+  const finalH = maxY + PAD + (longCount > 0 ? longCount * LANE + 32 : 0);
+
+  return { entityPos, boxHeights, finalW, finalH, ghostEntities: ghostMap };
+}
+
+function svgText(x, y, text, cls, opts = {}) {
+  const { bold, color, size, anchor } = opts;
+  const fw = bold ? 'font-weight:700' : '';
+  const fc = color ? `fill:${color}` : '';
+  const fs = size ? `font-size:${size}px` : 'font-size:12px';
+  const ta = anchor ? `text-anchor:${anchor}` : '';
+  return `<text x="${x}" y="${y}" style="${fw};${fc};${fs};font-family:'Microsoft YaHei','PingFang SC',sans-serif" ${ta}>${escXml(text)}</text>`;
+}
+
+function escXml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function shortText(text, limit) {
+  const s = text || '';
+  return s.length > limit ? s.slice(0, limit - 1) + '…' : s;
+}
+
+function renderERGraph(domainId) {
+  const data = ALL_DATA.domains[domainId];
+  if (!data) return '<p style="padding:40px">域数据未找到</p>';
+
+  const entities = data.entities || [];
+  const relations = data.relations || [];
+  if (entities.length === 0) {
+    return `<div style="padding:40px;text-align:center;color:#64748b">
+      <p style="font-size:1.1rem;margin-bottom:8px">📭 域 ${domainId}: ${data.title} — 实体待填充</p>
+      <p>请先完成业务工作流梳理，然后在 <code>data/${domainId}-${data.slug||'xx'}.json</code> 中定义实体</p>
+      <p><a href="?domain=all">← 返回总 ER 全景</a></p>
+    </div>`;
+  }
+
+  // 确定式自适应布局（域内实体网格 + 跨域 ghost 列）
+  const { entityPos, boxHeights, finalW, finalH, ghostEntities } =
+    forceDomainLayout(entities, relations, domainId);
+
+  // SVG
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${finalW}" height="${finalH}" viewBox="0 0 ${finalW} ${finalH}" preserveAspectRatio="xMinYMin meet">`;
+  svg += `<defs>
+    <filter id="card-shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="7" stdDeviation="8" flood-color="#0f172a" flood-opacity=".12"/></filter>
+    <marker id="arrow-blue" markerWidth="11" markerHeight="9" refX="10" refY="4.5" orient="auto"><polygon points="0 0, 11 4.5, 0 9" fill="#2563eb"/></marker>
+    <marker id="arrow-amber" markerWidth="11" markerHeight="9" refX="10" refY="4.5" orient="auto"><polygon points="0 0, 11 4.5, 0 9" fill="#ea580c"/></marker>
+  </defs>`;
+
+  // Build entity lookup
+  const elookup = {};
+  entities.forEach(e => { elookup[e.id] = e; });
+  Object.values(ghostEntities).forEach(g => { elookup[g.id] = g; });
+
+  const entityColors = {};
+  entities.forEach((e, i) => { entityColors[e.id] = ENTITY_PALETTE[i % ENTITY_PALETTE.length]; });
+  Object.values(ghostEntities).forEach(g => { entityColors[g.id] = GHOST_COLOR; });
+
+  // Draw entity boxes
+  // 实体配色映射：域内实体自动配色，跨域 ghost 统一橙色
+  Object.keys(entityPos).forEach(eid => {
+    const pos = entityPos[eid];
+    if (!pos) return;
+    const e = elookup[eid] || {id:eid, name:eid, table:'?'};
+    const h = boxHeights[eid] || 80;
+    const isGhost = pos.ghost;
+    const dColor = entityColors[eid] || domainColor(pos.domain || data.domain);
+
+    const fill = isGhost ? '#fff7ed' : '#ffffff';
+    const stroke = isGhost ? GHOST_COLOR : dColor;
+    const sw = isGhost ? 1.8 : 2.5;
+    const dash = isGhost ? 'stroke-dasharray="6 4"' : '';
+
+    // 实体框（top-left 坐标）
+    svg += `<rect x="${pos.x}" y="${pos.y}" width="${BOX_W}" height="${h}" rx="10" ry="10" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" ${dash} filter="url(#card-shadow)" class="entity-box" data-entity="${escXml(eid)}" data-ghost="${isGhost?'true':'false'}" data-domain="${escXml(pos.domain || data.domain)}" style="cursor:pointer"/>`;
+
+    // 标题栏
+    svg += `<rect x="${pos.x+2}" y="${pos.y+2}" width="${BOX_W-4}" height="32" rx="8" ry="8" fill="${stroke}" opacity="${isGhost?0.12:0.18}"/>`;
+
+    svg += `<text x="${pos.x+BOX_W/2}" y="${pos.y+22}" text-anchor="middle"
+      style="font-size:15px;font-weight:800;fill:#0f172a;font-family:'Microsoft YaHei','PingFang SC',sans-serif">${escXml(e.name||eid)}${isGhost?' 🔗':''}</text>`;
+
+    svg += `<text x="${pos.x+14}" y="${pos.y+50}" style="font-size:12px;fill:#475569;font-family:Consolas,'Cascadia Mono',monospace;font-weight:700">${escXml(e.table||'')}</text>`;
+
+    // 辅助：按逗号位置折行（用于长枚举值）
+    function wrapType(t) {
+      if (!t || t.length <= 30) return [t||''];
+      var lines = [], remaining = t;
+      while (remaining.length > 30) {
+        var cut = remaining.lastIndexOf(',', 30);
+        if (cut < 0) cut = 30;
+        lines.push(remaining.slice(0, cut + 1));
+        remaining = remaining.slice(cut + 1).trim();
+      }
+      if (remaining) lines.push(remaining);
+      return lines;
+    }
+
+    var allFields = e.fields||[];
+    var fieldOffset = 0;
+    allFields.forEach(function(f) {
+      var nameText = f.n||f.name||'';
+      var typeText = f.t||f.type||'';
+      var badges = [f.pk&&'PK', f.fk&&'FK', f.uq&&'UQ'].filter(Boolean).join(' ');
+      var typeLines = wrapType(typeText);
+      var fy = pos.y + 68 + fieldOffset;
+
+      // 主行：字段名 + 类型（首行）+ 徽标
+      svg += '<text x="' + (pos.x+14) + '" y="' + fy + '" style="font-size:12px;fill:#1e293b;font-family:Consolas,\'Cascadia Mono\',monospace">'
+        + escXml(nameText)
+        + ' <tspan fill="#64748b" font-size="11">' + escXml(typeLines[0]) + '</tspan>'
+        + (badges ? ' <tspan fill="' + dColor + '" font-size="10" font-weight="800">' + badges + '</tspan>' : '')
+        + '</text>';
+
+      // 折行：类型续行缩进显示
+      for (var li = 1; li < typeLines.length; li++) {
+        var wy = fy + li * EFLD;
+        svg += '<text x="' + (pos.x+26) + '" y="' + wy + '" style="font-size:11px;fill:#64748b;font-family:Consolas,\'Cascadia Mono\',monospace">'
+          + escXml(typeLines[li]) + '</text>';
+      }
+
+      fieldOffset += EFLD * typeLines.length;
+    });
+
+    if (isGhost) {
+      svg += `<a href="?domain=${pos.domain}" style="cursor:pointer"><rect x="${pos.x+BOX_W-30}" y="${pos.y+7}" width="22" height="22" rx="6" fill="${GHOST_COLOR}" opacity="0.9"/><text x="${pos.x+BOX_W-19}" y="${pos.y+23}" text-anchor="middle" style="font-size:13px;fill:#fff;font-weight:900">›</text></a>`;
+    }
+  });
+
+  // ====== 关系连线（顶层绘制：避障外侧路由，走实体间隙，箭头与线始终可见）======
+  const fallbackH = eH({fields:[]});
+  function sideAnchor(eid, side, slot, total) {
+    const pos = entityPos[eid];
+    const h = boxHeights[eid] || fallbackH;
+    const frac = total > 1 ? (slot + 1) / (total + 1) : 0.5;
+    const m = 10;
+    if (side === 'left')  return { x: pos.x - m,          y: pos.y + h * frac };
+    if (side === 'right') return { x: pos.x + BOX_W + m,  y: pos.y + h * frac };
+    if (side === 'top')   return { x: pos.x + BOX_W * frac, y: pos.y - m };
+    return                       { x: pos.x + BOX_W * frac, y: pos.y + h + m };
+  }
+
+  function arrowHead(from, to, color) {
+    const angle = Math.atan2(to.y - from.y, to.x - from.x);
+    const len = 13, half = 5.5;
+    const backX = to.x - Math.cos(angle) * len;
+    const backY = to.y - Math.sin(angle) * len;
+    const nx = -Math.sin(angle), ny = Math.cos(angle);
+    const p1 = `${to.x},${to.y}`;
+    const p2 = `${backX + nx * half},${backY + ny * half}`;
+    const p3 = `${backX - nx * half},${backY - ny * half}`;
+    return `<polygon points="${p1} ${p2} ${p3}" fill="${color}"/>`;
+  }
+
+  const placedLabels = [];
+  function placeLabel(x, y, w) {
+    const labelH = 18;
+    const candidates = [
+      {x, y}, {x, y:y-28}, {x, y:y+28}, {x:x-52, y}, {x:x+52, y},
+      {x:x-52, y:y-24}, {x:x+52, y:y+24}, {x:x-52, y:y+24}, {x:x+52, y:y-24},
+      {x, y:y-52}, {x, y:y+52}
+    ];
+    const boxes = Object.keys(entityPos).map(eid => {
+      const p = entityPos[eid];
+      return { x:p.x - 8, y:p.y - 8, w:BOX_W + 16, h:(boxHeights[eid] || fallbackH) + 16 };
+    });
+    const overlaps = (c, b) =>
+      Math.min(c.x + w / 2, b.x + b.w) - Math.max(c.x - w / 2, b.x) > 0 &&
+      Math.min(c.y + labelH / 2, b.y + b.h) - Math.max(c.y - labelH / 2, b.y) > 0;
+    const clear = c => !boxes.some(b => overlaps(c, b)) && !placedLabels.some(b => overlaps(c, b));
+    const picked = candidates.find(clear) || {x, y};
+    placedLabels.push({ x:picked.x - w / 2 - 4, y:picked.y - labelH / 2 - 4, w:w + 8, h:labelH + 8 });
+    return picked;
+  }
+
+  const obstacleBoxes = Object.keys(entityPos).map(eid => {
+    const p = entityPos[eid];
+    return { id:eid, x:p.x - 10, y:p.y - 10, w:BOX_W + 20, h:(boxHeights[eid] || fallbackH) + 20 };
+  });
+  // 路径段障碍走廊：已画好的路径片段记录为矩形障碍，
+  // 让后续路径自动避开，从根本上解决不同实体对的路径重叠问题。
+  const pathObstacles = [];
+
+  // 检测线段 (ax,ay)→(bx,by) 是否与已有路径障碍走廊重叠
+  function segHitsPO(ax, ay, bx, by) {
+    if (pathObstacles.length === 0) return false;
+    for (var pi = 0; pi < pathObstacles.length; pi++) {
+      var box = pathObstacles[pi];
+      if (ax === bx) {
+        var y1 = Math.min(ay, by), y2 = Math.max(ay, by);
+        if (ax >= box.x && ax <= box.x + box.w && Math.min(y2, box.y + box.h) - Math.max(y1, box.y) > 0) return true;
+      } else if (ay === by) {
+        var x1 = Math.min(ax, bx), x2 = Math.max(ax, bx);
+        if (ay >= box.y && ay <= box.y + box.h && Math.min(x2, box.x + box.w) - Math.max(x1, box.x) > 0) return true;
+      }
+    }
+    return false;
+  }
+
+  function segmentHitsBox(a, b, box) {
+    if (a.x === b.x) {
+      const x = a.x, y1 = Math.min(a.y, b.y), y2 = Math.max(a.y, b.y);
+      return x >= box.x && x <= box.x + box.w && Math.min(y2, box.y + box.h) - Math.max(y1, box.y) > 0;
+    }
+    if (a.y === b.y) {
+      const y = a.y, x1 = Math.min(a.x, b.x), x2 = Math.max(a.x, b.x);
+      return y >= box.y && y <= box.y + box.h && Math.min(x2, box.x + box.w) - Math.max(x1, box.x) > 0;
+    }
+    return false;
+  }
+
+  function routeScore(points, sourceId, targetId) {
+    let length = 0, hits = 0;
+    var allBoxes = obstacleBoxes.concat(pathObstacles);
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i], b = points[i + 1];
+      length += Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+      allBoxes.forEach(box => {
+        if (box.id === sourceId || box.id === targetId) return;
+        if (segmentHitsBox(a, b, box)) hits++;
+      });
+    }
+    return hits * 100000 + length;
+  }
+
+  // ── 智能通道选择：在 entity 行间找到最近的空档，不走极端 ──
+  // 对于跨越多列的长连接，不再硬塞到画布顶部/底部，
+  // 而是在障碍物行间找到最近的"行间隙"通道，大幅缩短路径。
+  // pathObstacles 参数包含已画路径的走廊矩形，用于规避路径-路径重叠。
+  function findClearChannel(srcY, tgtY, spanX1, spanX2, obstacleBoxes, pathObstacles, sourceId, targetId, pad) {
+    if (pad === undefined) pad = 8;
+    var pathPad = 3;  // 路径障碍已有 3px 内置缓冲，额外给 3px 就够了
+    var yRanges = [];
+    // entity 障碍用 pad=8，path 障碍用 pathPad=3，避免路径段过度膨胀挤占所有间隙
+    obstacleBoxes.forEach(function(box) {
+      if (box.id === sourceId || box.id === targetId) return;
+      if (Math.min(spanX2, box.x + box.w) - Math.max(spanX1, box.x) > 0) {
+        yRanges.push({ y1: box.y - pad, y2: box.y + box.h + pad });
+      }
+    });
+    pathObstacles.forEach(function(box) {
+      if (Math.min(spanX2, box.x + box.w) - Math.max(spanX1, box.x) > 0) {
+        yRanges.push({ y1: box.y - pathPad, y2: box.y + box.h + pathPad });
+      }
+    });
+    if (yRanges.length === 0) return (srcY + tgtY) / 2;
+
+    yRanges.sort(function(a, b) { return a.y1 - b.y1; });
+    var merged = [];
+    for (var ri = 0; ri < yRanges.length; ri++) {
+      var r = yRanges[ri];
+      if (merged.length && r.y1 <= merged[merged.length - 1].y2) {
+        merged[merged.length - 1].y2 = Math.max(merged[merged.length - 1].y2, r.y2);
+      } else {
+        merged.push({ y1: r.y1, y2: r.y2 });
+      }
+    }
+
+    var midY = (srcY + tgtY) / 2;
+    var bestY = null, bestDist = Infinity;
+
+    var prevY2 = 0;
+    for (var mi = 0; mi < merged.length; mi++) {
+      var r2 = merged[mi];
+      if (r2.y1 > prevY2) {
+        var gapY = (prevY2 + r2.y1) / 2;
+        var d = Math.abs(gapY - midY);
+        if (gapY > 0 && d < bestDist) { bestDist = d; bestY = gapY; }
+      }
+      prevY2 = r2.y2;
+    }
+    var bottomY = merged[merged.length - 1].y2 + 40;
+    if (bottomY < 2000) {
+      var d2 = Math.abs(bottomY - midY);
+      if (d2 < bestDist) { bestY = bottomY; }
+    }
+
+    return bestY !== null ? bestY : (srcY < tgtY ? prevY2 + 20 : Math.max(18, merged[0].y1 - 30));
+  }
+
+  // Pass 1：决定每条边的进出方向并统计同侧边数
+  const routed = [];
+  const tally = {};
+  relations.forEach(r => {
+    const p = parseRel(r);
+    const pf = entityPos[p.fromEntity], pt = entityPos[p.toEntity];
+    if (!pf || !pt) return;
+    const hf = boxHeights[p.fromEntity] || fallbackH;
+    const ht = boxHeights[p.toEntity] || fallbackH;
+    const cfx = pf.x + BOX_W/2, cfy = pf.y + hf/2;
+    const ctx = pt.x + BOX_W/2, cty = pt.y + ht/2;
+    const dx = ctx - cfx, dy = cty - cfy;
+    let fromSide, toSide, horiz;
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      horiz = true;
+      fromSide = dx >= 0 ? 'right' : 'left';
+      toSide   = dx >= 0 ? 'left'  : 'right';
+    } else {
+      horiz = false;
+      fromSide = dy >= 0 ? 'bottom' : 'top';
+      toSide   = dy >= 0 ? 'top'    : 'bottom';
+    }
+    const kf = p.fromEntity + '|' + fromSide, kt = p.toEntity + '|' + toSide;
+    tally[kf] = (tally[kf] || 0) + 1;
+    tally[kt] = (tally[kt] || 0) + 1;
+    routed.push({ r, p, fromSide, toSide, horiz, kf, kt });
+  });
+
+  // Pass 2：分配同侧锚点槽位 + 避障圆角路由（只走实体外侧和行列间隙）
+  const colXs = [...new Set(Object.values(entityPos).map(p => p.x))].sort((a, b) => a - b);
+  const colIndex = x => colXs.indexOf(x);
+  const slot = {};
+  // 车道分配器：同一间隙/通道里的多条线错开，避免叠成一条
+  const vLane = {};
+  const hLane = {};
+  let topLane = 0, bottomLane = 0;   // 长线外侧通道车道序号（备用方案）
+  const channelLanes = {};            // 行间隙通道车道计数器（按通道 Y 值索引）
+  const takeLane = (map, key) => { const n = map[key] || 0; map[key] = n + 1; return n; };
+  const laneOffset = (n, step = 8) => (n % 2 === 0 ? 1 : -1) * Math.ceil((n + 1) / 2) * step;
+  const minBoxY = Math.min(...obstacleBoxes.map(b => b.y));
+  const maxBoxY = Math.max(...obstacleBoxes.map(b => b.y + b.h));
+  routed.forEach(o => {
+    const pf = entityPos[o.p.fromEntity], pt = entityPos[o.p.toEntity];
+    const colDiff = Math.abs(colIndex(pt.x) - colIndex(pf.x));
+    const isCross = !!o.r.cross_domain;
+    const color = mixColor(entityColors[o.p.fromEntity] || domainColor(domainId), entityColors[o.p.toEntity] || GHOST_COLOR, 0.5);
+    const dash = isCross ? 'stroke-dasharray="9 6"' : '';
+    const longHoriz = o.horiz && colDiff > 1;
+
+    let d, lx, ly, ax, ay, routePoints;
+    if (longHoriz) {
+      // ★ 智能通道路由：在行间隙中找到最近的可用通道
+      const dir = colIndex(pt.x) > colIndex(pf.x) ? 1 : -1;
+      const kf = o.p.fromEntity + '|' + (dir > 0 ? 'right' : 'left');
+      const kt = o.p.toEntity + '|' + (dir > 0 ? 'left' : 'right');
+      tally[kf] = tally[kf] || 1; tally[kt] = tally[kt] || 1;
+      const sf = (slot[kf] = (slot[kf] || 0)); slot[kf]++;
+      const stt = (slot[kt] = (slot[kt] || 0)); slot[kt]++;
+      const a = sideAnchor(o.p.fromEntity, dir > 0 ? 'right' : 'left', sf, tally[kf]);
+      const b = sideAnchor(o.p.toEntity, dir > 0 ? 'left' : 'right', stt, tally[kt]);
+      const riserBase = dir > 0 ? pf.x + BOX_W + GAP_X / 2 : pf.x - GAP_X / 2;
+      const dropBase  = dir > 0 ? pt.x - GAP_X / 2 : pt.x + BOX_W + GAP_X / 2;
+      const riserX = riserBase + laneOffset(takeLane(vLane, 'R' + Math.round(riserBase)), 7);
+      const dropX  = dropBase  + laneOffset(takeLane(vLane, 'D' + Math.round(dropBase)), 7);
+      const spanX1 = Math.min(riserX, dropX), spanX2 = Math.max(riserX, dropX);
+
+      const channelY = findClearChannel(a.y, b.y, spanX1, spanX2, obstacleBoxes, pathObstacles, o.p.fromEntity, o.p.toEntity);
+      if (channelY !== null) {
+        const chanKey = 'C' + Math.round(channelY / 4) * 4;
+        const laneN = (channelLanes[chanKey] = (channelLanes[chanKey] || 0) + 1) - 1;
+        const actualY = channelY + laneOffset(laneN, 10);
+        // ★ 二次贝塞尔曲线：M 起点 Q 控制点 终点
+        var ctrlX = (a.x + b.x) / 2;
+        routePoints = [a, {x:ctrlX, y:actualY}, b];
+        d = 'M' + a.x + ',' + a.y + ' Q' + ctrlX + ',' + actualY + ' ' + b.x + ',' + b.y;
+        lx = ctrlX; ly = actualY; ax = a.x; ay = a.y;
+      } else {
+        // 回退：上/下外侧通道择优
+        const localBoxes = obstacleBoxes.filter(function(box) {
+          if (box.id === o.p.fromEntity || box.id === o.p.toEntity) return false;
+          return Math.min(spanX2, box.x + box.w) - Math.max(spanX1, box.x) > 0;
+        });
+        const localTop = localBoxes.length ? Math.min(...localBoxes.map(function(box) { return box.y; })) : minBoxY;
+        const localBottom = localBoxes.length ? Math.max(...localBoxes.map(function(box) { return box.y + box.h; })) : maxBoxY;
+        const topY = Math.max(18, localTop - 24 - topLane * LANE);
+        const bottomY = localBottom + 24 + bottomLane * LANE;
+        const useTop = routeScore([a, {x:(a.x+b.x)/2,y:topY}, b], o.p.fromEntity, o.p.toEntity) <= routeScore([a, {x:(a.x+b.x)/2,y:bottomY}, b], o.p.fromEntity, o.p.toEntity);
+        var fallbackY = useTop ? topY : bottomY;
+        if (useTop) topLane++; else bottomLane++;
+        var ctrlX = (a.x + b.x) / 2;
+        routePoints = [a, {x:ctrlX, y:fallbackY}, b];
+        d = 'M' + a.x + ',' + a.y + ' Q' + ctrlX + ',' + fallbackY + ' ' + b.x + ',' + b.y;
+        lx = ctrlX; ly = fallbackY; ax = a.x; ay = a.y;
+      }
+    } else {
+      const sf = (slot[o.kf] = (slot[o.kf] || 0)); slot[o.kf]++;
+      const stt = (slot[o.kt] = (slot[o.kt] || 0)); slot[o.kt]++;
+      const a = sideAnchor(o.p.fromEntity, o.fromSide, sf, tally[o.kf]);
+      const b = sideAnchor(o.p.toEntity, o.toSide, stt, tally[o.kt]);
+      if (o.horiz) {
+        // 水平路径：二次贝塞尔曲线
+        const baseX = (a.x + b.x) / 2;
+        const midX = baseX + laneOffset(takeLane(vLane, 'M' + Math.round(baseX)), 8);
+        var ctrlY = (a.y + b.y) / 2;
+        routePoints = [a, {x:midX, y:ctrlY}, b];
+        d = 'M' + a.x + ',' + a.y + ' Q' + midX + ',' + ctrlY + ' ' + b.x + ',' + b.y;
+        lx = midX; ly = ctrlY;
+      } else {
+        // 垂直路径：二次贝塞尔曲线
+        const baseY = (a.y + b.y) / 2;
+        const midY = baseY + laneOffset(takeLane(hLane, 'M' + Math.round(baseY)), 8);
+        var ctrlX = (a.x + b.x) / 2;
+        routePoints = [a, {x:ctrlX, y:midY}, b];
+        d = 'M' + a.x + ',' + a.y + ' Q' + ctrlX + ',' + midY + ' ' + b.x + ',' + b.y;
+        lx = ctrlX; ly = midY;
+      }
+      ax = a.x; ay = a.y;
+    }
+    svg += `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" ${dash} style="pointer-events:stroke"><title>${escXml(o.r.from)} → ${escXml(o.r.to)} [${escXml(o.r.type)}] ${escXml(o.r.desc||'')}</title></path>`;
+    // 记录贝塞尔曲线控制点区域为障碍走廊（简化为控制点周围方块），后续曲线自然绕开
+    if (routePoints && routePoints.length === 3) {
+      var ctrl = routePoints[1];
+      pathObstacles.push({ x: ctrl.x - 12, y: ctrl.y - 12, w: 24, h: 24 });
+    }
+    // 箭头沿曲线末端切线方向（控制点→终点）
+    if (routePoints && routePoints.length >= 2) {
+      var arrowFrom = routePoints[routePoints.length - 2];
+      var arrowTo   = routePoints[routePoints.length - 1];
+      svg += arrowHead(arrowFrom, arrowTo, color);
+    }
+    // 出发端实心圆点，标明“从哪来”
+    svg += `<circle cx="${ax}" cy="${ay}" r="3.5" fill="${color}"/>`;
+    // 关系基数：拆分显示在端点附近（浮动偏移 20~80px，优先 20px，退避不跨界）
+    var typeParts = (o.r.type || '').split(':');
+    var srcLabel = typeParts[0] || '';
+    var tgtLabel = typeParts[1] || '';
+    if (routePoints && routePoints.length >= 3) {
+      var rA = routePoints[0], rC = routePoints[1], rB = routePoints[2];
+      var bp = function(t) {
+        var mt = 1 - t;
+        return { x: mt*mt*rA.x + 2*mt*t*rC.x + t*t*rB.x, y: mt*mt*rA.y + 2*mt*t*rC.y + t*t*rB.y };
+      };
+      // 浮动偏移：优先 20px，最多退到 80px，小 t ≈ dist/(2·|端点→ctrl|)
+      var dA = Math.sqrt(Math.pow(rC.x-rA.x,2)+Math.pow(rC.y-rA.y,2))||1;
+      var dB = Math.sqrt(Math.pow(rC.x-rB.x,2)+Math.pow(rC.y-rB.y,2))||1;
+      var tSrcLo = Math.min(20/(2*dA), 0.30);   // 20px → 最小 t
+      var tSrcHi = Math.min(80/(2*dA), 0.45);   // 80px → 最大 t（不超 0.45 守护顺序）
+      var tTgtHi = Math.max(1-20/(2*dB), 0.70); // 20px → 最大 t
+      var tTgtLo = Math.max(1-80/(2*dB), 0.55); // 80px → 最小 t（不低 0.55 守护顺序）
+
+      // 沿曲线滑动，只防实体遮挡；允许压其他线/标签
+      function slide(baseT, minT, maxT, w, h) {
+        var ts = [baseT], o = 0, obs = [];
+        for (o = 1; o <= 60; o++) { ts.push(baseT + o*0.005); ts.push(baseT - o*0.005); }
+        Object.keys(entityPos).forEach(function(eid) {
+          var p = entityPos[eid], hh = boxHeights[eid]||80;
+          obs.push({x:p.x-4, y:p.y-4, w:BOX_W+8, h:hh+8});
+        });
+        for (o = 0; o < ts.length; o++) {
+          var t = ts[o];
+          if (t < minT || t > maxT) continue;
+          var pt = bp(t), cx = pt.x-w/2, cy = pt.y-h/2;
+          var clr = !obs.some(function(b) {
+            return Math.min(cx+w, b.x+b.w) > Math.max(cx, b.x) &&
+                   Math.min(cy+h, b.y+b.h) > Math.max(cy, b.y);
+          });
+          if (clr) return {x:pt.x, y:pt.y, t:t};
+        }
+        var pt = bp(baseT < 0.5 ? minT : maxT);
+        return {x:pt.x, y:pt.y, t:baseT < 0.5 ? minT : maxT};
+      }
+
+      var LH = 16;
+      var sw = Math.max(18, srcLabel.length*9+10);
+      var sr = slide(tSrcLo, tSrcLo, tSrcHi, sw, LH);
+      svg += '<rect x="' + (sr.x-sw/2) + '" y="' + (sr.y-LH/2) + '" width="' + sw + '" height="' + LH + '" rx="5" fill="#fff" stroke="' + color + '" stroke-width="1.1"/>';
+      svg += '<text x="' + sr.x + '" y="' + (sr.y+3) + '" text-anchor="middle" fill="' + color + '" font-size="10" font-weight="800" font-family="Consolas,\'Cascadia Mono\',monospace">' + escXml(srcLabel) + '</text>';
+      var tw = Math.max(18, tgtLabel.length*9+10);
+      var tr = slide(tTgtHi, tTgtLo, tTgtHi, tw, LH);
+      svg += '<rect x="' + (tr.x-tw/2) + '" y="' + (tr.y-LH/2) + '" width="' + tw + '" height="' + LH + '" rx="5" fill="#fff" stroke="' + color + '" stroke-width="1.1"/>';
+      svg += '<text x="' + tr.x + '" y="' + (tr.y+3) + '" text-anchor="middle" fill="' + color + '" font-size="10" font-weight="800" font-family="Consolas,\'Cascadia Mono\',monospace">' + escXml(tgtLabel) + '</text>';
+    }
+  });
+
+  svg += '</svg>';
+  return { svg, width: finalW, height: finalH, data, entities, relations, entityPos, boxHeights };
+}
+
+// ══════════════════════════════════════════════════
+// 总 ER 渲染（多域全景）
+// ══════════════════════════════════════════════════
+function renderCoreER() {
+  const domains = Object.values(ALL_DATA.domains);
+  const core = ALL_DATA.core;
+  const crossRels = core.core_relations || [];
+
+  // Build entity→domain lookup
+  const entityDomain = {};
+  domains.forEach(function(d) { (d.entities||[]).forEach(function(e) { entityDomain[e.id] = d.domain; }); });
+
+  const DC = {"01":"#2563eb","02":"#059669","03":"#7c3aed","04":"#d97706","05":"#db2777","06":"#0891b2","07":"#4f46e5","08":"#dc2626"};
+  function domainColor(did) { return DC[did] || '#6b7280'; }
+
+  const EW = 190, EY = 52;
+  function eh(e) { return EY + 10; }  // 全景图只显示实体名称和表名，不需要字段空间
+  const PAD = 56, GC = 22, GR = 18, DH = 58, DPX = 26, DPB = 24;
+  const GCG = 34, GRG = 42;
+
+  function textW(s, size) { if (size === undefined) size = 14; return (String(s||'').length * size * .62) + 18; }
+
+  function autoCols(n, preferredRatio) {
+    if (preferredRatio === undefined) preferredRatio = 1.45;
+    if (n <= 1) return 1;
+    var best = 1, score = Infinity;
+    for (var c = 1; c <= n; c++) {
+      var r = Math.ceil(n / c), ratio = c / Math.max(r, 1);
+      var sc = Math.abs(ratio - preferredRatio) + Math.abs(c - r) * 0.08;
+      if (sc < score) { score = sc; best = c; }
+    }
+    return best;
+  }
+
+  function domainShape(dom) {
+    var ents = dom.entities, n = ents.length;
+    var cols = autoCols(n, 1.35), rows = Math.ceil(n / cols);
+    var heights = ents.map(function(e) { return eh(e); });
+    var rowH = Array(rows).fill(0);
+    for (var i = 0; i < n; i++) { var r = Math.floor(i / cols); rowH[r] = Math.max(rowH[r], heights[i]); }
+    var contentH = rowH.reduce(function(s, h) { return s + h; }, 0) + (rows - 1) * GR;
+    var entityW = cols * (EW + GC) - GC + DPX * 2;
+    var titleW = textW('域' + dom.domain + ': ' + dom.title, 16) + DPX * 2 + 44;
+    return { ents: ents, n: n, cols: cols, rows: rows, rowH: rowH, w: Math.max(entityW, titleW), h: DH + contentH + DPB };
+  }
+
+  function layout() {
+    var pos = {}, domBox = {};
+    var shapes = domains.map(function(d) { return domainShape(d); });
+    var cols = autoCols(domains.length, 1.55);
+    var rows = Math.ceil(domains.length / cols);
+    var colW = Array(cols).fill(0), rowH = Array(rows).fill(0);
+    shapes.forEach(function(sh, i) { var c = i % cols, r = Math.floor(i / cols); colW[c] = Math.max(colW[c], sh.w); rowH[r] = Math.max(rowH[r], sh.h); });
+    var totalW = colW.reduce(function(s, w) { return s + w; }, 0) + (cols - 1) * GCG;
+    var totalH = rowH.reduce(function(s, h) { return s + h; }, 0) + (rows - 1) * GRG;
+    var startX = PAD, startY = PAD;
+
+    domains.forEach(function(dom, di) {
+      var sh = shapes[di], c = di % cols, r = Math.floor(di / cols);
+      var cellX = startX, cellY = startY;
+      for (var i = 0; i < c; i++) cellX += colW[i] + GCG;
+      for (var i = 0; i < r; i++) cellY += rowH[i] + GRG;
+      var bx = cellX + (colW[c] - sh.w) / 2, by = cellY + (rowH[r] - sh.h) / 2;
+      var gx = bx + DPX, gy = by;
+      for (var i = 0; i < sh.n; i++) {
+        var col = i % sh.cols, row = Math.floor(i / sh.cols);
+        var y = gy + DH;
+        for (var rr = 0; rr < row; rr++) y += sh.rowH[rr] + GR;
+        pos[sh.ents[i].id] = { x: gx + col * (EW + GC), y: y, h: eh(sh.ents[i]) };
+      }
+      domBox[dom.domain] = { x: bx, y: by, w: sh.w, h: sh.h, c: domainColor(dom.domain), ti: dom.title, dom: dom.domain, n: sh.n };
+    });
+
+    return { pos: pos, domBox: domBox, width: totalW + PAD * 2, height: totalH + PAD * 2 + 48 };
+  }
+
+  var layoutResult = layout();
+  var pos = layoutResult.pos, domBox = layoutResult.domBox;
+  var width = layoutResult.width, height = layoutResult.height;
+
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" preserveAspectRatio="xMinYMin meet">';
+
+  var defs = '<defs><filter id="core-shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#0f172a" flood-opacity=".12"/></filter>';
+  var edgeLayer = '<g class="core-edge-layer" style="pointer-events:none">';
+
+  // Cross-domain edges
+  crossRels.forEach(function(e, i) {
+    if (!e || !e.from || !e.to) return;
+    var a = pos[e.from.split('.')[0]], b = pos[e.to.split('.')[0]];
+    if (!a || !b) return;
+    var fromDom = entityDomain[e.from.split('.')[0]];
+    var toDom = entityDomain[e.to.split('.')[0]];
+    var edgeColor = mixColor(domainColor(fromDom), domainColor(toDom));
+    var markerId = 'car_' + i;
+    defs += '<marker id="' + markerId + '" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0,10 4,0 8" fill="' + edgeColor + '"/></marker>';
+    var acx = a.x + EW / 2, acy = a.y + a.h / 2;
+    var bcx = b.x + EW / 2, bcy = b.y + b.h / 2;
+    var dx = bcx - acx, dy = bcy - acy, d = Math.sqrt(dx * dx + dy * dy) || 1;
+    var x1 = acx + dx / d * (EW / 2 + 6), y1 = acy + dy / d * (a.h / 2 + 6);
+    var x2 = bcx - dx / d * (EW / 2 + 6), y2 = bcy - dy / d * (b.h / 2 + 6);
+    var mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    var cx1 = mx - dy * 0.12, cy1 = my + dx * 0.12;
+    edgeLayer += '<path d="M' + x1 + ',' + y1 + ' Q' + cx1 + ',' + cy1 + ' ' + x2 + ',' + y2 + '" fill="none" stroke="' + edgeColor + '" stroke-width="2.7" stroke-dasharray="8,5" opacity="0.92" marker-end="url(#' + markerId + ')"/>';
+  });
+
+  svg += defs + '</defs>';
+  edgeLayer += '</g>';
+
+  // Domain containers
+  Object.keys(domBox).forEach(function(dk) {
+    var b = domBox[dk];
+    svg += '<a href="?domain=' + b.dom + '"><rect x="' + b.x + '" y="' + b.y + '" width="' + b.w + '" height="' + b.h + '" rx="16" fill="#ffffff" stroke="' + b.c + '" stroke-width="2.4" opacity=".98" filter="url(#core-shadow)" style="cursor:pointer"/></a>';
+    svg += '<rect x="' + b.x + '" y="' + b.y + '" width="' + b.w + '" height="' + DH + '" rx="16" fill="' + b.c + '" opacity=".16"/>';
+    svg += '<rect x="' + b.x + '" y="' + (b.y + DH - 12) + '" width="' + b.w + '" height="12" fill="' + b.c + '" opacity=".16"/>';
+    svg += '<circle cx="' + (b.x + 24) + '" cy="' + (b.y + 28) + '" r="9" fill="' + b.c + '" opacity=".95"/>';
+    svg += '<a href="?domain=' + b.dom + '"><text x="' + (b.x + 44) + '" y="' + (b.y + 25) + '" style="font-size:16px;font-weight:800;fill:' + b.c + ';cursor:pointer;font-family:\'Microsoft YaHei\',\'PingFang SC\',sans-serif">域' + b.dom + ': ' + escXml(b.ti) + '</text></a>';
+    svg += '<text x="' + (b.x + 44) + '" y="' + (b.y + 43) + '" style="font-size:11px;font-weight:600;fill:#64748b;font-family:\'Microsoft YaHei\',\'PingFang SC\',sans-serif">' + b.n + ' 个实体</text>';
+  });
+
+  // Entity boxes
+  domains.forEach(function(dom) {
+    dom.entities.forEach(function(e) {
+      var p = pos[e.id];
+      if (!p) return;
+      var g = e._ghost;
+      svg += '<g style="cursor:pointer" onclick="document.getElementById(\'domain-select\').value=\'' + dom.domain + '\';switchDomain()">';
+      svg += '<rect x="' + p.x + '" y="' + p.y + '" width="' + EW + '" height="' + p.h + '" rx="10" fill="' + (g ? '#fff7ed' : '#fff') + '" stroke="' + (g ? '#ea580c' : domainColor(dom.domain)) + '" stroke-width="' + (g ? 1.8 : 2.4) + '" ' + (g ? 'stroke-dasharray="5,3"' : '') + ' style="cursor:pointer"/>';
+      svg += '<rect x="' + (p.x + 2) + '" y="' + (p.y + 2) + '" width="' + (EW - 4) + '" height="30" rx="8" fill="' + domainColor(dom.domain) + '" opacity="' + (g ? 0.11 : 0.18) + '"/>';
+      svg += '<text x="' + (p.x + EW / 2) + '" y="' + (p.y + 21) + '" text-anchor="middle" style="font-size:15px;font-weight:800;fill:#0f172a;font-family:\'Microsoft YaHei\',\'PingFang SC\',sans-serif">' + escXml(e.name) + (g ? ' 🔗' : '') + '</text>';
+      svg += '<text x="' + (p.x + 12) + '" y="' + (p.y + 47) + '" style="font-size:12px;fill:#475569;font-family:Consolas,\'Cascadia Mono\',monospace;font-weight:600">' + escXml(e.table) + '</text>';
+      svg += '</g>';
+    });
+  });
+
+  svg += edgeLayer;
+
+  // Legend
+  var totalEntities = domains.reduce(function(s, d) { return s + d.entities.length; }, 0);
+  svg += '<rect x="18" y="' + (height - 40) + '" width="560" height="26" rx="8" fill="rgba(255,255,255,.94)" stroke="#cbd5e1"/>';
+  svg += '<text x="30" y="' + (height - 21) + '" style="font-size:12px;fill:#475569;font-weight:700;font-family:\'Microsoft YaHei\',\'PingFang SC\',sans-serif">┅ 跨域边按两端领域中间色显示 | ' + domains.length + ' 域 · ' + totalEntities + ' 实体 | 点击域/实体跳转详情</text>';
+  svg += '</svg>';
+  return svg;
+}
+
+// ====== UI ======
+let currentDomain = null;
+let currentData = null;
+
+function init() {
+  // Populate domain selector
+  const sel = document.getElementById('domain-select');
+  // 总 ER 全景选项，放在第一项
+  const allOpt = document.createElement('option');
+  allOpt.value = 'all';
+  allOpt.textContent = '🏗️ 总 ER 全景（跨域）';
+  sel.appendChild(allOpt);
+  ALL_DATA.core.domains.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.domain;
+    opt.textContent = `域 ${d.domain}: ${d.title}`;
+    sel.appendChild(opt);
+  });
+
+  // URL param
+  const params = new URLSearchParams(window.location.search);
+  const domainParam = params.get('domain') || 'all';
+  sel.value = domainParam;
+  switchDomain();
+}
+
+function switchDomain() {
+  const domainId = document.getElementById('domain-select').value;
+  // Update URL
+  const url = new URL(window.location);
+  url.searchParams.set('domain', domainId);
+  window.history.replaceState({}, '', url);
+
+  currentDomain = domainId;
+  panX = 0; panY = 0; scale = 1;
+  const container = document.getElementById('svg-container');
+  document.getElementById('detail-panel').classList.remove('visible');
+
+  if (domainId === 'all') {
+    // 渲染总 ER 全景
+    container.innerHTML = renderCoreER();
+    document.getElementById('stats').textContent = '跨域全景 — 全部 8 个域';
+    container.querySelectorAll('a[href^="?domain="]').forEach(function(a) {
+      a.addEventListener('click', function(e) {
+        e.preventDefault();
+        const dom = a.getAttribute('href').split('=')[1];
+        document.getElementById('domain-select').value = dom;
+        switchDomain();
+      });
+    });
+    applyTransform();
+    return;
+  }
+
+  const result = renderERGraph(domainId);
+  if (typeof result === 'string') {
+    container.innerHTML = result;
+    document.getElementById('stats').textContent = '';
+  } else {
+    container.innerHTML = result.svg;
+    currentData = result;
+    document.getElementById('stats').textContent =
+      `实体: ${result.entities.length} | 关系: ${result.relations.length} | SVG: ${result.width}×${result.height}`;
+    container.querySelectorAll('.entity-box').forEach(rect => {
+      rect.addEventListener('click', () => {
+        if (rect.dataset.ghost === 'true') {
+          document.getElementById('domain-select').value = rect.dataset.domain;
+          switchDomain();
+          return;
+        }
+        showDetail(rect.dataset.entity);
+      });
+    });
+    applyTransform();
+  }
+}
+
+function showDetail(entityId) {
+  const data = currentData.data;
+  const entity = data.entities.find(e => e.id === entityId);
+  if (!entity) return;
+
+  const panel = document.getElementById('detail-panel');
+  let html = `<div class="resize-handle" id="resize-handle"></div>`;
+  html += `<button class="close-btn" onclick="var p=this.parentElement;p.classList.remove('visible');p.style.width=''">✕</button>`;
+  html += `<h2>${escXml(entity.name)}</h2>`;
+  html += `<div class="table-name">${escXml(entity.table)}</div>`;
+  if (entity.description) html += `<div class="entity-desc">${escXml(entity.description)}</div>`;
+
+  html += `<table><thead><tr><th class="col-name">字段</th><th class="col-type">类型</th><th class="col-badge">约束</th><th class="col-desc">说明</th></tr></thead><tbody>`;
+  entity.fields.forEach(f => {
+    const badges = [];
+    if (f.pk) badges.push('<span class="badge pk">PK</span>');
+    if (f.nn) badges.push('<span class="badge nn">NN</span>');
+    if (f.uq) badges.push('<span class="badge uq">UQ</span>');
+    if (f.fk) badges.push('<span class="badge fk">FK→'+escXml(f.fk)+'</span>');
+    html += `<tr>
+      <td class="col-name" style="font-family:monospace;font-weight:600">${escXml(f.name)}</td>
+      <td class="col-type" style="font-size:.76rem;color:#64748b">${escXml(f.type)}</td>
+      <td class="col-badge">${badges.length ? badges.join(' ') : '—'}</td>
+      <td class="col-desc" style="font-size:.76rem;color:#64748b">${escXml(f.desc||'')}${f.comment ? '<span class="field-comment">' + escXml(f.comment) + '</span>' : ''}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+
+  if (entity.indexes && entity.indexes.length) {
+    html += `<div style="margin-top:12px;font-size:.82rem;color:#64748b"><strong>索引：</strong>`;
+    html += entity.indexes.map(i => i.unique ? 'UNIQUE('+i.fields.join(', ')+')' : '('+i.fields.join(', ')+')').join(', ');
+    html += '</div>';
+  }
+
+  // Relations for this entity
+  const related = currentData.relations.filter(r => {
+    const [fe] = r.from.split('.');
+    const [te] = r.to.split('.');
+    return fe === entityId || te === entityId;
+  });
+  if (related.length) {
+    html += `<div style="margin-top:14px"><strong style="font-size:.85rem">关联关系：</strong>`;
+    related.forEach(r => {
+      html += `<div style="font-size:.8rem;padding:4px 0;color:#7c3aed">${escXml(r.from)} → ${escXml(r.to)} [${r.type}] ${escXml(r.desc||'')}</div>`;
+    });
+    html += '</div>';
+  }
+
+  panel.innerHTML = html;
+  panel.classList.add('visible');
+}
+
+// SVG pan/zoom with auto-fit
+// SVG viewBox 自动适配容器，pan/zoom 仅用于用户交互
+let panX = 0, panY = 0, scale = 1;
+let dragging = false, dragStartX, dragStartY;
+
+function applyTransform() {
+  const svg = document.querySelector('#svg-container svg');
+  if (svg) svg.style.transform = `translate(${panX}px,${panY}px) scale(${scale})`;
+}
+
+document.getElementById('svg-container').addEventListener('mousedown', function(e) {
+  if (e.button !== 2) return; // 仅右键拖拽画布
+  if (e.target.tagName === 'rect' || e.target.tagName === 'text') return;
+  dragging = true;
+  dragStartX = e.clientX - panX;
+  dragStartY = e.clientY - panY;
+  this.style.cursor = 'move';
+});
+// 禁止画布区域右键菜单
+document.getElementById('svg-container').addEventListener('contextmenu', function(e) {
+  e.preventDefault();
+});
+document.addEventListener('mousemove', function(e) {
+  if (!dragging) return;
+  panX = e.clientX - dragStartX;
+  panY = e.clientY - dragStartY;
+  applyTransform();
+});
+document.addEventListener('mouseup', function(e) {
+  if (dragging) {
+    dragging = false;
+    document.getElementById('svg-container').style.cursor = 'default';
+  }
+});
+document.getElementById('svg-container').addEventListener('wheel', function(e) {
+  e.preventDefault();
+  const old = scale;
+  scale = Math.max(0.2, Math.min(4, scale - e.deltaY * 0.001));
+  const rect = e.currentTarget.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  panX = mx - (mx - panX) * (scale / old);
+  panY = my - (my - panY) * (scale / old);
+  applyTransform();
+});
+
+// ── Detail panel resize（左键拖拽左边手柄）──
+let resizing = false, resizeStartX = 0, resizeStartW = 0;
+document.addEventListener('mousedown', function(e) {
+  if (e.button !== 0) return; // 仅左键
+  var h = document.getElementById('resize-handle');
+  if (!h || !h.parentElement.classList.contains('visible')) return;
+  var rect = h.getBoundingClientRect();
+  if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return;
+  e.preventDefault();
+  e.stopPropagation();
+  resizing = true;
+  resizeStartX = e.clientX;
+  resizeStartW = document.getElementById('detail-panel').offsetWidth;
+  document.body.style.cursor = 'e-resize';
+  document.body.style.userSelect = 'none';
+});
+document.addEventListener('mousemove', function(e) {
+  if (!resizing) return;
+  var panel = document.getElementById('detail-panel');
+  var w = Math.max(280, Math.min(800, resizeStartW + resizeStartX - e.clientX));
+  panel.style.width = w + 'px';
+});
+document.addEventListener('mouseup', function(e) {
+  if (!resizing) return;
+  resizing = false;
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+});
+const ER_DOMAIN_FILES = {
+  "01":"01-user-identity-permission.json","02":"02-competition-schedule.json",
+  "03":"03-fighter-coach-club.json","04":"04-ticketing-finance.json",
+  "05":"05-venue-onsite-service.json","06":"06-notification.json",
+  "07":"07-file-storage.json","08":"08-customer-service.json"
+};
+
+async function tryRefreshFromJSON() {
+  let r = 0;
+  for (const [id, f] of Object.entries(ER_DOMAIN_FILES)) {
+    try {
+      const resp = await fetch('data/' + f);
+      if (resp.ok) { ALL_DATA.domains[id] = await resp.json(); r++; }
+    } catch(e) {}
+  }
+  try {
+    const cr = await fetch('data/core-er.json');
+    if (cr.ok) ALL_DATA.core = await cr.json();
+  } catch(e) {}
+  if (r > 0) {
+    ENTITY_DOMAIN = {};
+    Object.values(ALL_DATA.domains).forEach(d => {
+      if (d.entities) d.entities.forEach(e => { ENTITY_DOMAIN[e.id] = d.domain; });
+    });
+    console.log('🔄 从 JSON 刷新了 ' + r + ' 个 ER 域（HTTP 模式）');
+  }
+}
+
+(async function() {
+  await tryRefreshFromJSON();
+  init();
+})();
+</script>
+</body>
+</html>

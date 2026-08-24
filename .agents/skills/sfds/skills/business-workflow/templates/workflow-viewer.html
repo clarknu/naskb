@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Workflow — 拳击赛事运营平台</title>
+<style>
+  /* ── Design Tokens ── */
+  :root {
+    --bg: #f1f5f9; --card: #ffffff; --text: #1e293b; --text2: #64748b;
+    --border: #e2e8f0; --radius: 10px; --shadow: 0 1px 3px rgba(0,0,0,.08);
+    --blue: #2563eb; --purple: #7c3aed; --amber: #d97706; --green: #10b981;
+    --info-bg: #eff6ff; --info-border: #bfdbfe; --info-text: #1e40af;
+    --warn-bg: #fffbeb; --warn-border: #fde68a; --warn-text: #92400e;
+    --danger-bg: #fef2f2; --danger-border: #fecaca; --danger-text: #991b1b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); line-height: 1.55; font-size: .9rem; }
+
+  /* ── Toolbar ── */
+  .toolbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 8px 16px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 10; box-shadow: var(--shadow); }
+  .toolbar a { color: var(--blue); text-decoration: none; font-size: .82rem; }
+  .toolbar label { font-size: .82rem; font-weight: 600; color: var(--text2); }
+  .toolbar select { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: .85rem; background: #fff; cursor: pointer; }
+  .toolbar .stats { font-size: .78rem; color: var(--text2); margin-left: auto; }
+
+  /* ── Layout ── */
+  .layout { display: flex; height: calc(100vh - 46px); }
+  #sidebar { width: 230px; background: var(--card); border-right: 1px solid var(--border); overflow-y: auto; padding: 12px 0; flex-shrink: 0; }
+  #sidebar h3 { font-size: .75rem; text-transform: uppercase; color: var(--text2); padding: 0 16px; margin-bottom: 6px; letter-spacing: .05em; }
+  #sidebar nav a { display: block; padding: 5px 16px; font-size: .82rem; color: var(--text); text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
+  #sidebar nav a:hover { background: #f8fafc; color: var(--blue); }
+  #sidebar nav a.active { border-left-color: var(--blue); color: var(--blue); background: #eff6ff; font-weight: 600; }
+  #sidebar nav a.indent-1 { padding-left: 28px; font-size: .80rem; }
+  #sidebar nav a.indent-2 { padding-left: 38px; font-size: .78rem; }
+  #sidebar nav a.indent-3 { padding-left: 48px; font-size: .76rem; }
+
+  #content { flex: 1; overflow-y: auto; padding: 20px 28px; }
+
+  /* ── Section Cards ── */
+  .section { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px; box-shadow: var(--shadow); }
+  .section h1 { font-size: 1.3rem; margin-bottom: 12px; color: var(--text); }
+  .section h2 { font-size: 1.1rem; margin: 16px 0 10px; color: var(--text); }
+  .section h3 { font-size: .95rem; margin: 14px 0 6px; color: var(--text); }
+  .section h4 { font-size: .88rem; margin: 10px 0 4px; color: var(--text2); }
+  .section p { margin-bottom: 8px; }
+
+  /* ── Lists ── */
+  .section ul, .section ol { margin: 6px 0 10px 18px; }
+  .section li { margin-bottom: 3px; }
+
+  /* ── Notes ── */
+  .note { padding: 10px 14px; border-radius: 6px; margin: 10px 0; font-size: .85rem; line-height: 1.5; border-left: 3px solid; }
+  .note.info { background: var(--info-bg); border-color: var(--info-border); color: var(--info-text); }
+  .note.warning { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text); }
+  .note.danger { background: var(--danger-bg); border-color: var(--danger-border); color: var(--danger-text); }
+  .note::before { font-weight: 700; display: block; margin-bottom: 3px; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; }
+  .note.info::before { content: "ℹ 信息"; }
+  .note.warning::before { content: "⚠ 注意"; }
+  .note.danger::before { content: "❗ 警告"; }
+
+  /* ── Tables ── */
+  .section table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: .84rem; }
+  .section th { background: #f8fafc; color: var(--text2); font-size: .72rem; text-transform: uppercase; letter-spacing: .03em; padding: 8px 12px; text-align: left; border-bottom: 2px solid var(--border); }
+  .section td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .section tr:hover td { background: #fafbfc; }
+
+  /* ── HR ── */
+  .section hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  /* ── Flowchart Container ── */
+  .flowchart-wrap { margin: 16px 0; overflow-x: auto; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; }
+  .flowchart-wrap svg { display: block; min-width: 100%; }
+  .flowchart-caption { text-align: center; font-size: .78rem; color: var(--text2); padding: 6px; border-top: 1px solid var(--border); background: #fff; }
+
+  /* ── Empty / Loading ── */
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text2); }
+  .empty-state h2 { font-size: 1.1rem; margin-bottom: 6px; }
+  .empty-state p { font-size: .85rem; }
+  .empty-state p { font-size: .9rem; }
+</style>
+</head>
+<body>
+
+<!-- ── Toolbar ── -->
+<div class="toolbar">
+  <a href="../entity-relationship/er-viewer.html">← ER 图</a>
+  <label>领域：</label>
+  <select id="domain-select" name="domain-select" title="选择业务领域" onchange="switchDomain()"></select>
+  <span class="stats" id="stats"></span>
+</div>
+
+<!-- ── Layout ── -->
+<div class="layout">
+  <aside id="sidebar">
+    <h3>📋 目录</h3>
+    <nav id="toc"></nav>
+  </aside>
+  <main id="content"></main>
+</div>
+
+  <!-- ═══ 数据加载：loader.js 按项目配置自动加载子域文件 ═══ -->
+  <script src="data/loader.js"></script>
+
+  <script>
+const ALL_DATA = { domains: {} };
+if (window.WF_DATA) Object.keys(window.WF_DATA).forEach(function(k) { ALL_DATA.domains[k] = window.WF_DATA[k]; });
+
+// ═══════════════════════════════════════════════
+function getDomain() {
+  const params = new URLSearchParams(window.location.search);
+  const domain = params.get('domain');
+  if (domain && ALL_DATA.domains[domain]) return domain;
+  // Default to first available domain
+  const keys = Object.keys(ALL_DATA.domains).sort();
+  return keys[0] || null;
+}
+
+function switchDomain() {
+  const sel = document.getElementById('domain-select');
+  const newDomain = sel.value;
+  if (newDomain) {
+    const url = new URL(window.location);
+    url.searchParams.set('domain', newDomain);
+    window.history.replaceState({}, '', url);
+    render();
+  }
+}
+
+function initDomainSelect() {
+  const sel = document.getElementById('domain-select');
+  sel.innerHTML = '';
+  const keys = Object.keys(ALL_DATA.domains).sort();
+  if (keys.length === 0) {
+    sel.innerHTML = '<option>— 暂无数据 —</option>';
+    return;
+  }
+  keys.forEach(k => {
+    const d = ALL_DATA.domains[k];
+    const opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = `${k} — ${d.title}`;
+    sel.appendChild(opt);
+  });
+  const current = getDomain();
+  if (current) sel.value = current;
+}
+
+// ═══════════════════════════════════════════════
+// Text Block Renderer
+// ═══════════════════════════════════════════════
+function renderBlock(block) {
+  switch (block.type) {
+    case 'p':
+      return `<p>${esc(block.text)}</p>`;
+    case 'h2':
+      return `<h2>${esc(block.text)}</h2>`;
+    case 'h3':
+      return `<h3>${esc(block.text)}</h3>`;
+    case 'h4':
+      return `<h4>${esc(block.text)}</h4>`;
+    case 'ul':
+      return '<ul>' + block.items.map(i => `<li>${esc(i)}</li>`).join('') + '</ul>';
+    case 'ol':
+      return '<ol>' + block.items.map(i => `<li>${esc(i)}</li>`).join('') + '</ol>';
+    case 'note':
+      return `<div class="note ${esc(block.level || 'info')}">${esc(block.text)}</div>`;
+    case 'table':
+      return renderTable(block);
+    case 'hr':
+      return '<hr>';
+    default:
+      return `<p style="color:#999">[未知 block 类型: ${esc(block.type)}]</p>`;
+  }
+}
+
+function renderTable(block) {
+  let html = '<table><thead><tr>';
+  block.headers.forEach(h => { html += `<th>${esc(h)}</th>`; });
+  html += '</tr></thead><tbody>';
+  block.rows.forEach(row => {
+    html += '<tr>';
+    row.forEach(cell => { html += `<td>${esc(cell)}</td>`; });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════════════════
+// Flowchart Layout — Simplified Sugiyama Algorithm
+// ═══════════════════════════════════════════════
+
+// ── Node dimensions (before text measurement) ──
+const NODE_GEOM = {
+  start:       { w: 124, h: 32, rx: 16 },
+  end:         { w: 124, h: 32, rx: 16 },
+  action:      { w: 140, h: 40 },
+  decision:    { w: 112, h: 52 },
+  subprocess:  { w: 140, h: 40 }
+};
+
+function measureLabel(label, nodeType) {
+  // Split multi-line labels and estimate dimensions
+  const lines = label.split('\n');
+  const maxLen = Math.max(...lines.map(l => l.length));
+  // Rough: CJK char ~12px, latin ~7px (compact)
+  const hasCJK = /[一-鿿]/.test(label);
+  const charW = hasCJK ? 11 : 6.5;
+  const textW = maxLen * charW + 12;
+  const lineH = 15;
+  const base = NODE_GEOM[nodeType] || NODE_GEOM.action;
+  const minW = nodeType === 'decision' ? base.w : base.w;
+  const w = Math.max(minW, textW);
+  const h = Math.max(base.h, lines.length * lineH + 18);
+  return { w, h, lines, lineH };
+}
+
+function layoutFlowchart(flowchart) {
+  const { nodes, edges } = flowchart;
+  const layoutDir = flowchart.layout || 'topdown';
+
+  // ── Build lookup ──
+  const nodeMap = {};
+  nodes.forEach(n => {
+    const geom = measureLabel(n.label, n.type);
+    nodeMap[n.id] = {
+      ...n,
+      w: geom.w, h: geom.h,
+      lines: geom.lines, lineH: geom.lineH,
+      layer: -1, x: 0, y: 0,
+      outEdges: [], inEdges: []
+    };
+  });
+
+  // ── Build adjacency ──
+  edges.forEach(e => {
+    const src = nodeMap[e.from];
+    const tgt = nodeMap[e.to];
+    if (src && tgt) {
+      src.outEdges.push({ to: e.to, label: e.label || '' });
+      tgt.inEdges.push({ from: e.from, label: e.label || '' });
+    }
+  });
+
+  const nodeList = Object.values(nodeMap);
+  if (nodeList.length === 0) return { nodes: [], edges: [], svgW: 400, svgH: 200 };
+
+  // ── Phase 1: Layer assignment (longest path from sources, cycle-aware) ──
+  // Uses iterative relaxation: repeatedly scan nodes, assigning layer = 1 + max(layer of
+  // predecessors whose layer is known). Cycles are handled naturally — each pass resolves
+  // at least one node (picking the one with the most known predecessors as tiebreaker).
+  nodeList.forEach(n => { n.layer = -1; });
+
+  // Seed: nodes with no in-edges start at layer 0
+  nodeList.forEach(n => { if (n.inEdges.length === 0) n.layer = 0; });
+
+  let remaining = nodeList.filter(n => n.layer < 0).length;
+  let stall = 0;
+  while (remaining > 0 && stall < remaining + 2) {
+    let advanced = false;
+    nodeList.forEach(n => {
+      if (n.layer >= 0) return;
+      // Compute max known predecessor layer
+      let maxPred = -1;
+      let unknown = 0;
+      n.inEdges.forEach(e => {
+        const p = nodeMap[e.from];
+        if (p && p.layer >= 0) maxPred = Math.max(maxPred, p.layer);
+        else unknown++;
+      });
+      if (maxPred >= 0) {
+        n.layer = maxPred + 1;
+        remaining--;
+        advanced = true;
+      }
+    });
+    if (!advanced) {
+      // All remaining nodes form pure cycles — pick the one with the fewest
+      // unknown predecessors and assign it the minimum possible layer
+      stall++;
+      let best = null, bestUnknown = Infinity;
+      nodeList.forEach(n => {
+        if (n.layer >= 0) return;
+        let unk = 0;
+        n.inEdges.forEach(e => { if (!nodeMap[e.from] || nodeMap[e.from].layer < 0) unk++; });
+        if (unk < bestUnknown) { bestUnknown = unk; best = n; }
+      });
+      if (best) { best.layer = 0; remaining--; advanced = true; }
+    }
+    if (!advanced) break; // safety
+  }
+  // Final pass: any still-unassigned get layer 0
+  nodeList.forEach(n => { if (n.layer < 0) n.layer = 0; });
+
+  // ── Group nodes by layer ──
+  const layers = {};
+  let maxLayer = 0;
+  nodeList.forEach(n => {
+    if (!layers[n.layer]) layers[n.layer] = [];
+    layers[n.layer].push(n);
+    maxLayer = Math.max(maxLayer, n.layer);
+  });
+
+  // ── Phase 2: Barycenter ordering (reduce crossings) ──
+  // Initial ordering within each layer: by id (stable)
+  for (let l = 0; l <= maxLayer; l++) {
+    (layers[l] || []).forEach((n, i) => { n._pos = i; });
+  }
+
+  // 3 passes of barycenter
+  for (let pass = 0; pass < 3; pass++) {
+    // Top → bottom
+    for (let l = 1; l <= maxLayer; l++) {
+      const layer = layers[l] || [];
+      layer.forEach(n => {
+        const neighbors = n.inEdges.map(e => nodeMap[e.from]).filter(p => p && p._pos != null);
+        if (neighbors.length > 0) {
+          n._bary = neighbors.reduce((s, p) => s + p._pos, 0) / neighbors.length;
+        } else {
+          n._bary = n._pos;
+        }
+      });
+      layer.sort((a, b) => a._bary - b._bary);
+      layer.forEach((n, i) => { n._pos = i; });
+    }
+    // Bottom → top
+    for (let l = maxLayer - 1; l >= 0; l--) {
+      const layer = layers[l] || [];
+      layer.forEach(n => {
+        const neighbors = n.outEdges.map(e => nodeMap[e.to]).filter(c => c && c._pos != null);
+        if (neighbors.length > 0) {
+          n._bary = neighbors.reduce((s, c) => s + c._pos, 0) / neighbors.length;
+        } else {
+          n._bary = n._pos;
+        }
+      });
+      layer.sort((a, b) => a._bary - b._bary);
+      layer.forEach((n, i) => { n._pos = i; });
+    }
+  }
+
+  // ── Phase 3: Coordinate assignment ──
+  const LAYER_GAP = 75;     // gap between layers (vertical for topdown, horizontal for leftright)
+  const NODE_PAD = 18;      // gap between adjacent nodes within a layer
+  const MARGIN = 24;
+
+  // Calculate per-layer dimensions
+  let maxNodeW = 0, maxNodeH = 0;
+  nodeList.forEach(n => {
+    maxNodeW = Math.max(maxNodeW, n.w);
+    maxNodeH = Math.max(maxNodeH, n.h);
+  });
+
+  // For each layer, compute its total extent in the cross-axis
+  let layerWidths = {};   // total width of layer (for topdown: horizontal extent)
+  let layerHeights = {};  // total height of layer (for leftright: vertical extent)
+  let maxCrossExtent = 0; // max cross-axis extent across all layers
+  for (let l = 0; l <= maxLayer; l++) {
+    const layer = layers[l] || [];
+    let w = 0, h = 0;
+    layer.forEach(n => { w += n.w; h += n.h; });
+    w += Math.max(0, (layer.length - 1)) * NODE_PAD;
+    h += Math.max(0, (layer.length - 1)) * NODE_PAD;
+    layerWidths[l] = w;
+    layerHeights[l] = h;
+    maxCrossExtent = Math.max(maxCrossExtent, layoutDir === 'topdown' ? w : h);
+  }
+
+  // Total layers extent in main axis
+  const mainAxisExtent = (maxLayer + 1) * ((layoutDir === 'topdown' ? maxNodeH : maxNodeW) + LAYER_GAP);
+  let svgW, svgH;
+
+  if (layoutDir === 'topdown') {
+    // Layers stack vertically (top → bottom), nodes spread horizontally within each layer
+    svgW = maxCrossExtent + MARGIN * 2;
+    svgH = mainAxisExtent + MARGIN;
+
+    for (let l = 0; l <= maxLayer; l++) {
+      const layer = layers[l] || [];
+      const y = MARGIN + l * (maxNodeH + LAYER_GAP);
+      // Center layer horizontally
+      const layerW = layerWidths[l];
+      let x = MARGIN + (maxCrossExtent - layerW) / 2;
+      layer.forEach(n => {
+        n.x = x;
+        n.y = y + (maxNodeH - n.h) / 2;  // center node vertically in its row
+        x += n.w + NODE_PAD;
+      });
+    }
+  } else {
+    // leftright: Layers as columns (left → right), nodes spread vertically within each column
+    svgW = mainAxisExtent + MARGIN;
+    svgH = maxCrossExtent + MARGIN * 2;
+
+    for (let l = 0; l <= maxLayer; l++) {
+      const layer = layers[l] || [];
+      const x = MARGIN + l * (maxNodeW + LAYER_GAP);
+      // Center layer vertically
+      const layerH = layerHeights[l];
+      let y = MARGIN + (maxCrossExtent - layerH) / 2;
+      layer.forEach(n => {
+        n.x = x + (maxNodeW - n.w) / 2;  // center node horizontally in its column
+        n.y = y;
+        y += n.h + NODE_PAD;
+      });
+    }
+  }
+
+  // ── Build edge path data ──
+  const edgeData = edges.map(e => {
+    const src = nodeMap[e.from];
+    const tgt = nodeMap[e.to];
+    if (!src || !tgt) return null;
+    const cx1 = src.x + src.w / 2, cy1 = src.y + src.h / 2;
+    const cx2 = tgt.x + tgt.w / 2, cy2 = tgt.y + tgt.h / 2;
+    if (layoutDir === 'topdown') {
+      return {
+        from: e.from, to: e.to, label: e.label || '',
+        x1: cx1, y1: src.y + src.h,    // exit bottom
+        x2: cx2, y2: tgt.y              // enter top
+      };
+    } else {
+      return {
+        from: e.from, to: e.to, label: e.label || '',
+        x1: src.x + src.w, y1: cy1,     // exit right
+        x2: tgt.x,         y2: cy2      // enter left
+      };
+    }
+  }).filter(Boolean);
+
+  return {
+    nodes: nodeList,
+    edges: edgeData,
+    svgW: Math.max(svgW + MARGIN, 400),
+    svgH: Math.max(svgH, 200)
+  };
+}
+
+// ═══════════════════════════════════════════════
+// Flowchart SVG Renderer
+// ═══════════════════════════════════════════════
+function renderFlowchartSVG(flowchart) {
+  // Auto-detect layout direction: wide screen → leftright (uses horizontal space);
+  // narrow screen → topdown (vertical stack). Explicit layout in JSON overrides.
+  const effectiveLayout = (flowchart.layout === 'topdown' || flowchart.layout === 'leftright')
+    ? flowchart.layout
+    : (window.innerWidth > 1100 ? 'leftright' : 'topdown');
+  const fc = { ...flowchart, layout: effectiveLayout };
+
+  const layout = layoutFlowchart(fc);
+  if (layout.nodes.length === 0) return '';
+
+  const { nodes, edges, svgW, svgH } = layout;
+
+  // Color palette
+  const colors = {
+    start:       { fill: '#ecfdf5', stroke: '#10b981', text: '#065f46' },
+    end:         { fill: '#ecfdf5', stroke: '#10b981', text: '#065f46' },
+    action:      { fill: '#eff6ff', stroke: '#3b82f6', text: '#1e40af' },
+    decision:    { fill: '#fffbeb', stroke: '#f59e0b', text: '#92400e' },
+    subprocess:  { fill: '#faf5ff', stroke: '#8b5cf6', text: '#5b21b6' }
+  };
+
+  let svg = '';
+
+  // ── Defs: arrow marker ──
+  svg += `<defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="5.6" refX="8" refY="2.8" orient="auto">
+      <polygon points="0 0, 8 2.8, 0 5.6" fill="#94a3b8"/>
+    </marker>
+  </defs>`;
+
+  // ── Draw edges ──
+  const layoutDir = fc.layout || 'topdown';
+
+  // ── Helpers ──
+  function bezierAt(p0, p1, p2, p3, t) {
+    const u = 1 - t;
+    return u*u*u*p0 + 3*u*u*t*p1 + 3*u*t*t*p2 + t*t*t*p3;
+  }
+
+  // Estimate text bounding box at (x,y).  x,y = top-left after baseline adjustment.
+  function labelRect(x, y, text) {
+    // font-size 10; CJK ~10px/char, latin ~6px/char
+    let w = 0;
+    for (const ch of text) {
+      w += /[一-鿿　-〿＀-￯]/.test(ch) ? 10 : 6;
+    }
+    return { x: x, y: y - 12, w: w + 4, h: 14 };
+  }
+
+  function rectsOverlap(a, b) {
+    return !(a.x + a.w < b.x || b.x + b.w < a.x ||
+             a.y + a.h < b.y || b.y + b.h < a.y);
+  }
+
+  // ── Build node lookup for collision avoidance ──
+  const nodeById = {};
+  nodes.forEach(n => { nodeById[n.id] = n; });
+
+  // Gather graph bounds and node bounding boxes
+  const graphLeft   = Math.min(...nodes.map(n => n.x));
+  const graphRight  = Math.max(...nodes.map(n => n.x + n.w));
+  const graphTop    = Math.min(...nodes.map(n => n.y));
+  const graphBottom = Math.max(...nodes.map(n => n.y + n.h));
+  const GUTTER = 24;  // margin outside graph for back-edge routing
+
+  // Check if a point (px,py) falls inside any node's box (excluding given ids)
+  function hitsNode(px, py, excludeIds) {
+    for (const n of nodes) {
+      if (excludeIds.has(n.id)) continue;
+      if (px >= n.x - 2 && px <= n.x + n.w + 2 &&
+          py >= n.y - 2 && py <= n.y + n.h + 2) return n;
+    }
+    return null;
+  }
+
+  // ── Build edge definitions (bezier or routed polyline) ──
+  const edgeDefs = edges.map(e => {
+    const sx = e.x1, sy = e.y1, tx = e.x2, ty = e.y2;
+    const srcNode = nodeById[e.from], tgtNode = nodeById[e.to];
+    const srcLayer = srcNode ? srcNode.layer : -1;
+    const tgtLayer = tgtNode ? tgtNode.layer : -1;
+    const isBackEdge = srcLayer >= 0 && tgtLayer >= 0 && tgtLayer <= srcLayer;
+    const exclude = new Set([e.from, e.to]);
+
+    // ── Compute bezier control points ──
+    let cp1x, cp1y, cp2x, cp2y, d;
+    if (layoutDir === 'topdown') {
+      cp1x = sx;  cp1y = sy + (ty - sy) * 0.4;
+      cp2x = tx;  cp2y = sy + (ty - sy) * 0.6;
+    } else {
+      cp1x = sx + (tx - sx) * 0.4;  cp1y = sy;
+      cp2x = sx + (tx - sx) * 0.6;  cp2y = ty;
+    }
+
+    // ── Collision check: sample bezier, see if it hits any node ──
+    let collides = false;
+    for (let t = 0.1; t < 0.95 && !collides; t += 0.1) {
+      const bx = bezierAt(sx, cp1x, cp2x, tx, t);
+      const by = bezierAt(sy, cp1y, cp2y, ty, t);
+      if (hitsNode(bx, by, exclude)) collides = true;
+    }
+
+    // ── Route around if back edge or collision detected ──
+    if (isBackEdge || collides) {
+      const srcCX = srcNode ? srcNode.x + srcNode.w / 2 : sx;
+      const srcCY = srcNode ? srcNode.y + srcNode.h / 2 : sy;
+      const tgtCX = tgtNode ? tgtNode.x + tgtNode.w / 2 : tx;
+      const tgtCY = tgtNode ? tgtNode.y + tgtNode.h / 2 : ty;
+
+      let pts;
+      if (layoutDir === 'topdown') {
+        // Route around the right side of the graph
+        const rx = graphRight + GUTTER;
+        pts = [
+          { x: srcNode ? srcNode.x + srcNode.w : sx, y: srcCY },
+          { x: rx, y: srcCY },
+          { x: rx, y: tgtCY },
+          { x: tgtNode ? tgtNode.x + tgtNode.w : tx, y: tgtCY }
+        ];
+      } else {
+        // leftright: route below the graph
+        const by = graphBottom + GUTTER;
+        pts = [
+          { x: srcCX, y: srcNode ? srcNode.y + srcNode.h : sy },
+          { x: srcCX, y: by },
+          { x: tgtCX, y: by },
+          { x: tgtCX, y: tgtNode ? tgtNode.y + tgtNode.h : ty }
+        ];
+      }
+      // Build polyline path; arrowhead on last segment
+      d = `M${pts[0].x},${pts[0].y}`;
+      for (let i = 1; i < pts.length; i++) d += ` L${pts[i].x},${pts[i].y}`;
+
+      return { ...e, cp1x, cp1y, cp2x, cp2y, d, _routed: true, _waypoints: pts };
+    }
+
+    // ── Clean bezier ──
+    d = `M${sx},${sy} C${cp1x},${cp1y} ${cp2x},${cp2y} ${tx},${ty}`;
+    return { ...e, cp1x, cp1y, cp2x, cp2y, d, _routed: false };
+  });
+
+  // ── Helpers for label placement ──
+  function labelXY(e, t) {
+    // For routed polylines, sample along the waypoint segments
+    if (e._routed && e._waypoints) {
+      const pts = e._waypoints;
+      // Compute segment lengths
+      const segs = [];
+      let total = 0;
+      for (let i = 1; i < pts.length; i++) {
+        const dx = pts[i].x - pts[i-1].x, dy = pts[i].y - pts[i-1].y;
+        const len = Math.sqrt(dx*dx + dy*dy);
+        segs.push({ i, len, cum: total });
+        total += len;
+      }
+      // Find position at fraction t along total length
+      const target = t * total;
+      let px, py, segDirX = 1, segDirY = 0;
+      for (const seg of segs) {
+        if (target <= seg.cum + seg.len || seg.i === segs.length) {
+          const local = (target - seg.cum) / seg.len;
+          px = pts[seg.i-1].x + (pts[seg.i].x - pts[seg.i-1].x) * local;
+          py = pts[seg.i-1].y + (pts[seg.i].y - pts[seg.i-1].y) * local;
+          segDirX = (pts[seg.i].x - pts[seg.i-1].x) / seg.len || 0;
+          segDirY = (pts[seg.i].y - pts[seg.i-1].y) / seg.len || 1;
+          break;
+        }
+      }
+      const perpDist = 8 + (e._perpExtra || 0);
+      return { x: px - segDirY * perpDist, y: py + segDirX * perpDist, px: -segDirY, py: segDirX };
+    }
+    // Bezier label position
+    const lx = bezierAt(e.x1, e.cp1x, e.cp2x, e.x2, t);
+    const ly = bezierAt(e.y1, e.cp1y, e.cp2y, e.y2, t);
+    const dt = 0.02;
+    const tx0 = bezierAt(e.x1, e.cp1x, e.cp2x, e.x2, Math.min(t + dt, 1));
+    const ty0 = bezierAt(e.y1, e.cp1y, e.cp2y, e.y2, Math.min(t + dt, 1));
+    const dx = tx0 - lx, dy = ty0 - ly;
+    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+    const px = -dy / len, py = dx / len;
+    const perpDist = 8 + (e._perpExtra || 0);
+    return { x: lx + px * perpDist, y: ly + py * perpDist, px, py };
+  }
+
+  // Initialize: all labels at t=0.5, no perp extra
+  edgeDefs.forEach(e => { if (e.label) { e.labelT = 0.5; e._perpExtra = 0; } });
+
+  // ── Step 1: Per-source — spread only when labels from same source overlap ──
+  const srcGroups = {};
+  edgeDefs.forEach(e => {
+    if (!e.label) return;
+    if (!srcGroups[e.from]) srcGroups[e.from] = [];
+    srcGroups[e.from].push(e);
+  });
+
+  Object.values(srcGroups).forEach(group => {
+    if (group.length === 1) return;  // single label stays at 0.5
+
+    function groupOverlaps() {
+      const rects = group.map(e => labelRect(labelXY(e, e.labelT).x, labelXY(e, e.labelT).y, e.label));
+      for (let i = 0; i < rects.length; i++)
+        for (let j = i + 1; j < rects.length; j++)
+          if (rectsOverlap(rects[i], rects[j])) return true;
+      return false;
+    }
+
+    if (!groupOverlaps()) return;  // no overlap at 0.5 — stay put
+
+    // Gradually spread symmetrically around 0.5 within [1/3, 2/3]
+    const lo = 1/3, hi = 2/3, mid = 0.5;
+    const span = hi - lo;
+    for (let factor = 0.1; factor <= 1.05; factor += 0.1) {
+      const halfSpan = Math.min(span / 2 * factor, mid - lo);
+      for (let i = 0; i < group.length; i++) {
+        const raw = mid - halfSpan + (2 * halfSpan * i / (group.length - 1));
+        group[i].labelT = Math.max(lo, Math.min(hi, raw));
+      }
+      if (!groupOverlaps()) return;
+    }
+  });
+
+  // ── Step 2: Global — cross-source overlaps resolved with perp offset only ──
+  const allLabeled = edgeDefs.filter(e => e.label && e.labelT != null);
+  for (let pass = 0; pass < 4; pass++) {
+    let dirty = false;
+    for (let i = 0; i < allLabeled.length; i++) {
+      for (let j = i + 1; j < allLabeled.length; j++) {
+        const a = allLabeled[i], b = allLabeled[j];
+        if (a.from === b.from) continue;
+        const pa = labelXY(a, a.labelT), pb = labelXY(b, b.labelT);
+        if (rectsOverlap(labelRect(pa.x, pa.y, a.label), labelRect(pb.x, pb.y, b.label))) {
+          a._perpExtra = (a._perpExtra || 0) + 3;
+          b._perpExtra = (b._perpExtra || 0) + 3;
+          dirty = true;
+        }
+      }
+    }
+    if (!dirty) break;
+  }
+
+  // ── Phase A: Draw edge paths (no labels yet) ──
+  edgeDefs.forEach(e => {
+    svg += `<path d="${e.d}" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)"/>`;
+  });
+
+  // ── Phase B: Draw nodes (on top of edges) ──
+
+  // ── Draw nodes ──
+  nodes.forEach(n => {
+    const c = colors[n.type] || colors.action;
+    const cx = n.x + n.w / 2;
+    const cy = n.y + n.h / 2;
+
+    svg += `<g class="fc-node" data-id="${esc(n.id)}">`;
+
+    switch (n.type) {
+      case 'start':
+      case 'end':
+        // Stadium shape
+        const rx = Math.min(n.w / 2, n.h / 2);
+        svg += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="${rx}" ry="${rx}" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.8"/>`;
+        break;
+      case 'decision':
+        // Diamond
+        svg += `<polygon points="${cx},${n.y} ${n.x + n.w},${cy} ${cx},${n.y + n.h} ${n.x},${cy}" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.8"/>`;
+        break;
+      case 'subprocess':
+        // Double border rectangle
+        svg += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="6" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.8"/>`;
+        svg += `<rect x="${n.x + 3}" y="${n.y + 3}" width="${n.w - 6}" height="${n.h - 6}" rx="4" fill="none" stroke="${c.stroke}" stroke-width="1" opacity="0.5"/>`;
+        break;
+      default:
+        // action — simple rectangle
+        svg += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="6" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.8"/>`;
+    }
+
+    // Node label (multi-line)
+    const lines = n.lines || [n.label];
+    const totalTextH = lines.length * n.lineH;
+    let textY = cy - totalTextH / 2 + n.lineH;
+    lines.forEach((line, i) => {
+      svg += `<text x="${cx}" y="${textY}" text-anchor="middle" fill="${c.text}" font-size="11" font-weight="600">${esc(line)}</text>`;
+      textY += n.lineH;
+    });
+
+    svg += `</g>`;
+  });
+
+  // ── Phase C: Draw labels on TOP of everything ──
+  edgeDefs.forEach(e => {
+    if (!e.label || e.labelT == null) return;
+    const t = e.labelT;
+    const lx = bezierAt(e.x1, e.cp1x, e.cp2x, e.x2, t);
+    const ly = bezierAt(e.y1, e.cp1y, e.cp2y, e.y2, t);
+    // Tangent
+    const dt = 0.02;
+    const tx0 = bezierAt(e.x1, e.cp1x, e.cp2x, e.x2, Math.min(t + dt, 1));
+    const ty0 = bezierAt(e.y1, e.cp1y, e.cp2y, e.y2, Math.min(t + dt, 1));
+    const dx = tx0 - lx, dy = ty0 - ly;
+    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+    const px = -dy / len, py = dx / len;
+    const perpDist = 8 + (e._perpExtra || 0);
+    svg += `<text x="${(lx + px * perpDist).toFixed(0)}" y="${(ly + py * perpDist).toFixed(0)}" fill="#64748b" font-size="10" font-weight="600">${esc(e.label)}</text>`;
+  });
+
+  return `<svg width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg">${svg}</svg>`;
+}
+
+// ═══════════════════════════════════════════════
+// Main Render
+// ═══════════════════════════════════════════════
+function render() {
+  const domain = getDomain();
+  const data = domain ? ALL_DATA.domains[domain] : null;
+
+  // ── Update domain select ──
+  initDomainSelect();
+  if (domain) {
+    document.getElementById('domain-select').value = domain;
+  }
+
+  // ── Content ──
+  const content = document.getElementById('content');
+  const toc = document.getElementById('toc');
+  const stats = document.getElementById('stats');
+
+  if (!data) {
+    content.innerHTML = `<div class="empty-state"><h2>暂无数据</h2><p>请先在 data/ 目录下创建领域工作流 JSON 文件，并同步到 ALL_DATA。</p></div>`;
+    toc.innerHTML = '';
+    stats.textContent = '';
+    return;
+  }
+
+  // ── Stats ──
+  const sectionCount = data.sections.length;
+  const flowchartCount = data.sections.filter(s => s.flowchart).length;
+  stats.textContent = `${sectionCount} 章节 · ${flowchartCount} 流程图`;
+
+  // ── Build TOC ──
+  let tocHTML = '';
+  data.sections.forEach(s => {
+    const indentClass = `indent-${Math.min(s.level || 1, 3) - 1}`;
+    tocHTML += `<a href="#sec-${s.id}" class="${indentClass}">${esc(s.title)}</a>`;
+  });
+  if (data.permissions && data.permissions.length) {
+    tocHTML += `<a href="#sec-permissions" class="indent-0">🔒 权限点清单</a>`;
+  }
+  if (data.roles && data.roles.length) {
+    tocHTML += `<a href="#sec-roles" class="indent-0">👥 角色定义</a>`;
+  }
+  toc.innerHTML = tocHTML;
+
+  // ── Render sections ──
+  let contentHTML = '';
+
+  // Domain header
+  contentHTML += `<div class="section" style="background:linear-gradient(135deg,#eff6ff,#faf5ff);border-left:4px solid var(--blue);">
+    <h1 style="margin-bottom:8px;">${esc(data.title)}</h1>
+    <p style="color:var(--text2);font-size:.9rem;margin:0;">${esc(data.description)}</p>
+    <p style="color:var(--text2);font-size:.8rem;margin:8px 0 0;">最后更新：${esc(data.last_updated)}</p>
+  </div>`;
+
+  data.sections.forEach(s => {
+    contentHTML += `<div class="section" id="sec-${s.id}">`;
+    contentHTML += `<h${s.level || 2}>${esc(s.title)}</h${s.level || 2}>`;
+
+    // Render text blocks
+    if (s.blocks && s.blocks.length > 0) {
+      contentHTML += s.blocks.map(b => renderBlock(b)).join('\n');
+    }
+
+    // Render flowchart
+    if (s.flowchart) {
+      const svg = renderFlowchartSVG(s.flowchart);
+      contentHTML += `<div class="flowchart-wrap">${svg}</div>`;
+      contentHTML += `<div class="flowchart-caption">▲ ${esc(s.title)} 流程图</div>`;
+    }
+
+    contentHTML += `</div>`;
+  });
+
+  // ── Render permissions section (from structured array) ──
+  if (data.permissions && data.permissions.length) {
+    contentHTML += `<div class="section" id="sec-permissions" style="border-left:4px solid #f59e0b;">`;
+    contentHTML += `<h2>🔒 权限点清单</h2>`;
+    contentHTML += `<p style="color:var(--text2);font-size:.85rem;margin-bottom:12px;">本域共 ${data.permissions.length} 个权限控制点。每个权限点对应一个可独立授权的业务操作。API 端点和前端页面组件通过引用权限点 id 建立控制关系。</p>`;
+    contentHTML += `<table class="block-table"><thead><tr><th>权限点 ID</th><th>名称</th><th>说明</th><th>功能分类</th></tr></thead><tbody>`;
+    data.permissions.forEach(p => {
+      contentHTML += `<tr><td><code style="background:#fef3c7;padding:1px 6px;border-radius:3px;font-size:12px;">${esc(p.id)}</code></td><td>${esc(p.name)}</td><td style="font-size:12px;">${esc(p.desc)}</td><td style="font-size:11px;color:#6b7280;">${esc(p.category||'—')}</td></tr>`;
+    });
+    contentHTML += `</tbody></table></div>`;
+  }
+
+  // ── Render roles section (from structured array) ──
+  if (data.roles && data.roles.length) {
+    contentHTML += `<div class="section" id="sec-roles" style="border-left:4px solid #8b5cf6;">`;
+    contentHTML += `<h2>👥 角色定义</h2>`;
+    contentHTML += `<p style="color:var(--text2);font-size:.85rem;margin-bottom:12px;">本域共 ${data.roles.length} 个角色。每个角色聚合一组权限点——用户通过被分配角色获得操作权限。</p>`;
+    contentHTML += `<table class="block-table"><thead><tr><th>角色</th><th>说明</th><th>端组</th><th>聚合的权限点</th></tr></thead><tbody>`;
+    data.roles.forEach(r => {
+      const permBadges = (r.permission_ids||[]).map(pid => `<code style="background:#fef3c7;padding:1px 5px;border-radius:3px;font-size:11px;margin:0 2px;">${esc(pid)}</code>`).join(' ');
+      const cgLabel = {Customer:'🎫 观众端',FighterCoach:'🥊 拳手/教练端',Staff:'⚙️ 运营后台'}[r.client_group] || r.client_group;
+      contentHTML += `<tr><td><b>${esc(r.name)}</b><br><span style="font-size:10px;color:#9ca3af;">${esc(r.id)}</span></td><td style="font-size:12px;">${esc(r.desc)}</td><td style="font-size:12px;">${cgLabel}</td><td style="font-size:12px;">${permBadges||'<span style="color:#9ca3af;">—</span>'}</td></tr>`;
+    });
+    contentHTML += `</tbody></table></div>`;
+  }
+
+  content.innerHTML = contentHTML;
+
+  // ── TOC click → smooth scroll + active highlight ──
+  toc.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', function(e) {
+      e.preventDefault();
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        toc.querySelectorAll('a').forEach(x => x.classList.remove('active'));
+        this.classList.add('active');
+      }
+    });
+  });
+
+  // ── Highlight current TOC item on scroll ──
+  const sections = content.querySelectorAll('.section[id]');
+  const tocLinks = toc.querySelectorAll('a');
+  content.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (content.scrollTop >= s.offsetTop - 80) {
+        current = s.getAttribute('id');
+      }
+    });
+    tocLinks.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === `#${current}`);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', render);
+</script>
+</body>
+</html>
