@@ -775,8 +775,10 @@ def desc_analyze_folder(ctx, path, llm, recursive):
               help="走 PG 向量库检索（多 NAS；未配置/失败自动回退本地引擎）")
 @click.option("--nas", "nas_alias", default=None,
               help="[[nas]] 别名（--pg 时选择 NAS；缺省按当前连接方式推断）")
+@click.option("--hybrid/--no-hybrid", "hybrid", default=False,
+              help="混合检索（R5-05，仅 --pg 文档级）：向量 + 关键词 RRF 融合")
 @click.pass_context
-def desc_search(ctx, query, root, top_k, vector, pg_flag, nas_alias):
+def desc_search(ctx, query, root, top_k, vector, pg_flag, nas_alias, hybrid):
     """基于 .naskb 描述数据的语义（向量）/BM25 搜索（不读文件原文）。
 
     引擎选择链：--pg → PG 向量库（失败自动回退）；否则向量索引 → BM25。
@@ -800,7 +802,7 @@ def desc_search(ctx, query, root, top_k, vector, pg_flag, nas_alias):
                                    default_schema=nas["schema_name"])
                 try:
                     hits = e.search(query, top_k=top_k,
-                                    schema=nas["schema_name"])
+                                    schema=nas["schema_name"], hybrid=hybrid)
                 except Exception as ex:
                     print(f"  [跳过] {nas['label'] or nas['schema_name']}: {ex}")
                     continue
@@ -816,9 +818,11 @@ def desc_search(ctx, query, root, top_k, vector, pg_flag, nas_alias):
             engine, schema = _pg_engine_or_none(ctx, config, fs, nas_alias)
             if engine is not None:
                 try:
-                    hits = engine.search(query, top_k=top_k, schema=schema)
+                    hits = engine.search(query, top_k=top_k, schema=schema,
+                                         hybrid=hybrid)
                     print(f"[naskb] PG 语义搜索 \"{query}\" → {len(hits)} 条"
-                          f"（schema {schema}）")
+                          f"（schema {schema}）"
+                          + ("，混合检索 pg-hybrid" if hybrid else ""))
                     _print_hits(hits)
                     return
                 finally:
@@ -883,8 +887,10 @@ def _print_hits(hits) -> None:
               help="走 PG 向量库检索（多 NAS；未配置/失败自动回退本地引擎）")
 @click.option("--nas", "nas_alias", default=None,
               help="[[nas]] 别名（--pg 时选择 NAS；缺省按当前连接方式推断）")
+@click.option("--hybrid/--no-hybrid", "hybrid", default=False,
+              help="混合检索（R5-05，仅 --pg 文档级）：向量 + 关键词 RRF 融合")
 @click.pass_context
-def desc_ask(ctx, question, root, top_k, vector, pg_flag, nas_alias):
+def desc_ask(ctx, question, root, top_k, vector, pg_flag, nas_alias, hybrid):
     """RAG 问答：检索 .naskb 描述（--pg 走 PG 向量库）→ DeepSeek 生成（带来源）。"""
     from ..common.llm import LLMConfig, create_llm_client
     from ..common.retrieval import BM25Index, ask, collect_docs
@@ -899,8 +905,9 @@ def desc_ask(ctx, question, root, top_k, vector, pg_flag, nas_alias):
             if pg_engine is not None:
                 llm_client = create_llm_client(
                     LLMConfig.from_dict(config.llm_text))
-                result = ask(llm_client, pg_engine, question, top_k=top_k)
-                result["engine"] = "pg"
+                result = ask(llm_client, pg_engine, question, top_k=top_k,
+                             hybrid=hybrid)
+                result["engine"] = "pg-hybrid" if hybrid else "pg"
                 print(f"[naskb] PG 问答（schema {schema}）:\n{result['answer']}")
                 if result["sources"]:
                     print("\n来源:")

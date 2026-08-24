@@ -27,7 +27,7 @@ naskb/                      ← Skill/系统根
     └── skill/cli.py        ← desc 命令组（28 命令）
 NASKB_data/                 ← 工作区：config.toml、sources.json（无 PG 时来源表）
 tests/                      ← 测试（按 SFDS 方法论重组：api/ unit/ integration/ page-mock/ + 架构契约门禁 test_arch_contract.py；
-                              基线 381 passed / 1 skipped + page-mock 21 + 初始化时序 2，见 tests/test-reports/）
+                              基线 425 passed / 1 skipped + page-mock 21 + 初始化时序 2，见 tests/test-reports/）
 ```
 
 ## 核心能力（`naskb desc ...`）
@@ -38,7 +38,7 @@ tests/                      ← 测试（按 SFDS 方法论重组：api/ unit/ i
 | `analyze <file>` | 单文件分析（文档 DeepSeek 摘要、图片/音频 MiMo、docx 图文流） |
 | `analyze-tree <root> --llm` | 批量分析（增量幂等：hash 对比，一致跳过/变更重分析/删除清孤儿） |
 | `analyze-folder <root> --recursive` | 目录级描述 folder.json |
-| `search <query>` / `ask <question>` | 语义向量检索（bge-small-zh 本地嵌入）/ RAG 问答（DeepSeek 生成，带来源）；无向量索引自动降级 BM25；`--pg` 走 PG 多 NAS 向量库（失败自动回退） |
+| `search <query>` / `ask <question>` | 语义向量检索（bge-small-zh 本地嵌入）/ RAG 问答（DeepSeek 生成，带来源）；无向量索引自动降级 BM25；`--pg` 走 PG 多 NAS 向量库（失败自动回退）；`--hybrid`（需 `--pg`）混合检索——向量 + 关键词 RRF 融合（R5-05） |
 | `serve [--host --port --root --open --pg]` | 内置问答服务：Web UI + `/api/search` `/api/ask`（向量/BM25 自动选择，`/api/reload` 热刷新）；`--pg` 启用 PG 多 NAS 下拉 |
 | `sync-vectors <root> [--nas --rebuild]` | 同步 .naskb → PG 多 NAS 向量库（五要素身份/独立 schema/增改删移增量） |
 | `sync-chunks <root> [--nas]` | 深析目录 MinerU md 分段成条款级 chunk 向量行（需 `[deep].enabled`，REQ-R5-06） |

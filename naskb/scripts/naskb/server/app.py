@@ -212,6 +212,7 @@ def create_app(config) -> FastAPI:
         top_k: int = Query(10),
         sources: str = Query(""),       # 逗号分隔 alias/id；空 = 全部
         dir: str = Query(""),           # 目录范围过滤（前缀）
+        hybrid: bool = Query(False),    # R5-05 混合检索（opt-in）：向量+关键词 RRF 融合
     ):
         query = query.strip()
         if not query:
@@ -250,7 +251,8 @@ def create_app(config) -> FastAPI:
                 for schema, info in schemas.items():
                     try:
                         hits = pg.search(schema, vec, top_k=top_k,
-                                         source_ids=info["sids"])
+                                         source_ids=info["sids"],
+                                         hybrid=hybrid, keyword_query=query)
                     except Exception:
                         continue
                     for h in hits:
@@ -259,7 +261,9 @@ def create_app(config) -> FastAPI:
                 merged.sort(key=lambda x: -float(x.get("score") or 0))
                 merged = merged[:top_k]
                 out = [_trim_hit(h, dir_prefix=dir.strip("/")) for h in merged]
-                return {"query": query, "engine": "pg", "hits": out,
+                return {"query": query,
+                        "engine": "pg-hybrid" if hybrid else "pg",
+                        "hits": out,
                         "total": len(out)}
             except HTTPException:
                 raise

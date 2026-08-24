@@ -23,7 +23,7 @@ applyTo: "*"
 | 分析单个文件 | `naskb desc analyze <file>` |
 | 看还有哪些没描述 | `naskb desc scan <root>` |
 | 构建语义向量索引 | `naskb desc index-vectors <root>`（bge-small-zh 本地嵌入，首次自动下载 ~24MB 模型） |
-| 检索文件 | `naskb desc search "关键词"`（有向量索引 → 语义检索；无 → BM25 自动降级；`--no-vector` 强制 BM25） |
+| 检索文件 | `naskb desc search "关键词"`（有向量索引 → 语义检索；无 → BM25 自动降级；`--no-vector` 强制 BM25；`--pg` 走 PG 多 NAS 向量库，加 `--hybrid` 为向量+关键词 RRF 混合检索） |
 | 问答（RAG） | `naskb desc ask "问题"`（语义/BM25 召回 top-k → DeepSeek 生成，带来源） |
 | 内部问答服务 | `naskb desc serve [--host 127.0.0.1 --port 8765 --open]`（Web UI + `/api/search` `/api/ask`，见下） |
 | 同步 PG 向量库 | `naskb desc sync-vectors <root> [--nas <alias>] [--rebuild]`（.naskb → PG 多 NAS 独立 schema，增/改/删/移增量；未配 `[pg]` 自动跳过） |

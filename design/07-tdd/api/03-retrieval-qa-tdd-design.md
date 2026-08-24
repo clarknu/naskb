@@ -47,3 +47,15 @@
 
 ### TC-R06: 统计与 rebind
 - **类型**: 正常流程 ｜ **断言清单**: ✅ /api/stats 返回 engine/docs/vector_index；✅ pg/rebind 幂等（重复调用结果一致）
+
+### TC-R07: 混合检索（R5-05，opt-in）
+- **类型**: 正常/边界流程 ｜ **状态**: ✅ 已实现（2026-08-24，DD-010）
+- **断言清单**:
+  - ✅ `pg.keyword_search`（真 PG）：中文子串式查询命中（查「月租金」→ token N-gram 对齐）；无关词空；ts_rank_cd > 0
+  - ✅ `pg.search(hybrid=True)`：向量+关键词 RRF 融合，结果无重复 resource_id、score=RRF 分值（含 rrf_k 标记）；非 hybrid 不受影响
+  - ✅ 纯函数 `rrf_fuse`：两路命中重叠提升（B 两路第一）、单路、top-N 截断、level 独立融合
+  - ✅ `_tokenize_for_ts`/`_tsquery_from_text`：CJK 单字+二元组、英文整词保留、单字噪声剔除（双字起）、max_terms 截断
+  - ✅ `PgSearchEngine` hybrid 透传 + engine='pg-hybrid'；`retrieval.ask` hybrid 仅 PG 引擎生效（BM25/向量索引忽略）
+  - ✅ REST：`/api/kb/search?hybrid=1` → engine=pg-hybrid（契约见 rest/03 参数表）
+- **位置**: unit/test_pgsearch_hybrid.py（12 例）+ integration/test_pgstore.py::TestHybridSearch（2 例，真 PG）
+- **已知点**: 关键词通道无有效词（纯单字/空）→ 退化为纯向量；chunk 级不掺入混合（两级引用语义已定）

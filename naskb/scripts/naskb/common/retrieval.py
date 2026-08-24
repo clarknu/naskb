@@ -220,14 +220,24 @@ def collect_docs(fs, root: str, repo_name: str = ".naskb") -> list[Doc]:
 
 
 def ask(client, index: BM25Index, question: str, top_k: int = 5,
-        context_chars: int = 6000) -> dict:
+        context_chars: int = 6000,
+        hybrid: bool = False) -> dict:
     """RAG 问答：检索 top-k 描述 → LLM 生成带来源的回答。
 
     上下文包含检索到的**完整描述文本**（摘要+全文，预算内裁剪），
     而不是只有摘要——否则"月租金多少/和谁签的"这类细节问题
     会因上下文缺失而答不出来。
+    hybrid: 混合检索（R5-05，仅 PG 引擎生效）：向量+关键词 RRF 融合后
+            交给 LLM；其它引擎（BM25 索引/向量索引）忽略该开关。
     """
-    hits = index.search(question, top_k=top_k)
+    if hybrid:
+        from .pgsearch import PgSearchEngine
+        if isinstance(index, PgSearchEngine):
+            hits = index.search(question, top_k=top_k, hybrid=True)
+        else:
+            hits = index.search(question, top_k=top_k)
+    else:
+        hits = index.search(question, top_k=top_k)
     if not hits:
         return {"answer": "知识库中没有找到与问题相关的描述。", "sources": []}
     budget = context_chars

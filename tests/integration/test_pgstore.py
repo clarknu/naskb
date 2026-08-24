@@ -461,3 +461,53 @@ class TestFolderAndChunkDelete:
         assert self._count_rows(pg, schema, "summary", sid_a) == 1
         assert self._count_rows(pg, schema, "chunk", sid_b) == stats_b["chunks"]
         assert self._count_rows(pg, schema, "summary", sid_b) == 1
+
+
+class TestHybridSearch:
+    """R5-05 混合检索（真 PG）：search_vector 填充/索引/关键词通道/RRF 融合。"""
+
+    def test_keyword_search_and_hybrid(self, pg_env):
+        pg: PgStore = pg_env["pg"]
+        nas = pg.get_or_create_nas("local", "local", 0, pg_env["username"])
+        schema = nas["schema_name"]
+        docs = [_doc("合同/租赁合同.pdf", "月租金为3200元，押一付三，租赁期一年",
+                     "租赁合同 月租金 3200 押金", "hash-k1"),
+                _doc("学习/笔记.pdf", "深度神经网络课程笔记",
+                     "神经网络 反向传播 梯度", "hash-k2"),
+                _doc("摄影/相机说明.pdf", "ILCE-6000 相机操作说明，菜单与按钮功能",
+                     "相机 ILCE 菜单 按钮", "hash-k3")]
+        pg.sync_vectors(schema, docs)
+
+        # 关键词通道：中文查询命中「租赁合同」（期/押 等词经 jieba 预分词）
+        hits = pg.keyword_search(schema, "月租金是否押一付三", top_k=5)
+        assert hits, "关键词通道应有命中"
+        assert any("租赁合同" in h["path"] for h in hits)
+        assert hits[0]["score"] > 0
+
+        # 关键词语义：无关词不命中
+        empty = pg.keyword_search(schema, "足球世界杯", top_k=5)
+        assert empty == [] or all("租赁合同" not in h["path"] for h in empty)
+
+        # hybrid 融合（向量 top-k + 关键词 top-k → RRF）：返回结构合法、无重复 id
+        vec = [0.1] * 512
+        fused = pg.search(schema, vec, top_k=5, hybrid=True, keyword_query="相机")
+        assert fused, "hybrid 应有结果"
+        ids = [h["resource_id"] for h in fused]
+        assert len(ids) == len(set(ids)), "融合结果不得出现重复 resource_id"
+        assert all("rrf_k" in h for h in fused)
+        # 纯向量路径（非 hybrid）不受影响
+        plain = pg.search(schema, vec, top_k=3)
+        assert len(plain) == 3 and all("rrf_k" not in h for h in plain)
+
+    def test_search_vector_index_exists(self, pg_env):
+        """全量 GIN 索引（idx_vectors_search_gin）在迁移后存在（chunk-only 旧索引已清理）。"""
+        pg: PgStore = pg_env["pg"]
+        nas = pg.get_or_create_nas("local", "local", 0, pg_env["username"])
+        with pg.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT indexname FROM pg_indexes WHERE schemaname=%s",
+                    (nas["schema_name"],))
+                names = {r[0] for r in cur.fetchall()}
+        assert "idx_vectors_search_gin" in names
+        assert "idx_vectors_chunk_tsv" not in names

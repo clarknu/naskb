@@ -53,11 +53,12 @@ window.API_DATA["03-retrieval-qa"] = {
         ["query","string","是","查询词","非空","出行要带的证件"],
         ["top_k","int","否","返回条数","1-100","20"],
         ["sources","string[]","否","来源过滤","—","—"],
-        ["dir","string","否","目录过滤","rel_path","docs/合同"]
+        ["dir","string","否","目录过滤","rel_path","docs/合同"],
+        ["hybrid","bool","否","混合检索（R5-05）：向量 + 关键词 RRF 融合；engine=pg-hybrid","false","true"]
       ],
       responses: [
-        { description: "成功响应 — HTTP 200", json: '{\n  "engine": "vector",\n  "hits": [\n    {\n      "resource_id": "uuid",\n      "path": "docs/合同.pdf",\n      "score": 0.83,\n      "summary": "…",\n      "category": "合同",\n      "tags": ["租赁"],\n      "stale": false,\n      "nas": "home-nas",\n      "source_alias": "home-nas-docs"\n    }\n  ]\n}',
-          fields: [["engine","enum","pg|vector|bm25"],["hits[].resource_id","UUID","资源 ID"],["hits[].path","text","相对路径"],["hits[].score","decimal","相似度"],["hits[].summary","text","摘要"],["hits[].category","text","分类"],["hits[].tags","text[]","标签"],["hits[].stale","bool","过期标记"],["hits[].nas","text","NAS 别名"],["hits[].source_alias","text","来源别名"]] }
+        { description: "成功响应 — HTTP 200", json: '{\n  "engine": "pg-hybrid",\n  "hits": [\n    {\n      "resource_id": "uuid",\n      "path": "docs/合同.pdf",\n      "score": 0.83,\n      "summary": "…",\n      "category": "合同",\n      "tags": ["租赁"],\n      "stale": false,\n      "nas": "home-nas",\n      "source_alias": "home-nas-docs"\n    }\n  ]\n}',
+          fields: [["engine","enum","pg|pg-hybrid|vector|bm25"],["hits[].resource_id","UUID","资源 ID"],["hits[].path","text","相对路径"],["hits[].score","decimal","相似度（hybrid 时为 RRF 分值）"],["hits[].summary","text","摘要"],["hits[].category","text","分类"],["hits[].tags","text[]","标签"],["hits[].stale","bool","过期标记"],["hits[].nas","text","NAS 别名"],["hits[].source_alias","text","来源别名"]] }
       ],
       errors: [
         ["400","INVALID_PARAMETER (40001)","query 为空","—"],

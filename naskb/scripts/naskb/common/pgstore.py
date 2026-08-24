@@ -191,13 +191,85 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_vectors_chunk_unique
   ON {schema}.vectors (resource_id, model, chunk_seq) WHERE level = 'chunk';
 CREATE INDEX IF NOT EXISTS idx_vectors_chunk_hnsw
   ON {schema}.vectors USING hnsw (embedding vector_cosine_ops) WHERE level = 'chunk';
-CREATE INDEX IF NOT EXISTS idx_vectors_chunk_tsv
-  ON {schema}.vectors USING gin (search_vector) WHERE level = 'chunk';
+-- R5-05 混合检索（opt-in）：search_vector 原为 chunk-only 索引（R5-06 预留列，
+-- 未使用）；改为全量 GIN（文档级+条款级统一），旧 partial 索引幂等清理。
+DROP INDEX IF EXISTS {schema}.idx_vectors_chunk_tsv;
+CREATE INDEX IF NOT EXISTS idx_vectors_search_gin
+  ON {schema}.vectors USING gin (search_vector);
 CREATE TABLE IF NOT EXISTS {schema}.termbase (
   term       text PRIMARY KEY,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 """
+
+
+# ═══════════════════════════════════════════════════════════════════
+# R5-05 混合检索（opt-in）：CJK N-gram 预分词 + tsvector('simple') 关键词通道
+#   PG 原生 tsvector 不对中文分词（'simple' 按空格/标点切），故写入前把中文
+#   切成「单字 + 二元组（N-gram）」空格串再 to_tsvector；查询侧同样切词后
+#   to_tsquery('simple', '词A | 词B ...')（OR 召回）。N-gram 使子串式查询
+#   可命中（查“月租金”→ 文档 token 含“月租”“租金”），且不依赖分词词典
+#   （jieba 未随包声明——原“jieba 术语表”亦为二期未实现项）。
+#   检索 = 向量 top-k 与关键词 top-k 做 RRF（Reciprocal Rank Fusion）融合；
+#   关键词通道无有效词/空查询 → 直接返回空（hybrid 退化为纯向量，不报错）。
+#   注：chunk 级（条款）仍走纯向量（两级引用语义已定，混合不掺入）。
+# ═══════════════════════════════════════════════════════════════════
+_CJK_RE = __import__("re").compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]+")
+
+
+def _tokenize_for_ts(text: str) -> str:
+    """中文关键词预分词：CJK 连续段出「单字 + 二元组」，其余按空白保留整词。
+
+    查询侧与写入侧共用（同粒度对齐）→ 中文子串式查询可命中。
+    """
+    if not text:
+        return ""
+    words: list[str] = []
+    last = 0
+    for m in _CJK_RE.finditer(text):
+        if m.start() > last:
+            words.extend(text[last:m.start()].split())  # 非中文段：英文/数字整词
+        run = m.group()
+        words.extend(run)                          # 单字
+        words.extend(run[i:i + 2] for i in range(len(run) - 1))  # 二元组
+        last = m.end()
+    if last < len(text):
+        words.extend(text[last:].split())
+    return " ".join(w for w in words if w)
+
+
+def _tsquery_from_text(text: str, max_terms: int = 32) -> str:
+    """查询文本 → tsquery 字符串（词间 OR）；单字符噪声剔除（N-gram 双字起）。
+
+    空/无有效词 → 空串（上层按「无关键词」处理）。
+    """
+    terms = [t for t in _tokenize_for_ts(text).split()
+             if len(t) >= 2][:max_terms]
+    return " | ".join(terms)
+
+
+def rrf_fuse(vector_hits: list[dict], keyword_hits: list[dict],
+             k: int = 60, limit: int | None = None) -> list[dict]:
+    """Reciprocal Rank Fusion：按 (resource_id, level) 融合两路命中。
+
+    每路按列表顺序为 rank（0-based）；score = Σ 1/(k + rank+1)。
+    limit=None 时返回全量（调用方按 score 截断）。
+    """
+    scores: dict[tuple, float] = {}
+    detail: dict[tuple, dict] = {}
+    for hits in (vector_hits, keyword_hits):
+        for rank, h in enumerate(hits):
+            key = (h.get("resource_id"), h.get("level"))
+            scores[key] = scores.get(key, 0.0) + 1.0 / (k + rank + 1)
+            if key not in detail:
+                detail[key] = h
+    merged = []
+    for key, s in sorted(scores.items(), key=lambda kv: -kv[1]):
+        h = dict(detail[key])
+        h["score"] = s
+        h["rrf_k"] = k
+        merged.append(h)
+    return merged[:limit] if limit else merged
 
 
 class PgStore:
@@ -419,11 +491,13 @@ class PgStore:
                     rid = cur.fetchone()[0]
                     cur.execute(sql.SQL(
                         "INSERT INTO {}.vectors (resource_id, model, dim, "
-                        "embedding, summary_text, full_text, source_hash) "
-                        "VALUES (%s,%s,%s,%s,%s,%s,%s)")
+                        "embedding, summary_text, full_text, source_hash, "
+                        "search_vector) "
+                        "VALUES (%s,%s,%s,%s,%s,%s,%s,to_tsvector('simple',%s))")
                         .format(sql.Identifier(schema_name)),
                         (rid, EMBEDDING_MODEL, EMBEDDING_DIM, vec,
-                         doc.text, doc.context, doc.file_hash))
+                         doc.text, doc.context, doc.file_hash,
+                         _tokenize_for_ts(doc.text or "")))
                     stats["added"] += 1
 
                 for doc, row in to_update:
@@ -479,16 +553,18 @@ class PgStore:
                  resource_id))
             cur.execute(sql.SQL(
                 "INSERT INTO {}.vectors (resource_id, model, dim, embedding, "
-                "summary_text, full_text, source_hash) "
-                "VALUES (%s,%s,%s,%s,%s,%s,%s) "
+                "summary_text, full_text, source_hash, search_vector) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,to_tsvector('simple',%s)) "
                 "ON CONFLICT (resource_id, model) WHERE level='summary' "
                 "DO UPDATE SET embedding=EXCLUDED.embedding, "
                 "summary_text=EXCLUDED.summary_text, "
                 "full_text=EXCLUDED.full_text, "
-                "source_hash=EXCLUDED.source_hash, updated_at=now()")
+                "source_hash=EXCLUDED.source_hash, "
+                "search_vector=EXCLUDED.search_vector, updated_at=now()")
                 .format(ident),
                 (resource_id, EMBEDDING_MODEL, EMBEDDING_DIM, vec,
-                 doc.text, doc.context, doc.file_hash))
+                 doc.text, doc.context, doc.file_hash,
+                 _tokenize_for_ts(doc.text or "")))
         stats["embedded"] += 1
         stats["enriched"] += 1
 
@@ -497,13 +573,36 @@ class PgStore:
     def search(self, schema_name: str, query_vector,
                top_k: int = 10, model: str = EMBEDDING_MODEL,
                source_ids: list | None = None,
-               level: str = "summary") -> list[dict]:
-        """余弦 top-k。query_vector: np.ndarray/list（已归一化）。
+               level: str = "summary",
+               hybrid: bool = False, keyword_query: str | None = None,
+               keyword_top_k: int = 50, rrf_k: int = 60) -> list[dict]:
+        """余弦 top-k；hybrid=True 时与关键词通道做 RRF 融合（R5-05，opt-in）。
 
+        query_vector: np.ndarray/list（已归一化）。
         source_ids: 来源过滤（v3）；None/空 = 全部来源。
         level: 检索层级——'summary'（文档级，默认）/ 'chunk'（条款级，REQ-R5-06）。
-        输出含 resource_id/source_id（str），供内容访问层凭 id 寻址。
+        hybrid: 开启混合检索（仅 level='summary' 语义；chunk 级自动忽略）。
+        keyword_query: 关键词通道查询文本（缺省用 None → 以空处理，hybrid 退化为向量）。
+        输出含 resource_id/source_id（str），供内容访问层凭 id 寻址；
+        hybrid 融合后 score = RRF 分值（非余弦），engine 由上层标注。
         """
+        if hybrid and level == "summary":
+            vec_hits = self._search_vector(
+                schema_name, query_vector, top_k=keyword_top_k,
+                model=model, source_ids=source_ids, level=level)
+            kw_hits = self.keyword_search(
+                schema_name, keyword_query or "", top_k=keyword_top_k,
+                model=model, source_ids=source_ids, level=level)
+            return rrf_fuse(vec_hits, kw_hits, k=rrf_k, limit=top_k)
+        return self._search_vector(schema_name, query_vector, top_k=top_k,
+                                   model=model, source_ids=source_ids,
+                                   level=level)
+
+    def _search_vector(self, schema_name: str, query_vector,
+                       top_k: int = 10, model: str = EMBEDDING_MODEL,
+                       source_ids: list | None = None,
+                       level: str = "summary") -> list[dict]:
+        """余弦 top-k（纯向量通道，hybrid 的内部实现）。"""
         ident = sql.Identifier(schema_name)
         sids = None
         if source_ids:
@@ -530,6 +629,51 @@ class PgStore:
                     ).format(v=ident, r=ident),
                     tuple(params))
                 rows = cur.fetchall()
+        return self._rows_to_hits(rows)
+
+    def keyword_search(self, schema_name: str, query_text: str,
+                       top_k: int = 50, model: str = EMBEDDING_MODEL,
+                       source_ids: list | None = None,
+                       level: str = "summary") -> list[dict]:
+        """关键词通道（R5-05）：search_vector @@ tsquery 召回 + ts_rank_cd 排序。
+
+        输入文本先 jieba 切词 → to_tsquery('simple', '词A | ...')（OR 召回）；
+        无有效词/空查询返回 []（调用方按「无关键词」处理）。
+        返回与 search() 同形（score = ts_rank_cd 数值；仅同 level 行）。
+        """
+        tsq = _tsquery_from_text(query_text)
+        if not tsq:
+            return []
+        ident = sql.Identifier(schema_name)
+        sids = [uuid.UUID(str(s)) for s in source_ids] if source_ids else None
+        where_extra = " AND r.source_id = ANY(%s)" if sids else ""
+        params: list = [tsq, model, level]
+        if sids:
+            params.append(sids)
+        params.extend([tsq, top_k])
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql.SQL(
+                    "SELECT r.rel_path, r.parent_dir, r.name, r.kind, "
+                    "r.category, r.tags, r.summary, r.status, "
+                    "r.file_hash, r.hash_algorithm, r.size_bytes, "
+                    "r.mtime, r.ctime, v.summary_text, v.full_text, "
+                    "v.source_hash, v.title_path, v.chunk_seq, v.level, "
+                    "r.resource_id, r.source_id, "
+                    "ts_rank_cd(v.search_vector, to_tsquery('simple', %s)) AS score "
+                    "FROM {v}.vectors v "
+                    "JOIN {r}.resources r ON r.resource_id = v.resource_id "
+                    "WHERE v.model = %s AND v.level = %s" + where_extra + " "
+                    "AND v.search_vector @@ to_tsquery('simple', %s) "
+                    "ORDER BY score DESC LIMIT %s"
+                    ).format(v=ident, r=ident),
+                    tuple(params))
+                rows = cur.fetchall()
+        return self._rows_to_hits(rows)
+
+    @staticmethod
+    def _rows_to_hits(rows) -> list[dict]:
+        """SELECT 行 → 统一命中 dict（search/keyword_search 共用）。"""
         cols = ("path", "parent_dir", "name", "kind", "category", "tags",
                 "summary", "status", "file_hash", "hash_algorithm",
                 "size_bytes", "mtime", "ctime", "text", "context",

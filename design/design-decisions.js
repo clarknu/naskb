@@ -114,5 +114,17 @@ window.DESIGN_DECISIONS = [
     affected_assets: ["design/02-business-workflow/data/01..06", "design/03-entity-relationship/data/*（无字段变更，仅核对）", "design/04-platform-api/data/rest/*", "design/04-platform-api/data/ai-tools/tools.js", "design/05-backend-architecture/data/*", "design/06-web-console/data/*", "design/07-tdd/*", "naskb/scripts/naskb/server/*", "naskb/scripts/naskb/common/{auth? 无, pgstore, capabilities}", "naskb/scripts/naskb/mcp/server.py", "naskb/web/public/app.js"],
     alternatives_considered: [],
     supersedes: []
+  },
+  {
+    id: "DD-010",
+    date: "2026-08-24",
+    domain: "retrieval-qa",
+    layer: "api-design",
+    trigger: "implementation-feedback",
+    summary: "R5-05 混合检索落地（opt-in）：PG tsvector 关键词通道 + 向量 top-k 做 RRF 融合；中文分词用「CJK 单字+二元组 N-gram」（不依赖分词词典——jieba 未随包声明）；关键词通道对纯英文/数字与中文子串式查询可命中；engine 标注 pg-hybrid；默认关闭（向量路径不变），经 /api/kb/search?hybrid=1 或 CLI --hybrid 开启；条款级（chunk）不掺入混合（两级引用语义已定）",
+    rationale: "草案 pg-vector-multi-nas §8.1 要求 tsvector+RRF；实现中验证 PG 原生 tsvector 不分词中文，且 jieba 未安装——改采用 N-gram（查询/写入同粒度），零依赖且子串可命中；opt-in 避免改变既有检索行为（R5-05 标记为可选增强）",
+    affected_assets: ["design/04-platform-api/data/rest/03-retrieval-qa.js", "design/07-tdd/api/03-retrieval-qa-tdd-design.md", "naskb/scripts/naskb/common/pgstore.py", "naskb/scripts/naskb/common/pgsearch.py", "naskb/scripts/naskb/common/retrieval.py", "naskb/scripts/naskb/skill/cli.py", "naskb/scripts/naskb/server/app.py"],
+    alternatives_considered: ["jieba 预分词（未随包声明，需新增依赖）", "pg_trgm 扩展（需 PG 超级权限，统一实例不可控）", "tsvector + 默认分词（对中文无效）"],
+    supersedes: []
   }
 ];

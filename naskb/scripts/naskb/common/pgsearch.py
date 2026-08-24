@@ -27,11 +27,14 @@ class PgSearchEngine:
     def search(self, query: str, top_k: int = 10,
                kind: Optional[str] = None,
                schema: Optional[str] = None,
-               level: str = "summary") -> list[dict]:
+               level: str = "summary",
+               hybrid: bool = False) -> list[dict]:
         """语义检索指定 NAS schema；返回与 BM25Index.search 同构的结果。
 
         schema 缺省依次用：默认 schema（构造时绑定）→ 注册表第一条。
         level: 'summary'（文档级，默认）/'chunk'（条款级，REQ-R5-06）。
+        hybrid: 混合检索（R5-05，opt-in；仅文档级语义有效）——向量与
+                关键词通道 RRF 融合，engine 标注 'pg-hybrid'。
         """
         schema = schema or self._default_schema
         if schema is None:
@@ -41,8 +44,9 @@ class PgSearchEngine:
             schema = nas_list[0]["schema_name"]
         vec = self._emb.encode_one(query)
         rows = self._pg.search(schema, vec, top_k=top_k, model=EMBEDDING_MODEL,
-                               level=level)
-        return self._render(rows, kind, schema, level)
+                               level=level, hybrid=hybrid, keyword_query=query)
+        return self._render(rows, kind, schema, level,
+                            engine="pg-hybrid" if hybrid else "pg")
 
     def search_chunks(self, query: str, top_k: int = 10,
                       schema: Optional[str] = None,
@@ -65,7 +69,7 @@ class PgSearchEngine:
             hits = [h for h in hits if h["score"] >= score_min]
         return hits
 
-    def _render(self, rows, kind, schema, level) -> list[dict]:
+    def _render(self, rows, kind, schema, level, engine: str = "pg") -> list[dict]:
         hits = []
         for r in rows:
             if kind and r["kind"] != kind:
@@ -84,7 +88,7 @@ class PgSearchEngine:
                 "context": r["context"],  # full_text（RAG 上下文）
                 "status": r["status"],
                 "stale": r["stale"],
-                "engine": "pg",
+                "engine": engine,
                 "schema": schema,
             })
         return hits

@@ -41,7 +41,7 @@
 ## 三、仍待决策
 
 - ⚠️ 待定：`/api/ask` 与 `/api/kb/ask` 的匿名/认证口径不一致（见 design-code-gap）。
-- ⚠️ 待定：R5-05 混合检索（blend = (1-余弦)+ts_rank_cd）草案，二期。
+- ✅ 已实现（2026-08-24）：R5-05 混合检索（**opt-in**）——PG tsvector 关键词通道（CJK N-gram 预分词）+ 向量 top-k RRF 融合，engine=pg-hybrid；开启方式 `/api/kb/search?hybrid=1` / CLI `--hybrid`（细节见 DD-010；原草案 blend 公式未采用，见决策 rationale）。
 
 ## 四、来源索引
 
