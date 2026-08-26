@@ -16,7 +16,7 @@
 
 > **任何任务，只要其意图与下表触发词匹配，必须先调用对应 Skill，按技能规定的流程推进工作。**
 > **禁止**在未加载 Skill 的情况下直接对 `design/` 或 `src/` 做 Read→Edit→Write 操作。
-> 本表由 `.agents/skills/_shared/pipeline-registry.js` 生成（`node .agents/skills/_shared/gen/generate-trigger-table.mjs --write`），勿手编。
+> 本表由 `.agents/skills/sfds/_shared/pipeline-registry.js` 生成（`node .agents/skills/sfds/_shared/gen/generate-trigger-table.mjs --write`），勿手编。
 
 | 触发词 | 技能 | 层 | 一句话 |
 |--------|------|----|------|
@@ -27,18 +27,16 @@
 | ER 图、实体关系、数据建模 | `entity-relationship` | 设计 | 实体关系图设计 |
 | API 设计、接口设计、**REST API** | `api-design` | 设计 | API 契约设计 |
 | 后端架构设计、分层设计、模块边界、架构审计、全量分析 | `backend-architecture-design` | 设计 | 架构与服务体系设计 |
-| 移动端设计、小程序设计、页面设计 | `mobile-app-design` | 设计 | 移动端页面功能设计 |
-| PC 端设计、桌面端设计、后台设计、**Web 后台设计** | `desktop-ui-design` | 设计 | 桌面/Web 端页面功能设计 |
+| 页面设计、移动端设计、小程序设计、App 设计、PC 端设计、桌面端设计、后台设计、**Web 后台设计** | `client-ui-design` | 设计 | 客户端页面功能设计 |
 | 工作流编排、编排设计、**Dify 流程设计**、节点走向、会话隔离 | `ai-workflow-orchestration-design` | 设计（团队） | AI 工作流编排设计六原则 P1-P6 |
 | TDD 设计、测试设计、写测试、API 测试、页面测试、集成测试 | `tdd-build` | 验证 | TDD 测试设计与编码 |
 | TDD 执行、运行测试、测试报告、跑测试 | `tdd-execute` | 验证 | TDD 测试执行与验证 |
 | 复查、一致性检查、全量复查 | `review` | 验证 | 多维度全项目复查 |
 | **API 代码生成**、后端代码 | `api-code-gen` | 实现 | 服务端代码生成与一致性检查 |
-| **移动端代码生成**、前端代码 | `mobile-code-gen` | 实现 | 移动端代码生成 |
-| **桌面端代码生成**、后台代码、**Web 前端代码** | `desktop-code-gen` | 实现 | 桌面/Web 端代码生成 |
+| **客户端代码生成**、页面代码生成、前端代码、**移动端代码生成**、**桌面端代码生成**、后台代码、**Web 前端代码** | `client-code-gen` | 实现 | 客户端代码生成 |
 | 发布设计文档、**同步设计文档到 publish** | `sync-design-to-publish` | 工具 | 设计文档同步到 publish/ 并部署 Cloudflare Pages |
 | 发布线上、上线、发版、部署线上、发布流程、发线上、更新到线上、版本号、打 tag、回滚、环境切换、预发布 | `release-management` | 工具 | 发布管理方法论 |
-| **微信开发者工具**、小程序预览、小程序调试 | `wechatide-skill` | 工具 | 微信开发者工具任务执行根入口 |
+| **微信开发者工具**、小程序预览、小程序调试 | `wechatide-automation` | 工具 | 微信开发者工具 |
 
 <!-- END skill-table -->
 

@@ -33,8 +33,7 @@ const OUT = resolve(flag("--out") || "viewer-smoke");
 const cases = [
   { name: "business-workflow",           viewer: "workflow-viewer.html",     files: ["example-domain.js"], fromDataDir: false },
   { name: "entity-relationship",         viewer: "er-viewer.html",           files: ["core-er.js", "example-entity-domain.js"], fromDataDir: false },
-  { name: "mobile-app-design",           viewer: "design-viewer.html",       files: ["example-tree.js", "example-processes.js", "example-style.js", "example-i18n.js"], fromDataDir: false },
-  { name: "desktop-ui-design",           viewer: "design-viewer.html",       files: ["example-tree.js", "example-processes.js", "example-style.js", "example-i18n.js"], fromDataDir: false },
+  { name: "client-ui-design",            viewer: "design-viewer.html",       files: ["example-tree-mobile.js", "example-tree-desktop.js", "example-processes.js", "example-style.js", "example-i18n.js"], fromDataDir: false },
   { name: "backend-architecture-design", viewer: "architecture-viewer.html", files: ["system-topology.js", "module-boundaries.js", "layering-strategy.js", "event-contracts.js", "caching-strategy.js", "resilience-policy.js", "data-consistency.js", "observability-policy.js", "security-policy.js", "arch-contract.js", "design-decisions.js", "audit-dossier.js"], fromDataDir: true }
 ];
 

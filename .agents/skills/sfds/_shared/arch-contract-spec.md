@@ -448,7 +448,7 @@ knownDebts: [
 | 8 | 幂等端点全覆盖（resilience-policy.requiredEndpoints） | set-relation declared-in-actual | mechanical |
 | 9 | 路由 ↔ API 设计一致（review D7 / validate-frontend-api-alignment 同构） | set-relation equal + keyStyle | mechanical |
 | 10 | ER 跨域关系 ↔ 跨域白名单（backend-architecture §3.2 检查 2） | set-relation | mechanical |
-| 11 | 前端页面只可调用 API 设计声明的端点（mobile/desktop-code-gen 检查 3） | set-relation actual-in-declared | mechanical |
+| 11 | 前端页面只可调用 API 设计声明的端点（client-code-gen 检查 3） | set-relation actual-in-declared | mechanical |
 | 12 | TS 前端 feature/shared 依赖方向（跨技术代表） | dependency-direction（unit=前端模块路径） | mechanical |
 | 13 | 微服务间只可经 API 契约调用（跨架构代表，L4） | reference-whitelist（含 http 边） | mechanical |
 | 14 | Controller/API 层禁止包含业务逻辑（skill 步骤 3 硬规则） | 无法谓词化 | review |

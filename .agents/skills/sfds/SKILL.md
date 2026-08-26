@@ -6,7 +6,7 @@ lineage:
   origin: arb-hub
   case: CASE-011
   note: NASKB 试行版：父技能+子技能单目录打包，迁移即整夹复制。bundle 内所有 `.agents/skills/…` 路径（子技能正文、模板、共享规范、脚本输出）一律解释为 `<本文件夹>/…`（本项目即 `.agents/skills/sfds/…`），即 `.agents/skills/_shared/…` → `.agents/skills/sfds/_shared/…`、`.agents/skills/<skill>/…` → `.agents/skills/sfds/skills/<skill>/…`；`~/.agents/skills/…`（全局分发）保持原样。
-  children: 20
+  children: 18
 ---
 
 # SFDS 方法论（仲裁版，父技能入口）
@@ -20,6 +20,7 @@ lineage:
 1. **本技能是项目方法论的唯一入口。** 任何涉及研发的行为——设计、编码、测试、修改、发布、调试、回答"怎么做/下一步"——都应在动作前加载本技能并按下方路由；
 2. 若当前会话尚未加载本技能（模型未自动触发）：**先调用技能工具获取本文件**，再开始任何方法论动作；项目 `AGENTS.md` 也强制要求走本入口（见"项目首次接入"）；
 3. 方法论类动作**不绕过本入口直接改 design/、tests/、src/**；绕过的行动按违规处理（与 AGENTS.md 铁律一致）。
+4. **官方手势 `/sfds`：** 在支持技能手势的会话中，输入 `/sfds`（可带子技能名，如 `/sfds pipeline-controller`）即令本技能全文被注入，再按下表路由。子技能**没有独立手势**——它们在 bundle 内，框架只发现本父技能这一层；单独输入 `/pipeline-controller` 不触发任何东西。
 
 ## 触发词路由（用户话术 → 子技能）
 
@@ -30,11 +31,9 @@ lineage:
 | ER 图 / 实体关系 / 数据建模 / 领域建模 | `entity-relationship` |
 | API 设计 / 接口 / REST / 路由设计 / 端点 | `api-design` |
 | 后端架构 / 架构模式 / 分层 / 模块边界 / 服务拓扑 | `backend-architecture-design` |
-| 移动端/前端画面设计 / TabBar / 页面功能 | `mobile-app-design` |
-| PC/桌面端页面设计 / 后台页面 | `desktop-ui-design` |
+| 客户端页面功能设计 / 移动端 TabBar / PC·桌面后台页面 | `client-ui-design` |
 | 后端代码生成 / API 实现 / ORM 生成 | `api-code-gen` |
-| 移动端代码生成 / 页面代码生成 | `mobile-code-gen` |
-| 桌面端代码生成 / PC 代码生成 | `desktop-code-gen` |
+| 客户端代码生成 / 页面代码生成 / 前端实现检查 | `client-code-gen` |
 | TDD 设计 / 测试设计 / 写测试 | `tdd-build` |
 | TDD 执行 / 跑测试 / 测试报告 / 回归 | `tdd-execute` |
 | 复查 / 一致性检查 / 全量复查 / 对齐检查 | `review` |

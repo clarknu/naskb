@@ -282,7 +282,7 @@ lineage:
 5. **版本记录：** 在数据文件的 `last_updated` 字段更新日期
 6. **上下文保持：** 每次迭代保持之前的设计决策和历史记录
 7. **同步 viewer：** 如果项目有 `workflow-viewer.html`，同时更新其 ALL_DATA 内联数据
-8. **权限点反推接收：** 当下游技能（api-design、mobile-app-design、desktop-ui-design）在映射过程中发现权限点缺失或不完善时，会反推回 business-workflow 要求补充。接收反推后按本步骤正常流程处理——存档、定位、修改。如果反推的权限点归属存在歧义（如不确定该权限应属于哪个域、或粒度是否合适），提示用户进行仲裁
+8. **权限点反推接收：** 当下游技能（api-design、client-ui-design）在映射过程中发现权限点缺失或不完善时，会反推回 business-workflow 要求补充。接收反推后按本步骤正常流程处理——存档、定位、修改。如果反推的权限点归属存在歧义（如不确定该权限应属于哪个域、或粒度是否合适），提示用户进行仲裁
 
 ---
 
@@ -402,7 +402,7 @@ window.WF_DATA["slug-matching-loader-filename"] = {
 | `category` | 否 | 功能分组，便于权限管理界面按组展示 |
 | `section_refs` | 否 | 关联的 section id，用于追溯权限点的业务来源 |
 
-> **设计逻辑：** `permissions` 是 `sections` 中权限清单表的**结构化等价物**。section 中的 table 供人阅读，`permissions` 数组供下游技能（api-design、mobile-app-design、desktop-ui-design）做权限映射引用。两者内容应保持一致。
+> **设计逻辑：** `permissions` 是 `sections` 中权限清单表的**结构化等价物**。section 中的 table 供人阅读，`permissions` 数组供下游技能（api-design、client-ui-design）做权限映射引用。两者内容应保持一致。
 >
 > **权限模型：** 本平台采用 RBAC（基于角色的访问控制）。角色（Role）聚合一组权限点（以 `id` 字符串集合存储），用户通过被分配角色获得权限。鉴权中间件直接校验用户角色集合中是否包含端点所需的权限点 `id`。不做位掩码运算——避免了权限数量超出固定位长的风险。
 

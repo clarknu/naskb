@@ -313,7 +313,7 @@ Review 检查的是全链条产物的一致性。所有被检查的产物必须�
 | **工作流 → API** | **每个状态转换是否有对应操作 API** | **→ 委托 `api-design`**（状态转换对照检查） |
 | 工作流 → API | 每个 subprocess 是否有对应 API 组 | subprocess → endpoint group |
 | 工作流 → API | 业务校验逻辑在 API 层是否有对应 | rules → validation |
-| **工作流 → 前端功能设计** | **每个操作步骤在前端有对应页面/交互组件** | **→ 委托 `mobile-app-design` / `desktop-ui-design` 一致性检查模式**（工作流覆盖检查） |
+| **工作流 → 前端功能设计** | **每个操作步骤在前端有对应页面/交互组件** | **→ 委托 `client-ui-design` 一致性检查模式**（工作流覆盖检查） |
 | **工作流 → 前端功能设计** | **工作流角色在前端有对应权限/视图控制** | role → UI permission（由通用检查代理比对角色定义与页面权限标注） |
 | **工作流 → 前端功能设计** | **流程步骤在前端有对应导航路径** | flow → navigation（由通用检查代理比对 flow 定义与 tree.flows 步骤序列） |
 | **工作流 → API → 前端** | **权限点全链路一致性：business-workflow 定义的每个权限点是否被 API 端点和前端组件正确引用，三处标注的权限点 id 是否一致** | **→ 通用检查代理执行：读取 business-workflow `permissions` 数组 → 比对 API 端点权限标注 → 比对前端组件 `perm_ref` 标注。标记三处不一致的权限点** |
@@ -337,7 +337,7 @@ Review 检查的是全链条产物的一致性。所有被检查的产物必须�
 | **ER → TDD** | **每个字段约束在 TDD 中有校验用例** | constraint → validation TC |
 | **ER → TDD** | **每个唯一约束在 TDD 中有重复插入用例** | uq → duplicate TC |
 | **ER → TDD** | **关系完整性在 TDD 中有引用完整性测试** | FK → referential integrity TC |
-| **ER → 前端功能设计** | **ER 中每个核心实体在前端是否有对应列表/详情/编辑页面** | **→ 委托 `mobile-app-design` / `desktop-ui-design` 一致性检查模式**（实体覆盖检查） |
+| **ER → 前端功能设计** | **ER 中每个核心实体在前端是否有对应列表/详情/编辑页面** | **→ 委托 `client-ui-design` 一致性检查模式**（实体覆盖检查） |
 | **ER → 前端功能设计** | **ER 中的枚举类型在前端是否有对应选择器/展示映射** | enum → picker/display mapping（由通用检查代理比对 ER 枚举值与前端组件描述） |
 | **ER → 前端功能设计** | **ER 中的实体关系在前端是否有对应导航/联级操作** | relationship → navigation/cascade UI（由通用检查代理比对 ER 关系与 tree.js 中的 refs 导航标注） |
 
@@ -391,27 +391,27 @@ Review 检查的是全链条产物的一致性。所有被检查的产物必须�
 
 > 前端功能设计定义了用户交互方式。须确保每个页面、组件、流程都被代码实现，且与 API 的消费关系正确。
 >
-> **前置条件：** 在检查"前端功能设计 → 前端代码"之前，应先通过 `mobile-app-design` / `desktop-ui-design` 的
+> **前置条件：** 在检查"前端功能设计 → 前端代码"之前，应先通过 `client-ui-design` 的
 > 一致性检查模式确认前端设计与上游（ER、工作流）一致。如果设计本身已过期，检查代码实现没有意义——
 > 先对齐设计，再对齐代码。
 
 | 追溯方向 | 检查项 | 方法 |
 |---------|--------|------|
-| **前端功能设计 → 前端代码** | **功能树中的页面在代码中有对应文件** | **→ 委托 `mobile-code-gen` 或 `desktop-code-gen`**（页面存在性检查） |
-| **前端功能设计 → 前端代码** | **功能组件在代码中有实现** | **→ 委托 `mobile-code-gen` 或 `desktop-code-gen`**（组件映射检查） |
+| **前端功能设计 → 前端代码** | **功能树中的页面在代码中有对应文件** | **→ 委托 `client-code-gen`**（页面存在性检查） |
+| **前端功能设计 → 前端代码** | **功能组件在代码中有实现** | **→ 委托 `client-code-gen`**（组件映射检查） |
 | 前端功能设计 → 前端代码 | 公共组件在代码中被复用 | shared → import |
-| **前端功能设计 → 前端代码** | **前端流程有完整代码实现** | **→ 委托 `mobile-code-gen` 或 `desktop-code-gen`**（导航路径检查） |
+| **前端功能设计 → 前端代码** | **前端流程有完整代码实现** | **→ 委托 `client-code-gen`**（导航路径检查） |
 | **前端功能设计 → TDD** | **每个交互场景在 TDD 中有对应用户交互用例** | interaction → UI test TC |
 | **前端功能设计 → TDD** | **每个输入校验规则在 TDD 中有校验用例** | validation rule → validation TC |
 | 前端功能设计 → API | 页面引用的 API 是否存在 | 逐 component 确认 |
 | 前端功能设计 → API | 页面操作有对应 API 端点 | action → endpoint |
-| **前端功能设计 → i18n 翻译表** | **每个 display/rich_text 组件的 `text` 是否在 i18n 文件中有对应条目** | **→ 委托 `mobile-app-design` / `desktop-ui-design` 一致性检查模式（文本与 i18n 完整性检查，step 6）** |
-| **前端功能设计 → i18n 翻译表** | **每个 button/link 组件的 `label`、每个 input 的 `placeholder`/`hint`/`validation[].error` 是否有 i18n key 定义** | **→ 委托 `mobile-app-design` / `desktop-ui-design` 一致性检查模式** |
-| **前端功能设计 → 工作流** | **`show_when` 条件和 `text.variants[].condition` 中引用的状态值是否与工作流状态机一致** | **→ 委托 `mobile-app-design` / `desktop-ui-design` 一致性检查模式** |
+| **前端功能设计 → i18n 翻译表** | **每个 display/rich_text 组件的 `text` 是否在 i18n 文件中有对应条目** | **→ 委托 `client-ui-design` 一致性检查模式（文本与 i18n 完整性检查，step 6）** |
+| **前端功能设计 → i18n 翻译表** | **每个 button/link 组件的 `label`、每个 input 的 `placeholder`/`hint`/`validation[].error` 是否有 i18n key 定义** | **→ 委托 `client-ui-design` 一致性检查模式** |
+| **前端功能设计 → 工作流** | **`show_when` 条件和 `text.variants[].condition` 中引用的状态值是否与工作流状态机一致** | **→ 委托 `client-ui-design` 一致性检查模式** |
 
 > 提示：「前端功能设计 → API」的检查已在 2.4 中从 API 端做了反向确认，此处从组件端再做正向确认，双向覆盖。
 >
-> 提示：「前端功能设计 → i18n」和「前端功能设计 → 工作流（文本条件）」是细粒度检查维度，对应 mobile-app-design / desktop-ui-design 方法论的原则七（文本精确化）。
+> 提示：「前端功能设计 → i18n」和「前端功能设计 → 工作流（文本条件）」是细粒度检查维度，对应 client-ui-design 方法论的原则七（文本精确化）。
 
 #### 2.6.1 API 调用正确性验证
 

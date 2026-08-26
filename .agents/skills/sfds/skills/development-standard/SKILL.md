@@ -103,10 +103,10 @@ lineage:
 
 | 用户说的端 | client-slug | 渲染器由哪个 skill 创建 |
 |-----------|------------|----------------------|
-| 微信小程序 | `miniprogram` | `mobile-app-design` |
-| App | `app` | `mobile-app-design` |
-| Web 管理后台 | `web-{name}` | `desktop-ui-design` |
-| PC 桌面端 | `desktop` | `desktop-ui-design` |
+| 微信小程序 | `miniprogram` | `client-ui-design` |
+| App | `app` | `client-ui-design` |
+| Web 管理后台 | `web-{name}` | `client-ui-design` |
+| PC 桌面端 | `desktop` | `client-ui-design` |
 
 > 渲染器文件（`workflow-viewer.html`、`er-viewer.html`、`design-viewer.html`）
 > 由各 skill 的"首次搭建"步骤负责复制。本 skill 只创建空目录骨架。
@@ -174,7 +174,7 @@ node .agents/skills/sfds/_shared/gen/generate-trigger-table.mjs --write
 | 设计原则有哪些 | §3 六条设计原则 |
 | API 怎么设计 | §8.3 API 契约设计方法 |
 | 复查门控怎么执行 | §9 触发点 C + 风险等级策略 |
-| 页面深度超了怎么办 | 见 `mobile-app-design` / `desktop-ui-design` skill 中的层级深度规则 |
+| 页面深度超了怎么办 | 见 `client-ui-design` skill 中的层级深度规则 |
 
 ---
 
@@ -188,7 +188,7 @@ node .agents/skills/sfds/_shared/gen/generate-trigger-table.mjs --write
 | "这个接口要不要做幂等" | §8.3.5 幂等性标注 |
 | "跨域关系怎么处理" | §6.3 跨域关系维护 + §8.2.3 |
 | "需要做几轮迭代才能收敛" | §10.6 收敛判定 |
-| "功能树节点类型不对" | 见 `mobile-app-design` / `desktop-ui-design` skill 中的节点体系定义 |
+| "功能树节点类型不对" | 见 `client-ui-design` skill 中的节点体系定义 |
 | "我改了工作流，哪些要跟着改" | §10.3 变更传播规则 |
 | "设计改了但代码还没同步" | §10.5 设计-代码追踪 |
 | "代码能不能主动改业务逻辑" | §10.2 变更发起权规则 |
@@ -394,8 +394,7 @@ AI 生成的代码 + AI 写的测试 = 同一套认知模型的产物。如果�
 | `entity-relationship` | ER 图、实体关系、数据建模、数据库设计、字段定义 | 使用 `er-viewer.html` + `data/*.js` 模式进行实体关系图设计和数据建模。从业务工作流提取实体方法论 + 5 步设计法 + 输入规格 | §8.2 |
 | `api-design` | API 设计、接口设计、REST API、路由设计、API 契约 | 将业务工作流和实体关系转化为 API 设计数据文件（`data/*.js` + `protocol.js`） | §8.3 |
 | `backend-architecture-design` | 后端架构设计、架构设计、服务体系设计、架构模式、分层设计、模块边界、服务拓扑、缓存策略、可靠性设计、部署架构、服务治理 | 在 API 设计之后、代码实现之前，将架构模式、分层策略、模块边界、缓存体系、可靠性策略、部署结构等固化为结构化设计资产。提供创建/一致性检查/裁剪三种模式 | §8.3b |
-| `mobile-app-design` | 移动端设计、小程序设计、App 设计、页面功能设计、TabBar | 使用 `design-viewer.html` + `data/*.js` 进行移动端页面功能设计，以 TabBar 标签组为根 | §8.4 |
-| `desktop-ui-design` | PC 端设计、桌面端设计、后台设计、页面功能设计 | 使用 `design-viewer.html` + `data/*.js` 进行 PC/桌面端 UI 设计，页面直接从根节点展开 | §8.4 |
+| `client-ui-design` | 页面功能设计、移动端设计、小程序设计、App 设计、TabBar、PC 端设计、桌面端设计、后台设计 | 使用 `design-viewer.html` + `data/*.js` 进行客户端页面功能设计（移动端 TabBar 根 / 桌面端页面集根） | §8.4 |
 | `tdd-build` | TDD 设计、测试设计、测试编码、写测试、测试用例设计、测试代码生成 | TDD 设计与编码（Phase 1+2）：读 API 设计/ER/工作流/页面设计 → 设计测试用例 → 编写测试代码。输出 TDD 设计文档 + 可编译测试代码 | §8.5 |
 | `tdd-execute` | TDD 执行、测试执行、运行测试、测试验证、测试报告 | TDD 执行与验证（Phase 3）：运行全量测试 → 失败分类溯源 → 修复循环至全绿 → 输出报告。依赖 §8.6+§8.7 完成 | §8.8 |
 
@@ -405,8 +404,7 @@ AI 生成的代码 + AI 写的测试 = 同一套认知模型的产物。如果�
 |------|--------|------|--------|
 | `iterate` | 迭代、更新、调整、修改、加功能、修 bug、报错、500、崩溃、测试失败、诊断、问题排查、根因分析 | 功能迭代 + Bug 修复 + 联调批量修正的统一级联引擎：两阶段铁律（分析→确认→执行）、路径 A（功能迭代）/ 路径 B（诊断修复）/ 路径 C（联调批量修正）、共享级联引擎、TDD 强制注入 | §10.3b |
 | `api-code-gen` | API 代码生成、后端代码、服务端代码、ORM 代码生成 | 服务端代码生成与一致性检查，覆盖 §8.6「API 代码实现」全部子步骤；技术栈从 AGENTS.md 读取 | §8.6 |
-| `mobile-code-gen` | 移动端代码生成、前端代码生成、移动端一致性检查 | 从 tree.js 功能树生成移动端页面骨架代码 + 设计→代码一致性校核 | §8.7 |
-| `desktop-code-gen` | 桌面端代码生成、PC 端代码生成、后台代码生成、桌面端一致性检查 | 从 tree.js 功能树（pages 格式）生成桌面端页面骨架代码 + 设计→代码一致性校核 | §8.7 |
+| `client-code-gen` | 客户端代码生成、页面代码生成、前端代码生成、移动端/桌面端代码生成、一致性检查 | 从 tree.js 功能树生成客户端页面骨架代码 + 设计→代码一致性校核（移动/桌面统一） | §8.7 |
 | `review` | 复查、一致性检查、全量复查、校核、对齐检查 | 全项目复查：13 个维度（D0-D12）逐层一致性校核 + 交互式迭代修复闭环，调度各 skill 的一致性检查模式 | §9 |
 | `consolidate-raw-input` | 整理原始输入、整理原始需求、需求归档 | 将原始设计讨论记录整合为结构清晰的规范文档，原始文件归档至 original-logs/ | §7 |
 | `sync-design-to-publish` | 发布、同步发布 | 项目专属：将 design/ 下的设计文档查看器同步到 publish/ 发布目录并部署（wrangler/Cloudflare Pages），非通用方法论 | — |
@@ -422,7 +420,7 @@ AI 生成的代码 + AI 写的测试 = 同一套认知模型的产物。如果�
 | 模式 | 说明 | 示例 |
 |------|------|------|
 | **创建模式** | 从零生成设计资产或代码骨架 | `business-workflow` 创建新的工作流数据 |
-| **一致性检查模式** | 以已有资产为输入，校验与上游产物的一致性，输出结构化问题清单 | `mobile-app-design` 检查 tree.js 与 ER/工作流的一致性 |
+| **一致性检查模式** | 以已有资产为输入，校验与上游产物的一致性，输出结构化问题清单 | `client-ui-design` 检查 tree.js 与 ER/工作流的一致性 |
 | **调度模式** | 不自行执行比对，而是逐维度委托对应 skill 执行检查，汇总结果 | `review` 委托各 skill 做深度检查 |
 
 > **设计意图：** review 不应亲自比对代码、字段或路由——那是各专业 skill 的工作。review 是**纯调度器**，逐维度调用对应 skill 的一致性检查模式，只做问题汇总和交互管理。
@@ -749,7 +747,7 @@ window.SYNC_STATUS = {
 10. §8.9 关键旅程冒烟验证（必做）— 依赖 §8.8 tdd-execute 全量通过后自动进入。输入：business-workflow 用户旅程 + 各端设计/代码产物
 11. §8.9b e2e — 依赖 §8.9 全部完成（预留）
 
-**重要：Review（复查门控）不属于流水线的任何一步。** Review 是覆盖全链条的外部验证层，必须等所有涉及步骤完成后才启动。其触发点为：**§8.8 tdd-execute 已执行且报告存在后**（全量复查，详见 §9 和 review skill）。§8.6/§8.7 完成后的代码自查由对应技能的后置一致性检查承担（`api-code-gen` 步骤 6 / `mobile-code-gen`、`desktop-code-gen` 一致性检查模式）。
+**重要：Review（复查门控）不属于流水线的任何一步。** Review 是覆盖全链条的外部验证层，必须等所有涉及步骤完成后才启动。其触发点为：**§8.8 tdd-execute 已执行且报告存在后**（全量复查，详见 §9 和 review skill）。§8.6/§8.7 完成后的代码自查由对应技能的后置一致性检查承担（`api-code-gen` 步骤 6 / `client-code-gen` 一致性检查模式）。
 
 #### 逐步骤输入需求与前置约束
 
@@ -791,11 +789,9 @@ window.SYNC_STATUS = {
 | ER → API | api-design | 字段一致性（内置） |
 | API 设计 → API 代码 | api-code-gen | 设计→代码一致性检查模式 |
 | 后端架构设计 → API 代码 | backend-architecture-design | 架构合规检查模式（分层/模块边界/缓存/可靠性/可观测性） |
-| ER → 前端设计（mobile） | mobile-app-design | 一致性检查模式（实体覆盖+字段检查） |
-| ER → 前端设计（desktop） | desktop-ui-design | 一致性检查模式（实体覆盖+字段检查） |
-| 前端设计 → 前端代码（移动端） | mobile-code-gen | 设计→代码一致性检查模式 |
-| 前端设计 → 前端代码（桌面端） | desktop-code-gen | 设计→代码一致性检查模式 |
-| API → 前端 API 调用 | review（委托 mobile-code-gen / desktop-code-gen） | API 路径+结构校核 |
+| ER → 前端设计（客户端） | client-ui-design | 一致性检查模式（实体覆盖+字段检查） |
+| 前端设计 → 前端代码（客户端） | client-code-gen | 设计→代码一致性检查模式 |
+| API → 前端 API 调用 | review（委托 client-code-gen） | API 路径+结构校核 |
 | TDD 设计 → TDD 代码 | tdd-build | 用例覆盖+断言一致性检查（一致性检查模式） |
 | 测试代码 → API 代码 | tdd-execute | 实际执行测试+失败溯源+循环修复至全绿 |
 
@@ -829,7 +825,7 @@ review skill 负责任何调度和汇总。
 - **下游:** §8.6 tdd-build（架构承诺转化为测试用例）+ §8.7 api-code-gen（架构设计是代码生成的前置约束）
 
 #### 8.4 用户端页面架构设计
-- **Skill:** `mobile-app-design`（移动端）或 `desktop-ui-design`（桌面端）
+- **Skill:** `client-ui-design`（移动/桌面统一）
 - **输入:** §8.3 API 设计 + §8.2 ER + §8.1 工作流 + raw-input + domain-registry
 - **产出:** `design/06-{client-slug}/data/`（tree.js + processes.js + style.js + i18n.js）
 
@@ -849,7 +845,7 @@ review skill 负责任何调度和汇总。
 - **产出:** `src/server/`（Controller + DTO + Service + ORM Model）+ 数据库迁移
 
 #### 8.7 用户端代码实现与适配
-- **Skill:** `mobile-code-gen`（移动端）或 `desktop-code-gen`（桌面端）
+- **Skill:** `client-code-gen`（移动/桌面统一）
 - **输入:** §8.4 页面设计（tree.js）+ §8.3 API 设计
 - **产出:** 对应 `src/` 目录下的页面代码 + 路由注册
 
@@ -938,7 +934,7 @@ TDD 验证"行为是否正确"，复查验证"设计是否合理、代码是否�
 |--------|------|--------|
 | **C: 全量复查（强制）** | §8.8 tdd-execute 已执行且报告存在后 | `review` skill 调度全部 13 个校核维度（D0-D12） |
 
-> **说明：** §8.6 完成后的代码-设计对齐由 `api-code-gen` 的后置一致性检查（步骤 6）承担；§8.7 完成后的前端代码-设计对齐由 `mobile-code-gen` / `desktop-code-gen` 的一致性检查模式承担。Review 是唯一的外部全量复查入口，不再定义轻量触发点（避免与各技能后置检查重复）。
+> **说明：** §8.6 完成后的代码-设计对齐由 `api-code-gen` 的后置一致性检查（步骤 6）承担；§8.7 完成后的前端代码-设计对齐由 `client-code-gen` 的一致性检查模式承担。Review 是唯一的外部全量复查入口，不再定义轻量触发点（避免与各技能后置检查重复）。
 > 触发点 C 要求 §8.8 已实际执行且报告存在（失败项以 P 级问题纳入复查清单，不阻塞 Review 启动）；代码提交仍以 tdd-execute 全绿为前提（见 §8.0 规则 6）。
 
 > 具体检查维度（安全、性能、代码结构、边界条件、错误处理、API 调用正确性、状态管理等）见 `review` skill。

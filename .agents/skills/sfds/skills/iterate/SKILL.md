@@ -765,10 +765,10 @@ C1 计划输出后，**必须停止**。输出以下确认提示：
 | §8.2 ER | `entity-relationship` |
 | §8.3 API 设计 | `api-design` |
 | §8.3b 架构设计 | `backend-architecture-design` |
-| §8.4 页面设计 | `mobile-app-design`（小程序/App）或 `desktop-ui-design`（Web/桌面） |
+| §8.4 页面设计 | `client-ui-design`（移动/桌面统一） |
 | §8.5 TDD | `tdd-build`（按端类型分发：Web→Stage 2，小程序→Stage 2b） |
 | §8.6 API 代码 | `api-code-gen` |
-| §8.7 前端代码 | `mobile-code-gen`（小程序/App）或 `desktop-code-gen`（Web/桌面） |
+| §8.7 前端代码 | `client-code-gen`（移动/桌面统一） |
 | §8.8 测试执行 | `tdd-execute`（按端类型分发：Web→Stage 2，小程序→Stage 2b） |
 | Review | `review` |
 | 小程序运行时操作 | `wechatide-skill`（编译/预览/调试/自动化——由 `tdd-execute` 在 Stage 2b 中调用） |

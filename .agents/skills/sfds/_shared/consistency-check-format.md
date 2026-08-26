@@ -51,20 +51,20 @@
 
 | type | 含义 | 使用方（skill） |
 |------|------|----------------|
-| `entity_uncovered` | ER 有实体但下游无引用 | entity-relationship, mobile-app-design, desktop-ui-design |
-| `field_mismatch` | 字段引用不存在 / 类型不匹配 / 枚举不一致 | entity-relationship, api-design, mobile-app-design, desktop-ui-design |
+| `entity_uncovered` | ER 有实体但下游无引用 | entity-relationship, client-ui-design |
+| `field_mismatch` | 字段引用不存在 / 类型不匹配 / 枚举不一致 | entity-relationship, api-design, client-ui-design |
 | `field_missing` | 上游定义了字段但下游遗漏 | entity-relationship, api-design |
 | `relationship_orphan` | 关系一端缺失 | entity-relationship |
 | `endpoint_uncovered` | 工作流 action 无对应 API 端点 | api-design |
 | `endpoint_orphan` | API 端点无工作流依据 | api-design |
 | `state_mismatch` | 状态转换与工作流状态机不一致 | api-design, entity-relationship |
 | `validation_missing` | 业务校验规则在 API 层缺失 | api-design |
-| `workflow_uncovered` | 工作流操作在前端无入口 | mobile-app-design, desktop-ui-design |
-| `text_issue` | 文本/i18n 字段缺失或不一致 | mobile-app-design, desktop-ui-design |
-| `i18n_key_missing` | i18n key 缺失 | mobile-app-design, desktop-ui-design, mobile-code-gen, desktop-code-gen |
-| `perm_ref_missing` | 前端节点缺权限标注 | mobile-app-design, desktop-ui-design |
-| `api_call_mismatch` | 前端 API 调用与后端路由/DTO 不一致 | mobile-code-gen, desktop-code-gen, review |
-| `design_code_mismatch` | 代码与设计不一致 | api-code-gen, mobile-code-gen, desktop-code-gen |
+| `workflow_uncovered` | 工作流操作在前端无入口 | client-ui-design |
+| `text_issue` | 文本/i18n 字段缺失或不一致 | client-ui-design |
+| `i18n_key_missing` | i18n key 缺失 | client-ui-design, client-code-gen |
+| `perm_ref_missing` | 前端节点缺权限标注 | client-ui-design |
+| `api_call_mismatch` | 前端 API 调用与后端路由/DTO 不一致 | client-code-gen, review |
+| `design_code_mismatch` | 代码与设计不一致 | api-code-gen, client-code-gen |
 | `arch_rule_violation` | 分层/模块边界/缓存/可靠性等架构约束违反 | backend-architecture-design, api-code-gen |
 | `test_case_missing` | TDD 用例缺失（泛用，详见下方 tdd-build 细类） | tdd-build |
 | `assertion_mismatch` | 测试断言与 TDD 设计不一致 | tdd-build |
@@ -88,14 +88,14 @@
 |--------|------|--------|
 | `workflow-to-er` | 工作流 → ER | entity-relationship |
 | `workflow-to-api` | 工作流 → API | api-design |
-| `workflow-to-frontend` | 工作流 → 前端设计 | mobile-app-design, desktop-ui-design |
+| `workflow-to-frontend` | 工作流 → 前端设计 | client-ui-design |
 | `er-to-api` | ER → API | api-design |
 | `er-to-orm` | ER → ORM 模型 | api-code-gen |
-| `er-to-frontend` | ER → 前端设计 | mobile-app-design, desktop-ui-design |
+| `er-to-frontend` | ER → 前端设计 | client-ui-design |
 | `architecture-to-api` | 架构 → API 代码 | backend-architecture-design |
 | `architecture-to-code` | 架构 → 代码 | backend-architecture-design |
 | `api-to-code` | API 设计 → API 代码 | api-code-gen |
-| `design-to-code` | 页面设计 → 页面代码 | mobile-code-gen, desktop-code-gen |
+| `design-to-code` | 页面设计 → 页面代码 | client-code-gen |
 | `code-to-api` | 页面代码 → API 代码（前后端集成） | review（委托 code-gen） |
 | `tdd-to-code` | TDD 设计 → 测试代码 | tdd-build |
 | `test-to-api` | 测试代码 → API 代码（执行验证） | tdd-execute |
