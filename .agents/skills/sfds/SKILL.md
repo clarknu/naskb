@@ -70,7 +70,7 @@ lineage:
 
 ## 项目首次接入（初始化）
 
-- 先执行 `development-standard` 子技能的**项目初始化**流程：生成 `AGENTS.md`、`design/` 骨架（01~07，模板在 `skills/development-standard/templates/`）、`domain-registry.js`、`pipeline-state.js`。
+- 先执行 `development-standard` 子技能的**项目初始化**流程：生成 `AGENTS.md`、`design/` 骨架（01~07，模板在 `skills/development-standard/templates/`）、`domain-registry.js`、`pipeline-state.js`；铺设 `docs/lessons-learned.md`（工程教训）与 `docs/tech-debt-register.md`（技术债登记册，§10.7 分记约定）。
 - 设计资产目录编号、发布目标（`release/` 配置、设计稿发布节点）按 `release-management` / `sync-design-to-publish` 的项目侧配置补齐。
 - 若项目此前无设计资产，初始化会把各子技能模板铺出最小可用骨架，之后由对应子技能按需生成每一层数据。
 

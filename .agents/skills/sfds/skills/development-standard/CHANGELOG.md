@@ -1,5 +1,13 @@
 # CHANGELOG · development-standard（仲裁版）
 
+## 3.2.0-arb.1 — 2026-08-31（CASE-025）
+
+从 zy-ai-consult 回收「技术债登记册 + 教训/债务分记」（需求方确认升为方法论约定）：
+
+- **新增 §10.7 技术债登记（教训/债务分记）**：三分记（lessons-learned 工程教训 ∥ tech-debt-register 主动推迟的设计债 ∥ arch-contract knownDebts 契约豁免）；铁律"登记≠不做，登记=钉住"；有效性判据（缺待还方向/触发条件=无效）；登记流程（当轮登记 TD-xxx，迭代/复查顺带过表，命中触发条件转待办）。
+- **§1.2 目录树 / §1.6 初始化摘要**：新增 `docs/lessons-learned.md` + `docs/tech-debt-register.md`（模板铺设）。
+- **新增模板** `templates/tech-debt-register.md.template`（登记表 + TD 条目结构：结论/背景判断/暂缓原因/待还方向/触发条件/状态流水）。
+
 ## 3.1.0-arb.1 — 2026-08-23
 
 CASE-002 仲裁版首次产出。

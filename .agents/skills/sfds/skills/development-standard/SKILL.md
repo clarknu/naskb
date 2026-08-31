@@ -1,6 +1,6 @@
 ---
 name: development-standard
-version: 3.1.0
+version: 3.2.0-arb.1
 description: |
   单人全栈开发标准（SFDS v3）——项目初始化、方法论查询、设计指导与管线调度。
   核心功能：
@@ -85,7 +85,9 @@ lineage:
 {project-slug}/
 ├── AGENTS.md                          ← 从模板生成
 ├── docs/
-│   └── development-standard.md        ← 从本 skill 第二部分提取，写入单独文件便于查阅
+│   ├── development-standard.md        ← 从本 skill 第二部分提取，写入单独文件便于查阅
+│   ├── lessons-learned.md             ← 工程教训（事发后复盘追加，§10.7；模板铺设）
+│   └── tech-debt-register.md          ← 技术债登记册（主动推迟的设计债，§10.7；模板铺设）
 ├── design/
 │   ├── domain-registry.js             ← 从模板生成
 │   ├── 01-raw-input/                  ← 原始交互存档（瀑布流第一步）
@@ -150,6 +152,8 @@ node .agents/skills/sfds/_shared/gen/generate-trigger-table.mjs --write
 ### 已创建
 - AGENTS.md —— 项目配置（含由 pipeline-registry 生成的铁律表）
 - docs/development-standard.md —— SFDS v3 完整方法论（从 skill 提取）
+- docs/lessons-learned.md —— 工程教训（事发后追加，§10.7）
+- docs/tech-debt-register.md —— 技术债登记册（主动推迟的设计债，§10.7）
 - design/domain-registry.js —— 域注册表（待填充）
 - design/pipeline-state.js —— 管线状态（调度模式数据源）
 - design/01-raw-input/ —— 原始交互存档目录
@@ -1205,6 +1209,20 @@ TDD 验证"行为是否正确"，复查验证"设计是否合理、代码是否�
 当以下两个条件**同时**满足时，视为收敛：
 1. 一致性校核连续 2 次未发现新的**实质性问题类型**。不追求零问题，只看是否还在出现新类别。
 2. **§8.8 tdd-execute 全量测试通过（0 失败）**——代码行为与设计契约一致。
+
+#### 10.7 技术债登记（教训/债务分记，2026-08-31 CASE-025）
+
+> **来源**：consult 实践回收（需求方确认升为方法论约定）。三类"欠账"**分记、不混页**——混记会导致"事后的错"淹没"主动推迟的决策"。
+
+| 记录处 | 记什么 | 性质 |
+|---|---|---|
+| `docs/lessons-learned.md` | **工程教训** | 事发后复盘："当时错在哪"（追加式，不删历史） |
+| `docs/tech-debt-register.md` | **主动推迟的设计/架构债** | **结论已定、但暂不执行**——每条记【结论 / 暂缓原因 / 待还方向 / 触发条件】 |
+| `design/05-backend-architecture/data/arch-contract.js#knownDebts` | 后端语义契约的存量豁免 | 机械门禁层的债（§8.3b 契约体系） |
+
+**登记册铁律：登记 ≠ 不做。** 登记只是把决策**钉住**——明确"何时/在什么条件下还"；有归还动因时按"待还方向"执行，归还后移入"已还"。判据：将来看到能**直接还、不用重新决策**，登记才算合格（缺"待还方向/触发条件"的登记视为无效）。
+
+**流程**：初始化时按模板铺设 `docs/tech-debt-register.md`（模板 `templates/tech-debt-register.md.template`）；发生"结论已定但本轮不做"的设计决策时**当轮登记**（编号 `TD-xxx` 递增）；每次迭代/复查（§9/§10）顺带过一遍登记表，命中触发条件的债转入待办。
 
 ---
 
