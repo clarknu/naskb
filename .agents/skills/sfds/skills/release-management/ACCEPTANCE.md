@@ -1,7 +1,7 @@
 # ACCEPTANCE — release-management（L1 自检）
 
-> 版本：v1.1.0-arb.1（2026-08-30，CASE-014 教训回流 + 过程资产定义）。
-> 本次 L1 要点：§八 教训回流为 17 条（A 14 + B 3），无项目专名硬编码（Dify/Cloudflare/命令/端口均泛化为「示例」）；§六 改为唯一过程资产 `deployment-config-guide.md`（含必记 ①-⑦/引用定义/文档 vs 密钥库边界），原 `release/`、`docs/ecs-deploy-design.md` 等陈旧引用已清零；交叉引用指向 `deployment-principles` 与 `credential-management`；frontmatter/lineage（reclaim: CASE-014）齐全。CASE-005 门的并集（§二）与红线/四层级/版本/回滚未动（沿用 v1.0.0-arb1 验收）。
+> 版本：v1.2.0-arb.1（2026-08-31，CASE-023/024）。
+> 本次 L1 要点：§八 增 #18-20（多线并存+Nginx 生成器纪律／端口收敛三方核对／多环境共主机端口唯一）——项目专名（域名/端口/路径）均泛化为模式，无实例值；#17 与多线模型对齐（Tunnel=并存线非默认）。新增 §九 环境退役/停用（只停不删／红线表／归属勘察三分／先 stop 再 `--restart=no` 防复活／清单=唯一真相源），源自 consult decommission 实践泛化，命令示例项目中性。frontmatter/lineage 已更新；§六 过程资产与 §八 #1-17 未动。
 
 ---
 
