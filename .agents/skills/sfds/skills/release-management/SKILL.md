@@ -1,10 +1,14 @@
 ---
 name: release-management
-version: 1.0.0
-description: 发布管理方法论——环境层级与晋升、发布门禁、版本规范（SemVer + tag）、回滚流程、线上安全红线。项目特定配置见 release/ 目录（environments.yaml / policy.md / CHANGELOG.md）。
+version: 1.1.0-arb.1
+description: 发布管理方法论——环境层级与晋升、发布门禁、版本规范（SemVer + tag）、回滚流程、线上安全红线、部署总原则与过程资产（deployment-config-guide）引用、教训固化（CASE-007 + 2026-08-29 增补）。项目特定配置一律走过程资产 `deployment-config-guide.md`（唯一权威/仲裁），本 skill 不硬编码项目数据。
 lineage:
   origin: arb-hub
   case: CASE-005
+  reclaim:
+    from: zy-ai-consult
+    at: "2026-08-30"
+    note: CASE-014 回收 consult v1.1.0 的 18 条发布教训（§八）+ 发布配置权威收敛到过程资产 `deployment-config-guide.md`；按 2026-08-30 项目中性审核裁决（audits/2026-08-30-c014-lessons-review.md）：A 全收、B 收原则（#12/13/18）、C 不收（#14）、#18 更正为"Tunnel 非默认、默认直接域名映射"。
   sources:
     zy-iot-ai:     {sha256: 28bc8805eb1b}
     zy-ai-consult: {sha256: e81304f0379e}
@@ -12,11 +16,7 @@ lineage:
 
 # Release Management（发布管理）
 
-> **定位：通用发布方法论 skill。** 环境层级、发布门禁、版本规范、回滚流程为通用方法论
-> （可复制到全局 `~/.agents/skills/` 复用）；**项目特定数据一律不写入本 skill**，
-> 通过 `release/` 目录（`environments.yaml` 环境清单 / `policy.md` 发布规则 / `CHANGELOG.md` 版本历史）
-> 与项目部署文档引用。
-> 本项目部署设计：`docs/ecs-deploy-design.md`（决策 D1-D6）；部署指南：`docs/deploy-guide.md`（公共服务宿主化原则）。
+> **定位：通用发布方法论 skill。** 环境层级、发布门禁、版本规范、回滚流程、部署总原则、过程资产引用、教训固化为通用方法论；**项目特定数据一律不写入本 skill**，落在项目侧**过程资产** `deployment-config-guide.md`（部署配置唯一权威/仲裁，见「过程资产与引用定义」）。门禁对项目侧命令仅为示例，真实命令在项目过程资产里。
 
 ## 触发条件
 
@@ -65,11 +65,14 @@ lineage:
 - `alpha` 内测等扩展层级**按需保留为概念**，不构成默认部署层级。
 - 各项目固定四层级后基本不变；新增/删除环境必须走本 skill 评审，禁止随手加层。
 
-**环境隔离原则**：库物理隔离、密钥隔离、域名隔离、数据单向（低层种子不进 prod、
-prod 数据不下放低层）。
+**环境隔离原则**：密钥隔离、域名隔离、数据单向（低层种子不进 prod、prod 数据不下放低层）。
+**库/中间件资源遵循 `deployment-principles` 定界**：数据库用**逻辑隔离**（同一库主机上按库名区分、最多分属不同用户，**一般不要求主机级物理隔离**；实例应为宿主机原生/统一独立实例）；**预发布与线上经 `deployment-principles` 判别**——
+- 第三方服务配置与线上**一致**：发布环境若连某线 RDS，预发也连**同一台库主机、仅库名不同**（预发库 vs 正式库，**逻辑隔离**）；
+- 自建第三方组件/中间件**尽量复用同一主机**，只要满足**数据隔离**即可；
+- 若第三方组件**轻量化且属系统一部分**，则预发**独立部署一套**、与主系统**部署方式一致**。
 
-> 本项目实际落地：`local`（本机）+ `dev`（5.2 研发联调，内网 `192.168.5.2`）+
-> `prod`（线上 ECS 三子域 + RDS，见 `release/environments.yaml`）；
+> 本项目实际落地：`local`（本机）+ `dev`（研发联调机，内网地址见项目过程资产 `deployment-config-guide.md`）+
+> `prod`（线上部署，见项目过程资产 `deployment-config-guide.md`）；
 > `beta` 预发层级按四层级原则预留、暂未落地。
 
 ## 二、发布门禁（不满足不发）
@@ -79,15 +82,17 @@ prod 数据不下放低层）。
 
 | # | 门禁 | 说明 |
 |---|------|------|
-| 1 | 全量测试绿 | 发布前执行项目全量测试，0 失败。示例（项目侧适配）：`pytest`（真实命令见各项目 `release/policy.md`，如 `PYTHONPATH=src python -m pytest tests/ -v`） |
+| 1 | 全量测试绿 | 发布前执行项目全量测试，0 失败。示例（项目侧适配）：`pytest`（真实命令见项目过程资产 `deployment-config-guide.md`，如 `PYTHONPATH=src python -m pytest tests/ -v`） |
 | 2 | e2e 绿 | 浏览器端到端测试通过。示例（项目侧适配）：项目自有 e2e 脚本，如 `scripts/e2e_full.py` / `e2e_ai.py` |
 | 3 | ORM-DB 无差异 | 迁移到位、ORM 与库结构无 schema 漂移。示例（项目侧适配）：独立 diff 脚本核对 dev 库，或以 `alembic upgrade head` 校验 |
 | 4 | 迁移预演 | 目标环境的上一级（或同构环境）`alembic upgrade head` 成功 |
 | 5 | 密钥齐全 | 目标环境密钥文件存在且含强随机密钥、不入库。示例（项目侧适配）：远程 `deploy/.env` chmod 600，由部署脚本生成 |
 | 6 | CHANGELOG 更新 | 本版本条目已写入 `release/CHANGELOG.md` |
 | 7 | 健康检查 | 部署后 API 健康端点 200 + 前端首页 200。示例（项目侧适配）：`GET /health` 返回 `{"status":"ok"}` |
-| 8 | **目标环境全量回归** | 发布后对目标环境执行：API 全端点回归（认证 → 只读端点断言 200 + 带参种子补测）+ 协议层冒烟（如 WS——按项目技术栈取舍）+ 关键旅程冒烟（旅程清单项目侧定义，如对话/任务导入/提醒）+ 环境对比（发预发布时线上仍 200）。示例（项目侧适配）：回归脚本与旅程清单见各项目 `release/policy.md` |
+| 8 | **目标环境全量回归** | 发布后对目标环境执行：API 全端点回归（认证 → 只读端点断言 200 + 带参种子补测）+ 协议层冒烟（如 WS——按项目技术栈取舍）+ 关键旅程冒烟（旅程清单项目侧定义，如对话/任务导入/提醒）+ 环境对比（发预发布时线上仍 200）。示例（项目侧适配）：回归脚本与旅程清单见项目过程资产 `deployment-config-guide.md` |
 | 9 | **架构契约校验（L2+ 项目）** | 架构约束机械校验退出码 0（探针 + 运行器，见 `_shared/arch-contract-spec.md` §10；通常已含于门禁 1 的测试套件，独立列出便于门禁清点与豁免审计） |
+| 10 | **通用中间件独立实例（基础设施评审）** | 业务容器无自建 PG/Redis/消息队列/对象存储；中间件为宿主机或统一独立实例（RDS/云 Redis/统一编排容器）；三环境同构、独立实例凭据集中管理。**由 `deployment-principles` 资产按清单判定**（原则与 release-management 互补：它定"用哪里的资源"，本 skill 定"怎么发布"，二者均须通过） |
+| 11 | **部署环境模型（环境拓扑合规）** | 各环境拓扑符合 `deployment-principles`：线上结构一致不超既定范围；本地开发自建/中间件/业务系统不出子网、外网以 Mock/网络转发绕过；预发布与线上共用同一第三方库主机、仅库名不同（逻辑隔离）、自建组件复用同一主机（满足数据隔离）、轻量系统组件独立部署一套与主系统同构；数据库跨环境一律逻辑隔离（不引入主机级物理隔离）；配置发布依赖架构文档圈定、机密存 Credential Vault。**由 `deployment-principles` 资产按清单判定** |
 
 > **时间安排（测试先行）**：全量回归在发布前本地/CI 跑完；发布后的回归是快速部署
 > 验证 + 目标环境冒烟，不重跑全量。
@@ -119,7 +124,7 @@ prod 数据不下放低层）。
 4. **权衡说明**：不开机自启意味着整机重启后需手动 `docker start`（或下次发布自动拉起）——如业务要求
    「平时全跑、仅测试时手关」，可回退 `unless-stopped`（手动 stop 同样不被拉起）。
    > 本项目现状：平台/OpenProject 已选 `unless-stopped`（生产常跑型，依据本条权衡；Dify 各容器
-   > `always` 沿用官方 compose）——见 `docs/ecs-deploy-design.md` §9，调整重启策略须走发布评审。
+   > `always` 沿用官方 compose）——见项目过程资产 `deployment-config-guide.md`，调整重启策略须走发布评审。
 
 ## 四、版本规范（SemVer + tag + 分支）
 
@@ -137,18 +142,45 @@ prod 数据不下放低层）。
 | 仅迁移问题 | `alembic downgrade -1`（或指定版本）→ 修迁移 → 重新 upgrade |
 | 容器/部署故障 | 回退旧部署方式（docker 回退 systemd 等，见红线 4） |
 
-## 六、执行入口（本项目）
+## 六、过程资产与引用定义（执行入口）
 
-调用本 skill 后，按以下顺序读取项目配置，禁止在 skill 内硬编码项目数据：
+### 6.1 过程资产：`deployment-config-guide.md`（唯一过程资产）
 
-1. `release/environments.yaml` —— 环境清单（域名/地址/数据库/部署方式/密钥引用）
-2. `release/policy.md` —— 本项目发布规则（门禁命令、发布步骤、回滚命令）
-3. `release/CHANGELOG.md` —— 版本历史（发布后追加）
-4. `docs/ecs-deploy-design.md` —— 线上 ECS 部署设计（组件矩阵/网络拓扑/决策 D1-D6）
-5. `docs/deploy-guide.md` —— 部署指南（5.2 经验 + 公共服务宿主化原则）
-6. `docs/environment-checklist.md` —— 环境配置核对清单（E1-E18）
-7. `scripts/deploy.py` / `scripts/deploy_prod.py` —— 实际部署执行脚本（dev 5.2 / prod ECS）
-8. `deploy/docker-compose.yml` —— 平台服务 compose（线上版）
+> 每个项目**只有一个部署过程资产** `deployment-config-guide.md`，是**发布配置唯一权威/仲裁**。其余原先分立的文件（environments.yaml / policy.md / environment-checklist.md / ecs-deploy-design.md / deploy-guide.md）都是它的**小节或被它合并**，不再是独立资产（consult 即如此、分立件已归档）。
+
+本 skill 只定义它**必须记什么、怎么被引用、遵循哪些原则**；内容由项目填。必记小节：
+
+| 小节 | 记什么 | 原则 |
+|---|---|---|
+| ① 环境段对照 | local/alpha/beta/release ↔ 发布层级；晋升路径 | 四层级固定；增删/改拓扑须走评审 |
+| ② 分类维度 | 环境作用域（共享/环境作用域）+ 资源类型（kind） | 只有"随环境不同"才加 `{env}_` 前缀 |
+| ③ 每个 key 类别 | 环境中性 `{kind}` / 环境作用域 `{env}_{kind}` / 线上共用 `online_*` | 命名 `{env}_{kind}`，不强制 SSH |
+| ④ 机密 vs 非密 | 哪些进密钥库、哪些进本文档 + **「部署步骤→密钥库 Key」对照表** | **机密只引 `<CREDENTIAL:proj/key>`，非密值进本文档** |
+| ⑤ 部署目标与关口 | 每环境部署目标/脚本 + 发布门禁（命令映射） | 与 §二 门禁对齐；命令为项目适配 |
+| ⑥ 部署蓝本 | 已执行做法：主机/中间件/网络/服务名解析/访问/坑 | 与实际一致；后续照此做，减少登机分析 |
+| ⑦ 坑与注意 + 下次部署 | 每次部署踩到的坑、下一步怎么做 | 随项目累积；同步记设计资产库 + CHANGELOG |
+
+### 6.2 引用定义（权威/次序）
+
+- `deployment-config-guide.md` 是**发布配置唯一权威/仲裁**——本 skill 与 `deployment-principles`（环境合规）都**先读它**，按其「分类→key→credentialctl」取配置。
+- `credential-management` 提供密钥侧（④）取值与越权规则；`deployment-principles` 提供环境/资源合规判定（§二 门禁10/11）。
+- 版本历史 `CHANGELOG.md` 为常规记录（发布后追加、append-only），非部署配置过程资产。
+
+### 6.3 "文档 vs 密钥库"边界
+
+- **密钥库（机密）**：口令 / API Key / 令牌 / 私钥 / 密钥材料。
+- **配置文档（非密）**：环境 / IP / 域名 / 地址 / 端口 / 用户名 / 库名 / URL / 路径 / 模型名 + **「部署步骤→密钥库 Key」对照表**。
+- **原则**：文档与脚本只存机密**引用**（`<CREDENTIAL:proj/key>`），真值仅部署注入那步经 `credentialctl --env/--reveal`；绝不把明文机密写进文档/脚本/仓库/日志。
+
+### 6.4 执行次序
+
+调本 skill 后：先读项目 `deployment-config-guide.md`（**发布前必读**）→ 按其「分类→key→credentialctl」取配置 → 按 §三 标准发布流程执行 → 发布后追加 CHANGELOG；禁止在 skill 内硬编码项目数据。
+
+### 6.5 首次接入铺设（模板）
+
+- 项目第一次接入：把本技能自带的 `templates/deployment-config-guide.md.template` 复制为 `<项目>\docs\deployment-config-guide.md`（或项目约定的部署配置文档路径），按模板的 ①-⑦ 铺出骨架并逐步填项目值（**不含实例值**、机密只写引用）。
+- 模板只规定**记哪几类、怎么用**（字段/类别/占位 + "项目填什么"注释），遵循 `credential-management`（机密/非密边界）+ `deployment-principles`（环境/中间件/网络分层）+ 本 skill（门禁/版本/流程）原则。
+- 后续部署/变更：只改该项目实例的 `deployment-config-guide.md`（单真相源），随代码 commit；不回调模板。
 
 ## 七、数据库迁移要求
 
@@ -157,11 +189,28 @@ prod 数据不下放低层）。
 - 迁移先于服务启动执行（容器 entrypoint / 部署脚本闸门）。
 - 迁移脚本必须可 downgrade（数据回填类迁移同时实现回滚）。
 
-## 八、教训固化（CASE-007，2026-08-23 新增）
+## 八、教训固化（CASE-007 + 2026-08-29 增补 · 2026-08-30 项目中性审核回灌）
 
-以下四条来自 zy-ai-consult 8/22~8/23 真实发布故障，已固化为通用发布纪律：
+> 以下来自真实发布/部署实践，已固化为**通用发布纪律**；凡绑定具体项目/工具的命令、端口、专名只作"示例"，真实值一律在项目过程资产 `deployment-config-guide.md`（§六）。审核裁决见 `audits/2026-08-30-c014-lessons-review.md`。
 
 1. **部署脚本 stdout 强制 UTF-8**——Windows 控制台默认 GBK，打印中文/emoji 会导致 stdout 解析崩溃；部署类脚本必须在入口显式设置 UTF-8 编码。
-2. **镜像依赖清单必须完整**——缺少运行期依赖（如 paramiko）会在上线后 import 即抛错（fail-fast 502）；Dockerfile 依赖清单作为发布门禁的一项核对。
+2. **镜像依赖清单必须完整**——缺少运行期依赖会在上线后 import 即抛错（fail-fast 502）；Dockerfile 依赖清单作为发布门禁的一项核对。示例：`paramiko`。
 3. **敏感值传递防特殊字符截断**——经 compose `env_file` 传入的机密若含 `#` 等特殊字符会被截断；改为 base64 或显式转义传递。
 4. **发布脚本对机密操作必须幂等**——密钥/证书的生成与注入重复执行不得重新生成或导致前后不一致；发布脚本用幂等写（探测已存在则跳过）。
+5. **SSH 开长连接通道，逐条执行**——远程部署勿每条命令新建连接：短时大量连接会触发主机 sshd/云侧限流（`Error reading SSH protocol banner` 甚至封锁账号）。应建立**单一持久 SSH 会话**（如 paramiko 一个连接跑多条命令，或 OpenSSH `ControlMaster` 复用），把一阶段的所有指令连续投递进去。
+6. **优先 SSH Key 认证**——用密钥登录而非口令，避免口令错/爆破把账号锁死；部署主机凭据建议用密钥（`pkey`），口令仅短期/降级。
+7. **禁止在线上主机 clone/打包**——Web 端与服务端均适用：代码在**本地打包再上传**（`scp`/`sftp` 传到主机），不线上 git clone 私有库、不线上装构建依赖，减少权限与泄露风险。
+8. **服务间连接用 Docker 网络服务名（namespace）解析**——容器互访（如平台→PG/Dify/OpenProject）用 compose 网络内**服务名**解析，不用 Docker 内网 IP 或宿主机 IP 映射，减少网络性能损耗与地址耦合。
+9. **SSH 加固后必须核对并固化到期望稳定状态**——一旦改 SSH（禁口令/仅密钥/提 MaxStartups），要**逐项检查并梳理到稳定状态**：① 本机防火墙（firewalld/iptables 规则、云安全组只放 22/80/443）；② SSH 相关安全（fail2ban/csf/denyhosts 是否需要；`PasswordAuthentication`/`PermitRootLogin` 落到实际生效值——注意 `Include sshd_config.d/*` 会覆盖主文件，需连同 drop-in 一起改）；③ sshd 配置（`MaxStartups`/`MaxSessions`/`LoginGraceTime`）；④ 校验 `sshd -t` + `systemctl reload sshd`，并用**新的密钥连接**复测确认没把自己锁死。把这些结果与最终值记录到部署配置文档。
+10. **SSH 私钥入密钥库、内存加载**——私钥是机密，**进密钥库（加密存储）**，需要时 `get --reveal` 取回**内存**加载（如 `paramiko .from_private_key(io.StringIO(pem))`），不落明文盘、不进仓库；明文 `.pem` 文件仅作临时/降级载体。（联 `credential-management` §硬规则 8。）
+11. **⛔ 设计资产/对外产物必须落库（铁律，2026-08-29 需求方确认固化）**——凡是"开发出来并部署到外部"的东西，**都必须以副本 commit 到代码库**，**不能只存在服务器上**。范围（示例）：自托管应用的**工作流/子流 DSL、模型提供方/插件配置、MCP 服务器、自建协议转换/代理层、部署拓扑与 .env 骨架**。理由：服务器可随时重建/销毁，**代码库副本才是真相源**；代码/逻辑 bug 修复会进库，**设计、流程、配置的一切更新同样必须进库**——"调试/配置完就不管了"是违规。
+    - **规约**：每次改动 → 立即导出/归档副本（如 `design/assets/<域>/`）+ 记 `CHANGELOG.md` + 随代码 commit；绝不允许只改服务器。
+    - **key 纪律**：归档与代码只存 `<CREDENTIAL:proj/key>` **引用**；真值在密钥库；**禁止把明文密钥/令牌 commit 进 DSL、配置、脚本**（若此前已硬编码，迁移时打码）。（联 `credential-management` §设计资产打码、`deployment-principles` 原则 6。）
+12. **配置型服务是"先装插件 → 再配凭据"（原则）**——每个提供方先**装插件**再配凭据；官方市场源可能不稳定（常见 `not a valid *.pkg`）。**可靠路径**：把可用的提供方/插件卷迁来，再用**平台控制台 API** 装；⚠️ 用**完整标识**（`org/plugin:version@sha256`），短标识装不上。示例：自托管工作流平台（如 Dify）的模型提供方插件化安装；具体端点见项目过程资产。
+13. **跨环境迁移配置/DSL 必须重写内嵌地址与 token（原则）**——从开发环境导出的配置/DSL **内嵌开发地址、子对象 token、internal key**；迁移到线上必须：① 子对象调用地址→线上内部；② 平台/上游地址→线上容器内；③ 各子对象 token→线上新 key（顺序：**先导入子对象 → 取新 key → 再导入主对象**并重写其引用）；④ 硬编码 internal key → 线上 key；⑤ 多环境加环境前缀；**⚠️ 必须覆盖「所有子对象」**——只改主对象会导致子对象仍指向开发环境（不可达）→ 上游报数据解析错误。**内部代理坑**：工作流 HTTP 节点调内部地址会被代理（如 ssrf_proxy）拦，需设 `ALLOW_PRIVATE_IPS/域` 白名单；**误报**：被代理端点返回 40x 时代理可能加 `Via` 头被误判为拦截——看真实原因（是否 401）。示例：自托管工作流平台 DSL 迁移，具体见项目过程资产。
+14. **同名 compose 文件双容器坑**——同一 compose 文件若被**两个不同 project 名**（如 `-p <项目>-beta` 与默认 `<项目>-platform`）各拉起一个容器，后拉起者因**端口被占**而**崩溃循环**，而**真正对外服务的仍是旧容器/旧镜像**。部署后务必**确认端口被哪个容器占用**（`ss -ltnp`），统一用**单一 `-p <project>`**，清理崩溃的重复容器。
+15. **外部数据库权限**——共享 PG 里为业务库新建的用户，其口令常与密钥库**不一致**（导致 `password authentication failed`）。正确顺序：管理身份 `ALTER ROLE <user> WITH PASSWORD '<vault>'` + `ALTER DATABASE <db> OWNER TO <user>` + `GRANT ALL PRIVILEGES ON DATABASE <db> TO <user>`，再启动容器；以 `SELECT 1` 验证连通。
+16. **前端空白 ≠ 没部署**——运行时编译的单页应用若从**外部 CDN**（如 unpkg/jsdelivr）加载运行时库，而网络屏蔽该 CDN → 模板不挂载 → **空白**（但 HTTP 200、文件已部署）。修法：**本地 vendor**（如 `/static/vendors/`）+ 静态资源挂载；排查先抓**真实响应头**（确认无 CSP）再定位；不要只因"网络通"就排除 CDN 依赖。
+17. **部署暴露方式：默认直接域名映射；Tunnel 仅作兜底**——**默认**：直接域名映射（DNS A 记录 → 反代 → 服务），TLS 在**边界**终结，WebSocket 经反代透传。**兜底**：当云边界拦截入站（如 ICP 备案前置、只放行 SSH(22)）时，用**出站隧道**暴露——主机免开入站端口、TLS 由隧道边缘终结、WebSocket 透传、命名规则统一（如 `{project}-{组件}-{env}.{domain}`，勿随意起名）、主机侧仅保留 SSH(22)。⚠️ **Tunnel 是条件兜底，不是默认部署模式**；能直接域名映射就不要默认上隧道。
+
+> **未收录**：Dify 控制台 API 的登录/导入细则（base64 密码、CSRF、Cloudflare `error 1010` 直连内部等）为**工具/平台专属**，不立通用条款，留项目侧部署文档作参考（见项目 `deployment-config-guide.md` 坑与注意）。

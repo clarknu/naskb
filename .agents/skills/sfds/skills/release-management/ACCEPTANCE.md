@@ -1,5 +1,10 @@
 # ACCEPTANCE — release-management（L1 自检）
 
+> 版本：v1.1.0-arb.1（2026-08-30，CASE-014 教训回流 + 过程资产定义）。
+> 本次 L1 要点：§八 教训回流为 17 条（A 14 + B 3），无项目专名硬编码（Dify/Cloudflare/命令/端口均泛化为「示例」）；§六 改为唯一过程资产 `deployment-config-guide.md`（含必记 ①-⑦/引用定义/文档 vs 密钥库边界），原 `release/`、`docs/ecs-deploy-design.md` 等陈旧引用已清零；交叉引用指向 `deployment-principles` 与 `credential-management`；frontmatter/lineage（reclaim: CASE-014）齐全。CASE-005 门的并集（§二）与红线/四层级/版本/回滚未动（沿用 v1.0.0-arb1 验收）。
+
+---
+
 - 日期：2026-08-23 ｜ 检查对象：`drafts/release-management/SKILL.md` vs 底座 `inbox/zy-ai-consult/release-management/SKILL.md`
 
 | 检查项 | 方法 | 结果 |

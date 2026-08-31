@@ -1,5 +1,16 @@
 # MERGE-NOTES — release-management（CASE-005 门禁并集）
 
+## 〇、CASE-014：教训回流 + 过程资产（2026-08-30，v1.1.0-arb.1）
+
+> 本次为**回收**方向（consult 领先 → bundle），非三方分叉仲裁；裁决见 `audits/2026-08-30-c014-lessons-review.md`。
+
+- **回收 v1.1.0 教训（§八）**：consult 在 CASE-007 4 条之后于 2026-08-29 上线再增补 14 条至 18 条；按项目中性审核：A（#1-11、15-17，14 条）直接回收；B（#12/13/18）收原则句、实例入适配层；C（#14 Dify 控制台 API）不收、留项目侧；**#18 更正**——Tunnel 非默认、默认直接域名映射、Tunnel 只在云边界拦入站（ICP 前置）时兜底。
+- **过程资产收敛**：发布配置权威由「`release/`(environments.yaml/policy.md/CHANGELOG) + `docs/ecs-deploy-design.md`/`deploy-guide.md`/`environment-checklist.md`」收敛为**唯一** `deployment-config-guide.md`（consult 已如此合并、原文件归档 `docs/_archive-2026-08-29/`）；§六 重写为「过程资产与引用定义」（必记 ①-⑦ + 引用次序 + 文档 vs 密钥库边界）。
+- **泛化**：删除 zy-ai-consult 专名/IP（`192.168.5.2`、`121.237.183.231`、`zy-ai-<组件>-beta.<主域名>`、Dify/OpenProject/paramiko 等），改为「示例」；真实值入项目过程资产。
+- **交叉引用**：§八 #11 ↔ `credential-management`（设计资产打码）+ `deployment-principles`（配置单一真相源+留痕）；§六 引用 `deployment-principles`（门禁10/11 判定）+ `credential-management`。
+
+---
+
 - 日期：2026-08-23 ｜ 底座：`inbox/zy-ai-consult/release-management/SKILL.md`（e81304f0379e）
 - 三方关系：仅 zy 两家；通用部分（红线、四层级原则表、重启策略原则、SemVer、回滚、迁移要求）逐字相同，差异集中在门禁命令实例与项目侧引用。
 

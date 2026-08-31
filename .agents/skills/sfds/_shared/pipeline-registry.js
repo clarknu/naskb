@@ -28,7 +28,7 @@ window.SFDS_DATA["pipeline-registry"] = (function () {
       { id: "impl",       name: "代码实现",   order: 8, skills: ["api-code-gen", "client-code-gen"], exitGates: [{ name: "后置一致性检查零差异", check: "各 code-gen skill 步骤 6 / 一致性检查模式" }, { name: "架构契约退出码 0（L2+）", check: "tests/test_arch_contract.py" }] },
       { id: "verify",     name: "测试执行",   order: 9, skills: ["tdd-execute"], exitGates: [{ name: "全量测试 0 失败", check: "tdd-execute 报告全绿" }] },
       { id: "review",     name: "全量复查",   order: 10, skills: ["review"], exitGates: [{ name: "D0-D12 通过且无新问题类别", check: "review 报告 + 收敛判据（§10）" }] },
-      { id: "release",    name: "发布",       order: 11, skills: ["release-management"], exitGates: [{ name: "门禁 9 项全过 + tag", check: "release/policy.md" }] }
+      { id: "release",    name: "发布",       order: 11, skills: ["release-management"], exitGates: [{ name: "门禁 11 项全过 + tag", check: "release/policy.md" }] }
     ],
 
     // ═══ exitGates.check 占位符约定 ═══
@@ -120,14 +120,24 @@ window.SFDS_DATA["pipeline-registry"] = (function () {
         upstream: ["各设计 skill"], downstream: [] },
       { name: "release-management", layer: "工具", stage: "release", priority: 5,
         triggers: ["发布线上", "上线", "发版", "部署线上", "发布流程", "发线上", "更新到线上", "版本号", "打 tag", "回滚", "环境切换", "预发布"],
-        summary: "发布管理方法论——环境层级/发布门禁 9 项/版本规范/回滚（项目配置 release/）",
+        summary: "发布管理方法论——环境层级/发布门禁 11 项/版本规范/回滚（项目配置 release/）",
         inputs: ["全绿测试", "review 报告"], outputs: ["tag vX.Y.Z", "线上部署", "CHANGELOG"],
         upstream: ["review"], downstream: [] },
       { name: "wechatide-automation", layer: "工具", stage: "bypass", priority: 5,
         triggers: ["微信开发者工具", "小程序预览", "小程序调试"],
         summary: "微信开发者工具（wechatide）使用与小程序自动化测试——能力门判定（有外置工具→可做自动化+做法 / 无→做不了、需补充）+ 驱动用法",
         inputs: ["微信开发者工具", "小程序项目"], outputs: ["判定结论 / 小程序自动化测试结果"],
-        upstream: ["client-code-gen", "tdd-execute"], downstream: [] }
+        upstream: ["client-code-gen", "tdd-execute"], downstream: [] },
+      { name: "credential-management", layer: "工具", stage: "bypass", priority: 5,
+        triggers: ["密钥管理", "密钥库", "访问凭据", "访问令牌", "API 密钥", "API Key", "敏感配置", "加密配置", "部署密钥", "环境变量注入", "凭据管理", "credentials", "access token", "api key"],
+        summary: "项目加密密钥/配置库（credentialctl）——passphrase 派生主密钥 + 每机 DPAPI 自动解锁；默认注入 <CREDENTIAL:proj/key> 占位符、仅 --env/--reveal 在部署时取真值；按项目 scope 认证 + 全程审计；数据在项目 .credential（gitignore）",
+        inputs: ["项目 scope 声明", "agent.md / .credential\\config 绑定"], outputs: ["<CREDENTIAL:proj/key> 占位符", "$env:NAME='...' 注入", "审计记录"],
+        upstream: [], downstream: [] },
+      { name: "deployment-principles", layer: "原则", stage: "review", priority: 5,
+        triggers: ["部署环境", "环境模型", "环境架构", "环境拓扑", "预发布环境", "预发环境", "生产环境", "线上环境", "环境规范", "子网", "网络转发", "Mock", "数据隔离", "同库主机", "库名不同", "逻辑隔离", "环境隔离", "部署架构", "中间件", "公共服务", "宿主化", "独立实例", "数据库实例", "Redis 缓存", "docker compose 自建", "部署原则", "环境配置", "服务隔离", "网络拓扑", "网络分层", "宿主端口", "Docker 网络", "Nginx", "反向代理", "内网", "公网", "域名映射"],
+        summary: "部署总原则（原则/评审资产）——（合并 deployment-environment-model + infra-service-isolation，CASE-020；2026-08-30 网络分层约束）把「环境拓扑规范 + 通用中间件资源放置 + 网络访问拓扑（宿主机分层）+ 部署原则」统一为一条部署合规评审：线上结构一致不超既定范围；本地开发自建/中间件/业务系统原则上不出子网（外网以 Mock/网络转发绕过）；预发布与线上共用同一第三方库主机、仅库名不同（逻辑隔离），自建组件复用同一主机、轻量系统组件独立部署一套；数据库跨环境一律逻辑隔离（不引入主机级物理隔离）；通用中间件用宿主机原生/统一独立实例（RDS/云 Redis/统一容器），禁止业务 compose 自建公共服务；公共中间件经宿主机端口接入、一个项目一个 Docker 网络、对外只经 Nginx 域名映射（内网不出公网）；三环境同构、独立实例凭据集中管理；配置发布依赖架构文档圈定、机密存 Credential Vault。与 release-management（怎么发布）/ credential-management（机密）互补",
+        inputs: ["项目环境配置", "部署架构文档", "环境拓扑", "业务 compose / 中间件布局", "宿主网络/端口布局"], outputs: ["部署合规评审结论 / 环境配置清单", "基础设施合规清单", "网络分层合规"],
+        upstream: ["release-management", "review"], downstream: [] }
     ],
 
     // ═══ 入口架构（谁在每次会话始终在场）═══

@@ -6,7 +6,7 @@ lineage:
   origin: arb-hub
   case: CASE-011
   note: NASKB 试行版：父技能+子技能单目录打包，迁移即整夹复制。bundle 内所有 `.agents/skills/…` 路径（子技能正文、模板、共享规范、脚本输出）一律解释为 `<本文件夹>/…`（本项目即 `.agents/skills/sfds/…`），即 `.agents/skills/_shared/…` → `.agents/skills/sfds/_shared/…`、`.agents/skills/<skill>/…` → `.agents/skills/sfds/skills/<skill>/…`；`~/.agents/skills/…`（全局分发）保持原样。
-  children: 18
+  children: 20
 ---
 
 # SFDS 方法论（仲裁版，父技能入口）
@@ -41,12 +41,22 @@ lineage:
 | 跨项目任务编排 / 队列 / 写锁 / 发布闭环调度 | `pipeline-controller` |
 | 发布 / 发版 / 上线 / 版本管理 | `release-management` |
 | 设计稿发布 / 同步 publish / 发布设计文档 | `sync-design-to-publish` |
+| 密钥管理 / 密钥库 / 访问凭据 / 访问令牌 / API 密钥 / 敏感配置 / 部署密钥 / 环境变量注入 / 凭据管理 | `credential-management` |
+| 部署环境 + 中间件 + 部署原则（子网/Mock/逻辑隔离/独立实例/宿主化/环境架构/部署架构…） | `deployment-principles` |
 | 原始输入整理 / 需求归档 / 整理原始需求 | `consolidate-raw-input` |
 | AI 工作流设计 / 编排设计 / Dify / 自定义节点 | `ai-workflow-orchestration-design` |
 | 微信小程序自动化 / 小程序调试 / wechatide | `wechatide-automation` |
 
 > 微信开发者工具本体（wechatide）是**外置工具**（随 DevTools 单向同步），不在 bundle 内置；`wechatide-automation` 说明的是"有该外置工具→可做自动化+做法 / 无该工具→做不了、需补充"的判定与用法。
 > 上表为代表性路由；每个子技能的**完整触发词集合见其 frontmatter 的 `triggers`**。若用户话术未命中，打开子技能 `skills/<name>/SKILL.md` 看它的「触发条件」章节再定。
+
+> **`credential-management`（密钥/配置管理）编排约定**：涉及密钥、访问令牌、环境变量、线上部署密钥时，自动取用 `credential-management` 子技能——
+> ① **提取**：生成配置/脚本/产物需引用密钥时，先 `credentialctl get <proj> <key>` 拿 `<CREDENTIAL:proj/key>` 占位符，**绝不写真值**；
+> ② **存储**：**机密**用 `credentialctl add <proj> <key> --secret --file <path>` 存入（值不落 argv）；**非密部署配置**（IP/域名/地址/端口/用户名/库名/URL/路径）**进部署配置文档**，不以 `--config --plain` 入库；
+> ③ **初始化**：接入时先 `credentialctl init`（**自动建库并生成一把 master 密钥**给你保存，换机凭它恢复），再 `credentialctl project init <proj> --scope ... --config <项目根>\.credential\config` 一键登记；
+> ④ **越权硬规则**：scope 外 key 一律拒绝；真值仅在部署注入（`--env`/`--reveal`，审计）时取。
+
+> **`deployment-principles`（部署总原则/评审资产）使用约定**：属**原则/评审资产**（无步骤流程）。评审/规划项目环境拓扑、组件放置、第三方连接与部署架构、中间件资源放置、**宿主机网络访问**时，判定各项目环境/部署是否合规——线上结构一致不超既定范围；本地开发自建/中间件/业务系统**原则上不出子网**、外网以 Mock/网络转发绕过（数据库可在本机或子网内其它主机）；预发布与线上**共用同一第三方库主机、仅库名不同（逻辑隔离）**，自建组件复用同一主机（满足数据隔离即可）、轻量系统组件**独立部署一套**与主系统同构；数据库跨环境**一律逻辑隔离**（不引入主机级物理隔离）；通用中间件用宿主机原生/统一独立实例（RDS/云 Redis/统一容器），**禁止业务 compose 自建公共服务**；**网络分层**——公共中间件经**宿主端口**接入、**一个项目一个 Docker 网络**（同项目含全环境同宿主共用同一网络、服务名互访，仅公共资源经宿主端口）、对外**只经 Nginx 域名映射**（内网不出公网）；三环境同构、独立实例凭据集中管理；配置发布依赖架构文档圈定的整体架构、机密存 Credential Vault。由 `release-management` 发布门禁（§二 门禁10/11）与 `review` 校核维度（§2.13）**引用**，并可按触发词**独立触发**。与 `credential-management`（机密）/`release-management`（怎么发布）互补。
 
 ## 使用规则（怎么"用"一个子技能）
 
