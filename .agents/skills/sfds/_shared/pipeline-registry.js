@@ -45,7 +45,7 @@ window.SFDS_DATA["pipeline-registry"] = (function () {
     skills: [
       { name: "iterate", layer: "编排", stage: "bypass", priority: 1,
         triggers: ["迭代", "更新", "调整", "修改", "改一下", "加功能", "新增", "重构", "变更", "修 bug", "报错", "500", "崩溃", "测试失败", "不对", "有问题", "少了", "缺了", "错误", "问题", "修复", "bug", "诊断", "问题排查", "根因分析", "联调", "联调修正", "集成调试", "前后端对接", "不匹配", "遗漏", "未同步", "对不上", "整体检查"],
-        summary: "功能迭代 + Bug 修复 + 联调批量修正的统一级联编排器（§10.3b），三条路径：A 功能迭代 / B 诊断修复 / C 联调修正（批量）",
+        summary: "功能迭代 + Bug 修复 + 联调批量修正的统一级联编排器（§10.3b），三条路径：A 功能迭代 / B 诊断修复 / C 联调修正（批量）；阶段二执行/验证默认进 pipeline-controller 流水线（CASE-015/016）",
         inputs: ["用户变更/问题意图", "当前设计资产", "tests/"], outputs: ["级联修正后的设计+代码+测试", "迭代报告"],
         upstream: ["任意设计/实现 skill"], downstream: ["review"] },
       { name: "business-workflow", layer: "设计", stage: "workflow", priority: 2,

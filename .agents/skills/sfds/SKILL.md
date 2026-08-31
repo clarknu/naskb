@@ -49,6 +49,7 @@ lineage:
 
 > 微信开发者工具本体（wechatide）是**外置工具**（随 DevTools 单向同步），不在 bundle 内置；`wechatide-automation` 说明的是"有该外置工具→可做自动化+做法 / 无该工具→做不了、需补充"的判定与用法。
 > 上表为代表性路由；每个子技能的**完整触发词集合见其 frontmatter 的 `triggers`**。若用户话术未命中，打开子技能 `skills/<name>/SKILL.md` 看它的「触发条件」章节再定。
+> **默认流水线（2026-08-29，CASE-015/016）**：开发类工作（重构 / 需求 / bug 修复 / 迭代 / 联调修正）命中 `iterate` 时，阶段二的执行/验证**默认由 `pipeline-controller` 外壳调度**——登记为 `T-xxx` 任务进 `.pipeline/PIPELINE.md` 队列、后台持锁串行、一任务一 commit、落过程留痕到 `.pipeline/journal/T-xxx.journal.md`（跨会话可恢复）。见 `iterate` SKILL.md「默认执行载体」+ 规则 #15 与 `pipeline-controller` SKILL.md「默认激活与分层」。用户显式声明「一次性 / 直接改 / 不用管线」时才内联执行。
 
 > **`credential-management`（密钥/配置管理）编排约定**：涉及密钥、访问令牌、环境变量、线上部署密钥时，自动取用 `credential-management` 子技能——
 > ① **提取**：生成配置/脚本/产物需引用密钥时，先 `credentialctl get <proj> <key>` 拿 `<CREDENTIAL:proj/key>` 占位符，**绝不写真值**；
