@@ -6,7 +6,7 @@ lineage:
   origin: arb-hub
   case: CASE-011
   note: NASKB 试行版：父技能+子技能单目录打包，迁移即整夹复制。bundle 内所有 `.agents/skills/…` 路径（子技能正文、模板、共享规范、脚本输出）一律解释为 `<本文件夹>/…`（本项目即 `.agents/skills/sfds/…`），即 `.agents/skills/_shared/…` → `.agents/skills/sfds/_shared/…`、`.agents/skills/<skill>/…` → `.agents/skills/sfds/skills/<skill>/…`；`~/.agents/skills/…`（全局分发）保持原样。
-  children: 20
+  children: 21
 ---
 
 # SFDS 方法论（仲裁版，父技能入口）
@@ -44,8 +44,12 @@ lineage:
 | 密钥管理 / 密钥库 / 访问凭据 / 访问令牌 / API 密钥 / 敏感配置 / 部署密钥 / 环境变量注入 / 凭据管理 | `credential-management` |
 | 部署环境 + 中间件 + 部署原则（子网/Mock/逻辑隔离/独立实例/宿主化/环境架构/部署架构…） | `deployment-principles` |
 | 原始输入整理 / 需求归档 / 整理原始需求 | `consolidate-raw-input` |
+| 先记下来 / 暂存 / 记到待办 / 这个需求先不急 / 中远期 / 回顾下待办 / 看看哪些能拎起来 / 细化一下这个需求 / 纳入方法论 / 从头开始迭代设计 | `requirements-backlog` |
 | AI 工作流设计 / 编排设计 / Dify / 自定义节点 | `ai-workflow-orchestration-design` |
 | 微信小程序自动化 / 小程序调试 / wechatide | `wechatide-automation` |
+| 图文转文本 / 语音转文本 / 文档结构化 / 图片识别 / 录音转写 / 敏感证照识别 / 知识库预处理 | `media-preprocess`（外协技能组） |
+
+> **媒体/信息预处理（media-preprocess-bundle，外协技能）引用约定**：把图片 / 语音 / 文档统一转成文本语言模型可消费的输入，并（产出方向）把合同文书生成/审查/修改/出正式档，作为开发主线的辅助层——`consolidate-raw-input`（原始输入整理：录音/图片/PDF 材料→文本化入库）、`review`（外部文档比对）等需要先文本化非文本材料时，引用 `packages/media-preprocess-bundle/`（独立 bundle，不进 SFDS 路由能力域）。四子技能（**无独立手势，经 `media-preprocess` 父技能点名 `/media-preprocess <子技能名>`**）：`image-preprocess`（图像，含敏感材料绕行）/ `voice-preprocess`（语音，识别+纠错+说话人分离+时间打点）/ `doc-preprocess`（文档，MinerU 封装+结构保持+图片子分析+HTML 复现）/ `contract-compose`（合同：起草/审查/修改/出正式档，产出方向）。**技能 zero-key**（密钥走项目配置 env / credentialctl）；**默认输出原文**（家庭知识库/自有材料），仅显式 `--redact` 才打码；合规由法律控制，不由项目或技能控制。大型引擎（MinerU/PaddleOCR/whisper）集中制 `C:\Soft\`。
 
 > 微信开发者工具本体（wechatide）是**外置工具**（随 DevTools 单向同步），不在 bundle 内置；`wechatide-automation` 说明的是"有该外置工具→可做自动化+做法 / 无该工具→做不了、需补充"的判定与用法。
 > 上表为代表性路由；每个子技能的**完整触发词集合见其 frontmatter 的 `triggers`**。若用户话术未命中，打开子技能 `skills/<name>/SKILL.md` 看它的「触发条件」章节再定。
